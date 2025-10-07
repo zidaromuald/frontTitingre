@@ -264,7 +264,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
           selectedTarget = null;
         }),
         child: Container(
-          padding: const EdgeInsets.all(8), // Réduit de 12 à 8
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: isSelected ? mattermostBlue : mattermostGray,
             borderRadius: BorderRadius.circular(8),

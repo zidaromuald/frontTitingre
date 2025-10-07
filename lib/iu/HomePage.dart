@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gestauth/iu/onglets/parametre.dart';
 import 'package:gestauth/iu/onglets/post.dart';
+import 'package:gestauth/iu/onglets/servicePlan/service.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -267,26 +269,29 @@ class HomePage extends StatelessWidget {
                             },
                           ),
                           const SizedBox(width: 10),
-                          const _SquareAction(
+                          _SquareAction(
                             label: '2',
                             icon: Icons.group,
-                            // onTap: () {
-                            //   Navigator.push(
-                            //     context,
-                            //     MaterialPageRoute(builder: (context) => const GroupePage()),
-                            //   );
-                            // },
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const ServicePage()),
+                              );
+                            },
                           ),
                           const SizedBox(width: 10),
-                          const _SquareAction(
+                          _SquareAction(
                             label: '3',
                             icon: Icons.settings_outlined,
-                            // onTap: () {
-                            //   Navigator.push(
-                            //     context,
-                            //     MaterialPageRoute(builder: (context) => const ParametrePage()),
-                            //   );
-                            // },
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ParametrePage()),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -431,7 +436,7 @@ class _SquareAction extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: onTap, // 🔥 navigation ou action
+          onTap: onTap,
           child: Stack(
             alignment: Alignment.center,
             children: [

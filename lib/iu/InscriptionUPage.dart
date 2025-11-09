@@ -1,7 +1,7 @@
 // ignore: file_names
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gestauth/iu/HomePage.dart';
+import 'package:gestauth_clean/iu/HomePage.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../models/authIns.dart';
 
@@ -41,8 +41,9 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
   }
 
   bool _isValidEmail(String email) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-        .hasMatch(email);
+    return RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(email);
   }
 
   void _showMessage(String message, {bool isError = false}) {
@@ -61,8 +62,9 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate:
-          DateTime.now().subtract(const Duration(days: 6570)), // 18 ans
+      initialDate: DateTime.now().subtract(
+        const Duration(days: 6570),
+      ), // 18 ans
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
     );
@@ -118,8 +120,10 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
         );
       }
     } catch (e) {
-      _showMessage('Une erreur est survenue. Veuillez réessayer.',
-          isError: true);
+      _showMessage(
+        'Une erreur est survenue. Veuillez réessayer.',
+        isError: true,
+      );
       debugPrint('Erreur inscription: $e');
     } finally {
       if (mounted) {
@@ -168,12 +172,11 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.person,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.person, color: Color(0xff5ac18e)),
               hintText: 'Votre nom',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -222,12 +225,11 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.person_outline,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.person_outline, color: Color(0xff5ac18e)),
               hintText: 'Votre prénom',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -267,8 +269,10 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             controller: _numeroController,
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              contentPadding: EdgeInsets.symmetric(
+                vertical: 14,
+                horizontal: 16,
+              ),
               hintText: 'Numéro de téléphone',
               hintStyle: TextStyle(color: Colors.black38),
               prefixIcon: Icon(Icons.phone, color: Color(0xff5ac18e)),
@@ -334,12 +338,11 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.email,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.email, color: Color(0xff5ac18e)),
               hintText: 'Votre email',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -389,12 +392,11 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.calendar_today,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.calendar_today, color: Color(0xff5ac18e)),
               hintText: 'Sélectionnez votre date de naissance',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -446,12 +448,11 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             },
             decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: const Icon(
-                Icons.lock,
-                color: Color(0xff5ac18e),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: const Icon(Icons.lock, color: Color(0xff5ac18e)),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -514,8 +515,10 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             },
             decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
               prefixIcon: const Icon(
                 Icons.lock_outline,
                 color: Color(0xff5ac18e),
@@ -570,10 +573,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
               )
             : const Text(
                 'S\'INSCRIRE',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
       ),
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gestauth/is/AccueilPage.dart';
-import 'package:gestauth/models/authSIns.dart';
+import 'package:gestauth_clean/is/AccueilPage.dart';
+import 'package:gestauth_clean/models/authSIns.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
 class InscriptionSPage extends StatefulWidget {
@@ -31,7 +31,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
   final List<String> _domaines = [
     'Societe_Negoce',
     'Societe_Transformateur',
-    'Societe_Exportatrice'
+    'Societe_Exportatrice',
   ];
 
   @override
@@ -46,8 +46,9 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
   }
 
   bool _isValidEmail(String email) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-        .hasMatch(email);
+    return RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(email);
   }
 
   void _showMessage(String message, {bool isError = false}) {
@@ -117,8 +118,10 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
         );
       }
     } catch (e) {
-      _showMessage('Une erreur est survenue. Veuillez réessayer.',
-          isError: true);
+      _showMessage(
+        'Une erreur est survenue. Veuillez réessayer.',
+        isError: true,
+      );
       debugPrint('Erreur inscription société: $e');
     } finally {
       if (mounted) {
@@ -167,12 +170,11 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.business,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.business, color: Color(0xff5ac18e)),
               hintText: 'Nom de votre société',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -213,8 +215,10 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             controller: _numeroController,
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              contentPadding: EdgeInsets.symmetric(
+                vertical: 14,
+                horizontal: 16,
+              ),
               hintText: 'Numéro de téléphone',
               hintStyle: TextStyle(color: Colors.black38),
               prefixIcon: Icon(Icons.phone, color: Color(0xff5ac18e)),
@@ -280,12 +284,11 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.email,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.email, color: Color(0xff5ac18e)),
               hintText: 'Email de la société',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -331,21 +334,17 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.category,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.category, color: Color(0xff5ac18e)),
               hintText: 'Sélectionnez votre centre d\'intérêt',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
             ),
             items: _centresInteret.map((String item) {
-              return DropdownMenuItem<String>(
-                value: item,
-                child: Text(item),
-              );
+              return DropdownMenuItem<String>(value: item, child: Text(item));
             }).toList(),
           ),
         ),
@@ -388,12 +387,11 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.domain,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.domain, color: Color(0xff5ac18e)),
               hintText: 'Sélectionnez votre domaine d\'activité',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -448,12 +446,11 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.inventory,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.inventory, color: Color(0xff5ac18e)),
               hintText: 'Type de produit commercialisé',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -505,12 +502,11 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             },
             decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: const Icon(
-                Icons.lock,
-                color: Color(0xff5ac18e),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: const Icon(Icons.lock, color: Color(0xff5ac18e)),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -573,8 +569,10 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             },
             decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
               prefixIcon: const Icon(
                 Icons.lock_outline,
                 color: Color(0xff5ac18e),
@@ -629,10 +627,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
               )
             : const Text(
                 'S\'INSCRIRE',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
       ),
     );

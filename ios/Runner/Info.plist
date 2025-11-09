@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Gestauth</string>
+	<string>Gestauth Clean</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>gestauth</string>
+	<string>gestauth_clean</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -45,11 +45,5 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>Cette app a besoin d'accéder à la caméra</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Cette app a besoin d'accéder au microphone</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Cette app a besoin d'accéder à la galerie</string>
 </dict>
 </plist>

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gestauth/iu/HomePage.dart';
+import 'package:gestauth_clean/iu/HomePage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -22,7 +22,9 @@ class _OTPScreenState extends State<OTPScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://votre-api.com/verify-otp'), // Remplacez par votre URL
+        Uri.parse(
+          'https://votre-api.com/verify-otp',
+        ), // Remplacez par votre URL
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'otp': otpController.text,
@@ -39,14 +41,16 @@ class _OTPScreenState extends State<OTPScreen> {
       } else {
         // Gérer les erreurs
         final message = json.decode(response.body)['message'];
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (e) {
       print(e);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erreur lors de la vérification de l'OTP")),
+        const SnackBar(
+          content: Text("Erreur lors de la vérification de l'OTP"),
+        ),
       );
     } finally {
       setState(() {
@@ -64,20 +68,14 @@ class _OTPScreenState extends State<OTPScreen> {
             Image.asset("images/otpscreen.jpg"),
             const Text(
               "OTP Verification",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 25,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 "Inscrire code",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
               ),
             ),
             Padding(

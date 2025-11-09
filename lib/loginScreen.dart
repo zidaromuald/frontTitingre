@@ -1,12 +1,12 @@
 // ignore_for_file: prefer_const_constructors, unused_import
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gestauth/is/AccueilPage.dart';
-import 'package:gestauth/is/InscriptionSPage.dart';
-import 'package:gestauth/iu/HomePage.dart';
-import 'package:gestauth/models/authSIns.dart';
-import 'package:gestauth/iu/InscriptionUPage.dart';
-import 'package:gestauth/models/authIns.dart';
+import 'package:gestauth_clean/is/AccueilPage.dart';
+import 'package:gestauth_clean/is/InscriptionSPage.dart';
+import 'package:gestauth_clean/iu/HomePage.dart';
+import 'package:gestauth_clean/models/authSIns.dart';
+import 'package:gestauth_clean/iu/InscriptionUPage.dart';
+import 'package:gestauth_clean/models/authIns.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,8 +32,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Validation améliorée pour l'email
   bool _isValidEmail(String input) {
-    return RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-        .hasMatch(input);
+    return RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    ).hasMatch(input);
   }
 
   bool _isValidPhone(String input) {
@@ -67,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-// ALTERNATIVE: Version avec sélecteur de page pour tests
+  // ALTERNATIVE: Version avec sélecteur de page pour tests
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -249,12 +250,11 @@ class _LoginScreenState extends State<LoginScreen> {
             },
             decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: Icon(
-                Icons.person,
-                color: Color(0xff5ac18e),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: Icon(Icons.person, color: Color(0xff5ac18e)),
               hintText: 'exemple@email.com ou +226 01 02 03 04', // CORRIGÉ
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
@@ -306,12 +306,11 @@ class _LoginScreenState extends State<LoginScreen> {
             },
             decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              prefixIcon: const Icon(
-                Icons.lock,
-                color: Color(0xff5ac18e),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
+              prefixIcon: const Icon(Icons.lock, color: Color(0xff5ac18e)),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility : Icons.visibility_off,
@@ -384,10 +383,7 @@ class _LoginScreenState extends State<LoginScreen> {
               )
             : const Text(
                 'SE CONNECTER',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
       ),
     );

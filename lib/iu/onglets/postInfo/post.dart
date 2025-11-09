@@ -21,8 +21,12 @@ class _CreerPostPageState extends State<CreerPostPage> {
   static const Color mattermostDarkGray = Color(0xFF8D8D8D);
   static const Color mattermostGreen = Color(0xFF28A745);
 
-  final List<String> groupes = ["Groupe Devs", "Tech Team", "UI/UX Designers"];
-  final List<String> societes = ["Tech Corp", "Innovation Lab", "StartupHub"];
+  final List<String> groupes = [
+    "Groupe paysans du faso ",
+    "Tech Team",
+    "UI/UX Designers",
+  ];
+  final List<String> societes = ["SANABI", "BRAKINA", "SOFITEX"];
   String? selectedTarget;
 
   @override
@@ -35,11 +39,14 @@ class _CreerPostPageState extends State<CreerPostPage> {
         title: const Text(
           "Titingre",
           style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      // SOLUTION 1: SingleChildScrollView pour rendre scrollable
+      // SingleChildScrollView pour rendre scrollable
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,7 +66,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
               ),
             ),
 
-            const SizedBox(height: 12), // Réduit de 16 à 12
+            const SizedBox(height: 12),
 
             // Choix du type de publication - RÉDUIT
             Padding(
@@ -74,7 +81,10 @@ class _CreerPostPageState extends State<CreerPostPage> {
                       const SizedBox(width: 8), // Réduit de 12 à 8
                       Expanded(
                         child: _buildChoice(
-                            "Galerie", Icons.photo_library, "image"),
+                          "Galerie",
+                          Icons.photo_library,
+                          "image",
+                        ),
                       ),
                     ],
                   ),
@@ -94,7 +104,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
               ),
             ),
 
-            const SizedBox(height: 12), // Réduit de 20 à 12
+            const SizedBox(height: 12),
 
             // Zone de contenu - HAUTEUR FIXE
             Container(
@@ -115,12 +125,11 @@ class _CreerPostPageState extends State<CreerPostPage> {
               child: _buildContentArea(),
             ),
 
-            const SizedBox(height: 12), // Réduit de 16 à 12
-
+            const SizedBox(height: 12),
             // Sélecteur de destinataire - RÉDUIT
             _buildDestinataireSelector(),
 
-            const SizedBox(height: 12), // Réduit de 16 à 12
+            const SizedBox(height: 12),
 
             // Sélecteur groupe / société - RÉDUIT
             if (destinataire != "public") _buildTargetSelector(),
@@ -136,7 +145,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
                       backgroundColor: mattermostGreen,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10), // Réduit
+                        horizontal: 20,
+                        vertical: 10,
+                      ), // Réduit
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -196,7 +207,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
             Icon(
               icon,
               color: isSelected ? Colors.white : Colors.white70,
-              size: isSelected ? 26 : 24, // Réduit de 30/28 à 26/24
+              size: isSelected ? 26 : 24,
             ),
             const SizedBox(height: 6), // Réduit de 8 à 6
             Text(
@@ -243,8 +254,8 @@ class _CreerPostPageState extends State<CreerPostPage> {
           const SizedBox(height: 8), // Réduit de 12 à 8
           Row(
             children: [
-              _buildDestinataireOption("Public", "public", Icons.public),
-              const SizedBox(width: 12),
+              //_buildDestinataireOption("Public", "public", Icons.public),
+              //const SizedBox(width: 12),
               _buildDestinataireOption("Groupe", "groupe", Icons.group),
               const SizedBox(width: 12),
               _buildDestinataireOption("Société", "societe", Icons.business),
@@ -298,8 +309,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
   // Sélecteur de groupe/société RÉDUIT
   Widget _buildTargetSelector() {
     final targets = destinataire == "groupe" ? groupes : societes;
-    final title =
-        destinataire == "groupe" ? "Choisir un groupe" : "Choisir une société";
+    final title = destinataire == "groupe"
+        ? "Choisir un groupe"
+        : "Choisir une société";
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -399,12 +411,19 @@ class _CreerPostPageState extends State<CreerPostPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.image,
-                                size: 40, color: mattermostDarkGray), // Réduit
+                            Icon(
+                              Icons.image,
+                              size: 40,
+                              color: mattermostDarkGray,
+                            ), // Réduit
                             SizedBox(height: 4),
-                            Text("Image sélectionnée",
-                                style: TextStyle(
-                                    color: mattermostDarkGray, fontSize: 12)),
+                            Text(
+                              "Image sélectionnée",
+                              style: TextStyle(
+                                color: mattermostDarkGray,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -414,8 +433,10 @@ class _CreerPostPageState extends State<CreerPostPage> {
                   TextButton.icon(
                     onPressed: () => _selectFromGallery(),
                     icon: const Icon(Icons.refresh, size: 16),
-                    label:
-                        const Text("Changer", style: TextStyle(fontSize: 12)),
+                    label: const Text(
+                      "Changer",
+                      style: TextStyle(fontSize: 12),
+                    ),
                   ),
                 ],
               )
@@ -437,13 +458,17 @@ class _CreerPostPageState extends State<CreerPostPage> {
                     ElevatedButton.icon(
                       onPressed: () => _selectFromGallery(),
                       icon: const Icon(Icons.photo_library, size: 16),
-                      label:
-                          const Text("Choisir", style: TextStyle(fontSize: 12)),
+                      label: const Text(
+                        "Choisir",
+                        style: TextStyle(fontSize: 12),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: mattermostBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                       ),
                     ),
                   ],
@@ -465,10 +490,12 @@ class _CreerPostPageState extends State<CreerPostPage> {
                 _isRecording
                     ? "Enregistrement..."
                     : (_hasSelectedMedia
-                        ? "Audio enregistré"
-                        : "Appuyez pour enregistrer"),
+                          ? "Audio enregistré"
+                          : "Appuyez pour enregistrer"),
                 style: TextStyle(
-                  color: _isRecording ? Colors.red : mattermostDarkGray,
+                  color: _isRecording
+                      ? const Color.fromARGB(255, 192, 180, 179)
+                      : mattermostDarkGray,
                   fontSize: 12, // Réduit
                 ),
                 textAlign: TextAlign.center,
@@ -477,13 +504,17 @@ class _CreerPostPageState extends State<CreerPostPage> {
               ElevatedButton.icon(
                 onPressed: _isRecording ? _stopRecording : _startRecording,
                 icon: Icon(_isRecording ? Icons.stop : Icons.mic, size: 16),
-                label: Text(_isRecording ? "Arrêter" : "Enregistrer",
-                    style: const TextStyle(fontSize: 12)),
+                label: Text(
+                  _isRecording ? "Arrêter" : "Enregistrer",
+                  style: const TextStyle(fontSize: 12),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isRecording ? Colors.red : mattermostBlue,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                 ),
               ),
             ],
@@ -504,12 +535,19 @@ class _CreerPostPageState extends State<CreerPostPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.play_circle_outline,
-                                size: 40, color: Colors.white),
+                            Icon(
+                              Icons.play_circle_outline,
+                              size: 40,
+                              color: Colors.white,
+                            ),
                             SizedBox(height: 4),
-                            Text("Vidéo sélectionnée",
-                                style: TextStyle(
-                                    color: Colors.white, fontSize: 12)),
+                            Text(
+                              "Vidéo sélectionnée",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -522,14 +560,18 @@ class _CreerPostPageState extends State<CreerPostPage> {
                       TextButton.icon(
                         onPressed: () => _takeVideo(),
                         icon: const Icon(Icons.videocam, size: 16),
-                        label: const Text("Filmer",
-                            style: TextStyle(fontSize: 10)),
+                        label: const Text(
+                          "Filmer",
+                          style: TextStyle(fontSize: 10),
+                        ),
                       ),
                       TextButton.icon(
                         onPressed: () => _selectFromGallery(),
                         icon: const Icon(Icons.video_library, size: 16),
-                        label: const Text("Galerie",
-                            style: TextStyle(fontSize: 10)),
+                        label: const Text(
+                          "Galerie",
+                          style: TextStyle(fontSize: 10),
+                        ),
                       ),
                     ],
                   ),
@@ -556,25 +598,33 @@ class _CreerPostPageState extends State<CreerPostPage> {
                         ElevatedButton.icon(
                           onPressed: () => _takeVideo(),
                           icon: const Icon(Icons.videocam, size: 14),
-                          label: const Text("Filmer",
-                              style: TextStyle(fontSize: 10)),
+                          label: const Text(
+                            "Filmer",
+                            style: TextStyle(fontSize: 10),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: mattermostBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                           ),
                         ),
                         ElevatedButton.icon(
                           onPressed: () => _selectFromGallery(),
                           icon: const Icon(Icons.video_library, size: 14),
-                          label: const Text("Galerie",
-                              style: TextStyle(fontSize: 10)),
+                          label: const Text(
+                            "Galerie",
+                            style: TextStyle(fontSize: 10),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: mattermostBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                           ),
                         ),
                       ],
@@ -613,8 +663,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content:
-            Text("${typePost == 'image' ? 'Image' : 'Vidéo'} sélectionnée"),
+        content: Text(
+          "${typePost == 'image' ? 'Image' : 'Vidéo'} sélectionnée",
+        ),
         backgroundColor: mattermostGreen,
         duration: const Duration(seconds: 1),
       ),

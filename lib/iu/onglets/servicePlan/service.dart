@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gestauth/iu/onglets/servicePlan/transaction.dart';
+import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
 
 class ServicePage extends StatefulWidget {
   const ServicePage({super.key});
@@ -26,7 +26,7 @@ class _ServicePageState extends State<ServicePage> {
       'avatar': 'JD',
       'statut': 'en ligne',
       'dernierMessage': 'Salut ! Comment ça va ?',
-      'heureMessage': '14:32'
+      'heureMessage': '14:32',
     },
     {
       'nom': 'Marie Martin',
@@ -34,7 +34,7 @@ class _ServicePageState extends State<ServicePage> {
       'avatar': 'MM',
       'statut': 'absent',
       'dernierMessage': 'Je travaille sur le nouveau design',
-      'heureMessage': '13:15'
+      'heureMessage': '13:15',
     },
     {
       'nom': 'Pierre Durand',
@@ -42,7 +42,7 @@ class _ServicePageState extends State<ServicePage> {
       'avatar': 'PD',
       'statut': 'en ligne',
       'dernierMessage': 'Réunion à 16h',
-      'heureMessage': '12:45'
+      'heureMessage': '12:45',
     },
     {
       'nom': 'Sophie Leroy',
@@ -50,7 +50,7 @@ class _ServicePageState extends State<ServicePage> {
       'avatar': 'SL',
       'statut': 'occupé',
       'dernierMessage': 'API prête pour les tests',
-      'heureMessage': '11:20'
+      'heureMessage': '11:20',
     },
   ];
 
@@ -61,7 +61,7 @@ class _ServicePageState extends State<ServicePage> {
       'membres': 12,
       'dernierMessage': 'Nouveau framework disponible',
       'heureMessage': '15:20',
-      'nonLus': 3
+      'nonLus': 3,
     },
     {
       'nom': 'Design & UI',
@@ -69,7 +69,7 @@ class _ServicePageState extends State<ServicePage> {
       'membres': 8,
       'dernierMessage': 'Prototype validé !',
       'heureMessage': '14:45',
-      'nonLus': 0
+      'nonLus': 0,
     },
     {
       'nom': 'Général',
@@ -77,7 +77,7 @@ class _ServicePageState extends State<ServicePage> {
       'membres': 25,
       'dernierMessage': 'Pause café à 15h30',
       'heureMessage': '13:30',
-      'nonLus': 1
+      'nonLus': 1,
     },
   ];
 
@@ -88,7 +88,7 @@ class _ServicePageState extends State<ServicePage> {
       'projets': 3,
       'statut': 'actif',
       'dernierMessage': 'Validation du livrable',
-      'heureMessage': '16:10'
+      'heureMessage': '16:10',
     },
     {
       'nom': 'Innovation Lab',
@@ -96,7 +96,7 @@ class _ServicePageState extends State<ServicePage> {
       'projets': 1,
       'statut': 'actif',
       'dernierMessage': 'Nouvelle collaboration',
-      'heureMessage': '10:30'
+      'heureMessage': '10:30',
     },
     {
       'nom': 'StartupHub',
@@ -104,7 +104,7 @@ class _ServicePageState extends State<ServicePage> {
       'projets': 2,
       'statut': 'en attente',
       'dernierMessage': 'Présentation demain',
-      'heureMessage': 'hier'
+      'heureMessage': 'hier',
     },
   ];
 
@@ -118,7 +118,10 @@ class _ServicePageState extends State<ServicePage> {
         title: const Text(
           "Services",
           style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -372,28 +375,19 @@ class _ServicePageState extends State<ServicePage> {
         ),
         title: Text(
           collab['nom'],
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               collab['poste'],
-              style: TextStyle(
-                color: mattermostDarkGray,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: mattermostDarkGray, fontSize: 12),
             ),
             const SizedBox(height: 2),
             Text(
               collab['dernierMessage'],
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 12, color: Colors.black87),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -401,10 +395,7 @@ class _ServicePageState extends State<ServicePage> {
         ),
         trailing: Text(
           collab['heureMessage'],
-          style: TextStyle(
-            color: mattermostDarkGray,
-            fontSize: 11,
-          ),
+          style: TextStyle(color: mattermostDarkGray, fontSize: 11),
         ),
         onTap: () {
           _showCollaborateurDetails(collab);
@@ -454,11 +445,7 @@ class _ServicePageState extends State<ServicePage> {
             color: mattermostBlue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(
-            Icons.tag,
-            color: mattermostBlue,
-            size: 20,
-          ),
+          child: Icon(Icons.tag, color: mattermostBlue, size: 20),
         ),
         title: Row(
           children: [
@@ -494,18 +481,12 @@ class _ServicePageState extends State<ServicePage> {
           children: [
             Text(
               "${canal['membres']} membres • ${canal['description']}",
-              style: TextStyle(
-                color: mattermostDarkGray,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: mattermostDarkGray, fontSize: 12),
             ),
             const SizedBox(height: 2),
             Text(
               canal['dernierMessage'],
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 12, color: Colors.black87),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -513,10 +494,7 @@ class _ServicePageState extends State<ServicePage> {
         ),
         trailing: Text(
           canal['heureMessage'],
-          style: TextStyle(
-            color: mattermostDarkGray,
-            fontSize: 11,
-          ),
+          style: TextStyle(color: mattermostDarkGray, fontSize: 11),
         ),
         onTap: () {
           _showCanalDetails(canal);
@@ -578,11 +556,7 @@ class _ServicePageState extends State<ServicePage> {
             color: mattermostBlue,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(
-            Icons.business,
-            color: Colors.white,
-            size: 20,
-          ),
+          child: const Icon(Icons.business, color: Colors.white, size: 20),
         ),
         title: Row(
           children: [
@@ -617,18 +591,12 @@ class _ServicePageState extends State<ServicePage> {
           children: [
             Text(
               "${societe['type']} • ${societe['projets']} projet(s)",
-              style: TextStyle(
-                color: mattermostDarkGray,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: mattermostDarkGray, fontSize: 12),
             ),
             const SizedBox(height: 2),
             Text(
               societe['dernierMessage'],
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 12, color: Colors.black87),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -636,10 +604,7 @@ class _ServicePageState extends State<ServicePage> {
         ),
         trailing: Text(
           societe['heureMessage'],
-          style: const TextStyle(
-            color: mattermostDarkGray,
-            fontSize: 11,
-          ),
+          style: const TextStyle(color: mattermostDarkGray, fontSize: 11),
         ),
         onTap: () {
           _showSocieteDetails(societe);
@@ -713,10 +678,7 @@ class _ServicePageState extends State<ServicePage> {
               ),
               Text(
                 collab['poste'],
-                style: TextStyle(
-                  color: mattermostDarkGray,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: mattermostDarkGray, fontSize: 14),
               ),
               const SizedBox(height: 20),
               Row(
@@ -757,13 +719,13 @@ class _ServicePageState extends State<ServicePage> {
         builder: (context) => Scaffold(
           appBar: AppBar(
             backgroundColor: mattermostBlue,
-            title:
-                Text(canal['nom'], style: const TextStyle(color: Colors.white)),
+            title: Text(
+              canal['nom'],
+              style: const TextStyle(color: Colors.white),
+            ),
             iconTheme: const IconThemeData(color: Colors.white),
           ),
-          body: Center(
-            child: Text("Contenu du canal ${canal['nom']}"),
-          ),
+          body: Center(child: Text("Contenu du canal ${canal['nom']}")),
         ),
       ),
     );
@@ -776,7 +738,7 @@ class _ServicePageState extends State<ServicePage> {
       'nom': 'Service',
       'color': const Color(0xFF1E4A8C), // mattermostBlue
       'icon': Icons.business,
-      'description': 'Services généraux'
+      'description': 'Services généraux',
     };
 
     if (societe['statut'] == 'actif') {
@@ -826,18 +788,12 @@ class _ServicePageState extends State<ServicePage> {
               const SizedBox(height: 16),
               Text(
                 societe['description'],
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
               const SizedBox(height: 20),
               Text(
                 'Cette société n\'est pas encore active. Vous pouvez envoyer une demande de partenariat.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.orange[700],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.orange[700]),
               ),
             ],
           ),

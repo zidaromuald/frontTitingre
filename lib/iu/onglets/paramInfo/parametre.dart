@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gestauth/iu/onglets/paramInfo/categorie.dart';
-import 'package:gestauth/iu/onglets/paramInfo/profil.dart';
+import 'package:gestauth_clean/iu/onglets/paramInfo/categorie.dart';
+import 'package:gestauth_clean/iu/onglets/paramInfo/profil.dart';
 
 class ParametrePage extends StatefulWidget {
   const ParametrePage({super.key});
@@ -29,43 +29,47 @@ class _ParametrePageState extends State<ParametrePage> {
     'formation': 'Master en Informatique',
   };
 
-  // Catégories d'activités
+  // Catégories d'activités principales
   final List<Map<String, dynamic>> categories = [
     {
       'nom': 'Agriculteur',
       'icon': Icons.agriculture,
       'color': Colors.green,
-      'description': 'Cultivation, semences, récoltes'
+      'description': 'Cultivation, semences, récoltes',
     },
     {
       'nom': 'Élevage',
       'icon': Icons.pets,
       'color': Colors.brown,
-      'description': 'Bétail, volaille, aquaculture'
+      'description': 'Bétail, volaille, aquaculture',
     },
     {
       'nom': 'Bâtiment',
       'icon': Icons.construction,
       'color': Colors.orange,
-      'description': 'Construction, rénovation, BTP'
+      'description': 'Construction, rénovation, BTP',
     },
     {
       'nom': 'Vente & Distribution',
       'icon': Icons.store,
       'color': Colors.purple,
-      'description': 'Commerce, distribution, vente'
+      'description': 'Commerce, distribution, vente',
     },
+  ];
+
+  // Catégories spéciales (Canaux et Collaboration)
+  final List<Map<String, dynamic>> categoriesSpeciales = [
     {
-      'nom': 'Canaux',
+      'nom': 'Créer Canaux',
       'icon': Icons.tag,
       'color': mattermostBlue,
-      'description': 'Groupes de discussion thématiques'
+      'description': 'Groupes de discussion thématiques',
     },
     {
-      'nom': 'Collaboration',
+      'nom': 'Créer Collaboration',
       'icon': Icons.handshake,
       'color': mattermostGreen,
-      'description': 'Partenariats et collaborations'
+      'description': 'Partenariats et collaborations',
     },
   ];
 
@@ -77,7 +81,7 @@ class _ParametrePageState extends State<ParametrePage> {
       'categorie': 'Agriculteur',
       'membres': 156,
       'description': 'Groupe des producteurs de riz du Burkina Faso',
-      'expediteur': 'Marie Ouédraogo'
+      'expediteur': 'Marie Ouédraogo',
     },
     {
       'type': 'societe',
@@ -85,7 +89,7 @@ class _ParametrePageState extends State<ParametrePage> {
       'categorie': 'Bâtiment',
       'projets': 12,
       'description': 'Entreprise spécialisée dans la construction',
-      'expediteur': 'Amadou Traoré'
+      'expediteur': 'Amadou Traoré',
     },
     {
       'type': 'collaboration',
@@ -93,7 +97,7 @@ class _ParametrePageState extends State<ParametrePage> {
       'categorie': 'Élevage',
       'poste': 'Vétérinaire',
       'description': 'Demande de collaboration professionnelle',
-      'expediteur': 'Pierre Sankara'
+      'expediteur': 'Pierre Sankara',
     },
   ];
 
@@ -107,7 +111,10 @@ class _ParametrePageState extends State<ParametrePage> {
         title: const Text(
           "Paramètres",
           style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -155,7 +162,9 @@ class _ParametrePageState extends State<ParametrePage> {
                     onTap: () => _navigateToProfile(),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: mattermostBlue,
                         borderRadius: BorderRadius.circular(20),
@@ -194,7 +203,7 @@ class _ParametrePageState extends State<ParametrePage> {
               ),
             ),
             const SizedBox(height: 12),
-            // Grille des catégories (2 colonnes)
+            // Grille des catégories principales (2 colonnes)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GridView.builder(
@@ -202,13 +211,44 @@ class _ParametrePageState extends State<ParametrePage> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 1.2,
+                  childAspectRatio: 1.0,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
                 itemCount: categories.length,
                 itemBuilder: (context, index) {
                   final categorie = categories[index];
+                  return _buildCategorieCard(categorie);
+                },
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Conteneur parent transparent pour Canaux et Collaboration
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: mattermostBlue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: mattermostBlue.withValues(alpha: 0.2),
+                  width: 1.5,
+                ),
+              ),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.0,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: categoriesSpeciales.length,
+                itemBuilder: (context, index) {
+                  final categorie = categoriesSpeciales[index];
                   return _buildCategorieCard(categorie);
                 },
               ),
@@ -237,8 +277,11 @@ class _ParametrePageState extends State<ParametrePage> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.notifications,
-                            color: mattermostBlue, size: 20),
+                        const Icon(
+                          Icons.notifications,
+                          color: mattermostBlue,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           "Invitations (${invitations.length})",
@@ -251,8 +294,9 @@ class _ParametrePageState extends State<ParametrePage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ...invitations
-                        .map((invitation) => _buildInvitationItem(invitation)),
+                    ...invitations.map(
+                      (invitation) => _buildInvitationItem(invitation),
+                    ),
                   ],
                 ),
               ),
@@ -313,10 +357,7 @@ class _ParametrePageState extends State<ParametrePage> {
             const SizedBox(height: 4),
             Text(
               categorie['description'],
-              style: const TextStyle(
-                fontSize: 10,
-                color: mattermostDarkGray,
-              ),
+              style: const TextStyle(fontSize: 10, color: mattermostDarkGray),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -433,8 +474,10 @@ class _ParametrePageState extends State<ParametrePage> {
                 onPressed: () => _accepterInvitation(invitation),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: mattermostGreen,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                 ),
                 child: const Text(
                   "Accepter",
@@ -463,11 +506,8 @@ class _ParametrePageState extends State<ParametrePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CategoriePage(
-          categorie: categorie,
-          societes: [],
-          groupes: [],
-        ),
+        builder: (context) =>
+            CategoriePage(categorie: categorie, societes: [], groupes: []),
       ),
     );
   }
@@ -496,8 +536,10 @@ class _ParametrePageState extends State<ParametrePage> {
                 // Logique de recherche
               },
               style: ElevatedButton.styleFrom(backgroundColor: mattermostBlue),
-              child: const Text("Rechercher",
-                  style: TextStyle(color: Colors.white)),
+              child: const Text(
+                "Rechercher",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );

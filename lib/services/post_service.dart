@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'api_service.dart';
-import 'unified_auth_service.dart';
 
 /// Modèle de Post
 class Post {

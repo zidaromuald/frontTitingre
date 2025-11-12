@@ -10,8 +10,10 @@ lib/services/
 ├── societe_auth_service.dart           # Auth Societe + SocieteModel
 ├── unified_auth_service.dart           # Service unifié (détection auto)
 ├── post_service.dart                   # Gestion des posts
+├── media_service.dart                  # ✨ Upload médias (séparé)
 ├── exemple_utilisation.dart            # Exemples posts
 ├── EXEMPLES_AUTHENTIFICATION.dart      # Exemples auth
+├── MEDIA_USAGE_EXAMPLE.md              # ✨ Exemples média
 ├── README.md                           # Documentation
 └── ARCHITECTURE_SERVICES.md            # Ce fichier
 ```
@@ -347,14 +349,55 @@ final post = await PostService.createPost(
 
 ---
 
+---
+
+## 📤 Service d'Upload Média
+
+### Architecture Backend → Flutter
+
+**Backend NestJS** : Module Media séparé
+```
+POST /media/upload/image
+POST /media/upload/video
+POST /media/upload/audio
+POST /media/upload/document
+```
+
+**Flutter** : Service séparé `media_service.dart`
+
+### Pourquoi séparer MediaService et PostService ?
+
+✅ **Réutilisabilité** : Upload pour posts, profils, groupes, messages
+✅ **Responsabilité unique** : MediaService = upload, PostService = logique métier
+✅ **Testabilité** : Tester l'upload indépendamment
+✅ **Cohérence** : Reflète l'architecture backend (module séparé)
+
+### Flux de création de post avec médias
+
+```
+1. MediaService.uploadImages([file1, file2])
+   → Retourne ['url1', 'url2']
+
+2. PostService.createPost(
+     contenu: '...',
+     images: ['url1', 'url2']
+   )
+   → Crée le post avec les URLs
+```
+
+**Voir [MEDIA_USAGE_EXAMPLE.md](./MEDIA_USAGE_EXAMPLE.md) pour des exemples détaillés.**
+
+---
+
 ## 🎯 Conclusion
 
-Votre backend ayant **2 types d'utilisateurs distincts** avec des **routes séparées**, l'architecture **HYBRIDE** est **optimale** :
+Votre backend ayant **2 types d'utilisateurs distincts** avec des **routes séparées** et un **module média séparé**, l'architecture **HYBRIDE + MODULAIRE** est **optimale** :
 
-✅ Code réutilisable (AuthBaseService)
+✅ Code réutilisable (AuthBaseService, MediaService)
 ✅ Spécialisations claires (UserAuth vs SocieteAuth)
 ✅ Interface unifiée pour widgets génériques
+✅ Séparation des responsabilités (upload vs posts)
 ✅ Maintenabilité maximale
-✅ Évolutif (facile d'ajouter un 3ème type)
+✅ Évolutif (facile d'ajouter types/modules)
 
 **Prochaine étape** : Intégrer ces services dans vos pages de connexion et HomePage !

@@ -1,8 +1,80 @@
 import 'dart:convert';
-import 'api_service.dart';
+import '../api_service.dart';
 import 'auth_base_service.dart';
 
-/// Modèle Societe
+/// Modèle SocieteProfil (données détaillées du profil société)
+class SocieteProfilModel {
+  final int id;
+  final int societeId;
+  final String? logo;
+  final String? description;
+  final List<String>? produits;
+  final List<String>? services;
+  final List<String>? centresInteret;
+  final String? siteWeb;
+  final int? nombreEmployes;
+  final int? anneeCreation;
+  final String? chiffreAffaires;
+  final String? certifications;
+
+  SocieteProfilModel({
+    required this.id,
+    required this.societeId,
+    this.logo,
+    this.description,
+    this.produits,
+    this.services,
+    this.centresInteret,
+    this.siteWeb,
+    this.nombreEmployes,
+    this.anneeCreation,
+    this.chiffreAffaires,
+    this.certifications,
+  });
+
+  factory SocieteProfilModel.fromJson(Map<String, dynamic> json) {
+    return SocieteProfilModel(
+      id: json['id'],
+      societeId: json['societe_id'],
+      logo: json['logo'],
+      description: json['description'],
+      produits: json['produits'] != null
+          ? List<String>.from(json['produits'])
+          : null,
+      services: json['services'] != null
+          ? List<String>.from(json['services'])
+          : null,
+      centresInteret: json['centres_interet'] != null
+          ? List<String>.from(json['centres_interet'])
+          : null,
+      siteWeb: json['site_web'],
+      nombreEmployes: json['nombre_employes'],
+      anneeCreation: json['annee_creation'],
+      chiffreAffaires: json['chiffre_affaires'],
+      certifications: json['certifications'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (description != null) 'description': description,
+      if (produits != null) 'produits': produits,
+      if (services != null) 'services': services,
+      if (centresInteret != null) 'centres_interet': centresInteret,
+      if (siteWeb != null) 'site_web': siteWeb,
+      if (nombreEmployes != null) 'nombre_employes': nombreEmployes,
+      if (anneeCreation != null) 'annee_creation': anneeCreation,
+      if (chiffreAffaires != null) 'chiffre_affaires': chiffreAffaires,
+      if (certifications != null) 'certifications': certifications,
+    };
+  }
+
+  String? getLogoUrl() {
+    return logo != null ? '/storage/$logo' : null;
+  }
+}
+
+/// Modèle Societe (données de base)
 class SocieteModel {
   final int id;
   final String nom;
@@ -10,8 +82,7 @@ class SocieteModel {
   final String? telephone;
   final String? adresse;
   final String? secteurActivite;
-  final String? description;
-  final String? logoUrl;
+  final SocieteProfilModel? profile; // Profil imbriqué
 
   SocieteModel({
     required this.id,
@@ -20,8 +91,7 @@ class SocieteModel {
     this.telephone,
     this.adresse,
     this.secteurActivite,
-    this.description,
-    this.logoUrl,
+    this.profile,
   });
 
   factory SocieteModel.fromJson(Map<String, dynamic> json) {
@@ -32,8 +102,9 @@ class SocieteModel {
       telephone: json['telephone'],
       adresse: json['adresse'],
       secteurActivite: json['secteur_activite'],
-      description: json['description'],
-      logoUrl: json['logo_url'],
+      profile: json['profile'] != null
+          ? SocieteProfilModel.fromJson(json['profile'])
+          : null,
     );
   }
 
@@ -42,13 +113,17 @@ class SocieteModel {
       'id': id,
       'nom': nom,
       'email': email,
-      'telephone': telephone,
-      'adresse': adresse,
-      'secteur_activite': secteurActivite,
-      'description': description,
-      'logo_url': logoUrl,
+      if (telephone != null) 'telephone': telephone,
+      if (adresse != null) 'adresse': adresse,
+      if (secteurActivite != null) 'secteur_activite': secteurActivite,
     };
   }
+
+  // Getters de convenance pour accéder au profil
+  String? get logoUrl => profile?.getLogoUrl();
+  String? get description => profile?.description;
+  List<String>? get produits => profile?.produits;
+  List<String>? get services => profile?.services;
 }
 
 /// Service d'authentification pour les SOCIETES
@@ -97,10 +172,7 @@ class SocieteAuthService {
     required String identifiant, // email ou nom de société
     required String password,
   }) async {
-    final data = {
-      'identifiant': identifiant,
-      'password': password,
-    };
+    final data = {'identifiant': identifiant, 'password': password};
 
     final response = await ApiService.post('/auth/societe/login', data);
 
@@ -121,7 +193,7 @@ class SocieteAuthService {
     }
   }
 
-  /// Récupérer les informations de la société connectée
+  /// Récupérer les informations de la société connectée (sans profil)
   static Future<SocieteModel> getMe() async {
     final response = await ApiService.get('/auth/societe/me');
 
@@ -130,6 +202,79 @@ class SocieteAuthService {
       return SocieteModel.fromJson(jsonResponse['data']);
     } else {
       throw Exception('Société non authentifiée');
+    }
+  }
+
+  /// Récupérer le profil complet de la société connectée (avec profil)
+  static Future<SocieteModel> getMyProfile() async {
+    final response = await ApiService.get('/societes/me');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return SocieteModel.fromJson(jsonResponse['data']);
+    } else {
+      throw Exception('Profil non trouvé');
+    }
+  }
+
+  /// Récupérer le profil d'une société par ID
+  static Future<SocieteModel> getSocieteProfile(int societeId) async {
+    final response = await ApiService.get('/societes/$societeId');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return SocieteModel.fromJson(jsonResponse['data']);
+    } else {
+      throw Exception('Société introuvable');
+    }
+  }
+
+  /// Mettre à jour mon profil société
+  static Future<SocieteProfilModel> updateMyProfile(
+    Map<String, dynamic> updates,
+  ) async {
+    final response = await ApiService.put('/societes/me/profile', updates);
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return SocieteProfilModel.fromJson(jsonResponse['data']);
+    } else {
+      throw Exception('Erreur de mise à jour du profil');
+    }
+  }
+
+  /// Upload logo de société
+  static Future<Map<String, dynamic>> uploadLogo(String filePath) async {
+    final response = await ApiService.uploadFile(filePath, 'image');
+
+    if (response != null) {
+      return {'logo': response, 'url': response};
+    } else {
+      throw Exception('Erreur lors de l\'upload du logo');
+    }
+  }
+
+  /// Récupérer les statistiques de ma société
+  static Future<Map<String, dynamic>> getMyStats() async {
+    final response = await ApiService.get('/societes/me/stats');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data'];
+    } else {
+      throw Exception('Erreur de récupération des statistiques');
+    }
+  }
+
+  /// Récupérer les statistiques d'une société
+  static Future<Map<String, dynamic>> getSocieteStats(int societeId) async {
+    final response = await ApiService.get('/societes/$societeId/stats');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data'];
+    } else {
+      throw Exception('Erreur de récupération des statistiques');
     }
   }
 
@@ -226,7 +371,9 @@ class SocieteAuthService {
     if (offset != null) params.add('offset=$offset');
 
     final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
-    final response = await ApiService.get('/societes/advanced-search$queryString');
+    final response = await ApiService.get(
+      '/societes/advanced-search$queryString',
+    );
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);

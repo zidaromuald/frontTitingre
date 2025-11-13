@@ -461,7 +461,7 @@ class GroupeAuthService {
 
   /// Rejoindre un groupe (pour les groupes publics)
   static Future<void> joinGroupe(int groupeId) async {
-    final response = await ApiService.post('/groupes/$groupeId/join', {});
+    final response = await ApiService.post('/groupes/$groupeId/membres/join', {});
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       final error = jsonDecode(response.body);

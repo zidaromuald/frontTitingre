@@ -57,6 +57,18 @@ class GroupeMembreService {
     }
   }
 
+  /// Quitter un groupe (sortie volontaire)
+  /// POST /groupes/:groupeId/leave
+  /// Nécessite authentification
+  static Future<void> leaveGroupe(int groupeId) async {
+    final response = await ApiService.post('/groupes/$groupeId/leave', {});
+
+    if (response.statusCode != 200) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Impossible de quitter le groupe');
+    }
+  }
+
   // ==========================================================================
   // GESTION DES RÔLES
   // ==========================================================================

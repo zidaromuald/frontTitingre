@@ -5,6 +5,7 @@ import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/groupe/groupe_service.dart';
 import 'user_profile_page.dart';
 import 'societe_profile_page.dart';
+import 'groupe_profile_page.dart';
 
 /// Page de recherche globale pour Users, Groupes et Sociétés
 /// Utilise l'autocomplétion en temps réel avec debouncing
@@ -454,41 +455,6 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// Page de profil Groupe temporaire (TODO: créer la vraie page)
-class GroupeProfilePage extends StatelessWidget {
-  final int groupeId;
-  const GroupeProfilePage({super.key, required this.groupeId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Profil Groupe #$groupeId'),
-        backgroundColor: const Color(0xff5ac18e),
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.group, size: 80, color: Colors.grey),
-            const SizedBox(height: 16),
-            Text(
-              'Page de profil groupe à implémenter',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Groupe ID: $groupeId',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
       ),
     );
   }

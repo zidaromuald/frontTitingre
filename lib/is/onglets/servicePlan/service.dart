@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
-import 'package:gestauth_clean/iu/onglets/recherche/global_search_page.dart';
 
 class ServicePage extends StatefulWidget {
   const ServicePage({super.key});
@@ -128,12 +127,7 @@ class _ServicePageState extends State<ServicePage> {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const GlobalSearchPage(),
-                ),
-              );
+              // Action de recherche
             },
             icon: const Icon(Icons.search, color: Colors.white),
           ),

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'api_service.dart';
+import '../api_service.dart';
 import 'auth_base_service.dart';
 
 /// Modèle UserProfil (données détaillées du profil)
@@ -225,7 +225,8 @@ class UserAuthService {
 
   /// Mettre à jour mon profil
   static Future<UserProfilModel> updateMyProfile(
-      Map<String, dynamic> updates) async {
+    Map<String, dynamic> updates,
+  ) async {
     final response = await ApiService.put('/users/me/profile', updates);
 
     if (response.statusCode == 200) {
@@ -237,70 +238,25 @@ class UserAuthService {
   }
 
   /// Upload photo de profil
+  /// POST /users/me/photo
   static Future<Map<String, dynamic>> uploadProfilePhoto(
-      String filePath) async {
-    final response = await ApiService.uploadFile(filePath, 'image');
+    String filePath,
+  ) async {
+    final response = await ApiService.uploadFileToEndpoint(
+      filePath,
+      '/users/me/photo',
+      fieldName: 'file',
+    );
 
-    if (response != null) {
-      return {'photo': response, 'url': response};
-    } else {
-      throw Exception('Erreur lors de l\'upload de la photo');
-    }
-  }
-
-  /// Récupérer les statistiques de mon profil
-  static Future<Map<String, dynamic>> getMyStats() async {
-    final response = await ApiService.get('/users/me/stats');
-
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
-      return jsonResponse['data'];
+      return jsonResponse['data']; // Retourne { photo: '...', url: '...' }
     } else {
-      throw Exception('Erreur de récupération des statistiques');
+      final error = jsonDecode(response.body);
+      throw Exception(
+        error['message'] ?? 'Erreur lors de l\'upload de la photo',
+      );
     }
-  }
-
-  /// Récupérer les statistiques d'un utilisateur
-  static Future<Map<String, dynamic>> getUserStats(int userId) async {
-    final response = await ApiService.get('/users/$userId/stats');
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return jsonResponse['data'];
-    } else {
-      throw Exception('Erreur de récupération des statistiques');
-    }
-  }
-
-  /// Déconnexion
-  static Future<void> logout() async {
-    try {
-      await ApiService.post('/auth/logout', {});
-    } catch (e) {
-      // Même si l'appel échoue, on déconnecte localement
-    } finally {
-      await AuthBaseService.logout();
-    }
-  }
-
-  /// Déconnexion de tous les appareils
-  static Future<void> logoutAll() async {
-    try {
-      await ApiService.post('/auth/logout-all', {});
-    } catch (e) {
-      // Même si l'appel échoue, on déconnecte localement
-    } finally {
-      await AuthBaseService.logout();
-    }
-  }
-
-  /// Récupérer l'utilisateur depuis le cache local
-  static Future<UserModel?> getCachedUser() async {
-    final userData = await AuthBaseService.getUserData();
-    if (userData != null) {
-      return UserModel.fromJson(userData);
-    }
-    return null;
   }
 
   /// Rechercher des utilisateurs
@@ -339,9 +295,64 @@ class UserAuthService {
     }
   }
 
+  /// Déconnexion
+  static Future<void> logout() async {
+    try {
+      await ApiService.post('/auth/logout', {});
+    } catch (e) {
+      // Même si l'appel échoue, on déconnecte localement
+    } finally {
+      await AuthBaseService.logout();
+    }
+  }
+
+  /// Déconnexion de tous les appareils
+  static Future<void> logoutAll() async {
+    try {
+      await ApiService.post('/auth/logout-all', {});
+    } catch (e) {
+      // Même si l'appel échoue, on déconnecte localement
+    } finally {
+      await AuthBaseService.logout();
+    }
+  }
+
   /// Vérifier si l'utilisateur est connecté
   static Future<bool> isLoggedIn() async {
     final userType = await AuthBaseService.getUserType();
     return userType == 'user' && await AuthBaseService.isAuthenticated();
+  }
+
+  /// Récupérer l'utilisateur depuis le cache local
+  static Future<UserModel?> getCachedUser() async {
+    final userData = await AuthBaseService.getUserData();
+    if (userData != null) {
+      return UserModel.fromJson(userData);
+    }
+    return null;
+  }
+
+  /// Récupérer les statistiques de mon profil
+  static Future<Map<String, dynamic>> getMyStats() async {
+    final response = await ApiService.get('/users/me/stats');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data'];
+    } else {
+      throw Exception('Erreur de récupération des statistiques');
+    }
+  }
+
+  /// Récupérer les statistiques d'un utilisateur
+  static Future<Map<String, dynamic>> getUserStats(int userId) async {
+    final response = await ApiService.get('/users/$userId/stats');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data'];
+    } else {
+      throw Exception('Erreur de récupération des statistiques');
+    }
   }
 }

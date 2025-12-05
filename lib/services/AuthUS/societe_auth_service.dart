@@ -129,23 +129,28 @@ class SocieteModel {
 /// Service d'authentification pour les SOCIETES
 class SocieteAuthService {
   /// Inscription d'une société
+  /// Correspond au CreateSocieteDto du backend NestJS
   static Future<SocieteModel> register({
-    required String nom,
+    required String nomSociete,
+    required String numero,
     required String email,
+    required String centreInteret,
+    required String secteurActivite,
+    required String typeProduit,
     required String password,
-    String? telephone,
+    required String passwordConfirmation,
     String? adresse,
-    String? secteurActivite,
-    String? description,
   }) async {
     final data = {
-      'nom': nom,
+      'nom_societe': nomSociete,
+      'numero': numero,
       'email': email,
+      'centre_interet': centreInteret,
+      'secteur_activite': secteurActivite,
+      'type_produit': typeProduit,
       'password': password,
-      if (telephone != null) 'telephone': telephone,
+      'password_confirmation': passwordConfirmation,
       if (adresse != null) 'adresse': adresse,
-      if (secteurActivite != null) 'secteur_activite': secteurActivite,
-      if (description != null) 'description': description,
     };
 
     final response = await ApiService.post('/auth/societe/register', data);
@@ -244,13 +249,20 @@ class SocieteAuthService {
   }
 
   /// Upload logo de société
+  /// POST /societes/me/logo
   static Future<Map<String, dynamic>> uploadLogo(String filePath) async {
-    final response = await ApiService.uploadFile(filePath, 'image');
+    final response = await ApiService.uploadFileToEndpoint(
+      filePath,
+      '/societes/me/logo',
+      fieldName: 'file',
+    );
 
-    if (response != null) {
-      return {'logo': response, 'url': response};
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data']; // Retourne { logo: '...', url: '...' }
     } else {
-      throw Exception('Erreur lors de l\'upload du logo');
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Erreur lors de l\'upload du logo');
     }
   }
 

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../../services/AuthUS/user_auth_service.dart';
+import '../../../widgets/editable_profile_avatar.dart';
 
 class ProfilDetailPage extends StatefulWidget {
-  final Map<String, dynamic> userProfile;
-
-  const ProfilDetailPage({super.key, required this.userProfile});
+  const ProfilDetailPage({super.key});
 
   @override
   State<ProfilDetailPage> createState() => _ProfilDetailPageState();
 }
 
 class _ProfilDetailPageState extends State<ProfilDetailPage> {
+  // Controllers
   late TextEditingController _nomController;
   late TextEditingController _prenomController;
   late TextEditingController _emailController;
@@ -18,6 +19,13 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
   late TextEditingController _experienceController;
   late TextEditingController _formationController;
 
+  // État
+  bool _isLoading = true;
+  bool _isSaving = false;
+  String? _photoUrl;
+  List<String> _competences = [];
+
+  // Couleurs
   static const Color mattermostBlue = Color(0xFF1E4A8C);
   static const Color mattermostGreen = Color(0xFF28A745);
   static const Color mattermostGray = Color(0xFFF4F4F4);
@@ -25,21 +33,163 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
   @override
   void initState() {
     super.initState();
-    _nomController = TextEditingController(text: widget.userProfile['nom']);
-    _prenomController =
-        TextEditingController(text: widget.userProfile['prenom']);
-    _emailController = TextEditingController(text: widget.userProfile['email']);
-    _numeroController =
-        TextEditingController(text: widget.userProfile['numero']);
-    _bioController = TextEditingController(text: widget.userProfile['bio']);
-    _experienceController =
-        TextEditingController(text: widget.userProfile['experience']);
-    _formationController =
-        TextEditingController(text: widget.userProfile['formation']);
+    _nomController = TextEditingController();
+    _prenomController = TextEditingController();
+    _emailController = TextEditingController();
+    _numeroController = TextEditingController();
+    _bioController = TextEditingController();
+    _experienceController = TextEditingController();
+    _formationController = TextEditingController();
+
+    _loadMyProfile();
+  }
+
+  /// Charger le profil de l'utilisateur connecté
+  Future<void> _loadMyProfile() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Appel à l'API pour récupérer MON profil
+      final userModel = await UserAuthService.getMyProfile();
+
+      setState(() {
+        // Remplir les controllers avec les données récupérées
+        _nomController.text = userModel.nom;
+        _prenomController.text = userModel.prenom;
+        _emailController.text = userModel.email ?? '';
+        _numeroController.text = userModel.numero;
+
+        // La photo est dans profile.photo
+        _photoUrl = userModel.profile?.photo;
+
+        // Charger les données du profil enrichi si disponibles
+        if (userModel.profile != null) {
+          _bioController.text = userModel.profile!.bio ?? '';
+          _experienceController.text = userModel.profile!.experience ?? '';
+          _formationController.text = userModel.profile!.formation ?? '';
+          _competences = userModel.profile!.competences ?? [];
+        }
+
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de chargement du profil: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Sauvegarder les modifications du profil
+  Future<void> _saveProfile() async {
+    setState(() => _isSaving = true);
+
+    try {
+      // Préparer les données à mettre à jour
+      final updates = <String, dynamic>{
+        'bio': _bioController.text.trim(),
+        'experience': _experienceController.text.trim(),
+        'formation': _formationController.text.trim(),
+        'competences': _competences,
+      };
+
+      // Appel à l'API pour mettre à jour le profil
+      await UserAuthService.updateMyProfile(updates);
+
+      setState(() => _isSaving = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Profil sauvegardé avec succès"),
+            backgroundColor: mattermostGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+
+  /// Ajouter une compétence
+  void _addCompetence() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text("Ajouter une compétence"),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: "Ex: Flutter"),
+            textCapitalization: TextCapitalization.words,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Annuler"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text.trim().isNotEmpty) {
+                  setState(() {
+                    _competences.add(controller.text.trim());
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: mattermostBlue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Ajouter"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Retirer une compétence
+  void _removeCompetence(String competence) {
+    setState(() {
+      _competences.remove(competence);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: mattermostGray,
+        appBar: AppBar(
+          backgroundColor: mattermostBlue,
+          title: const Text(
+            "Mon Profil",
+            style: TextStyle(color: Colors.white),
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: mattermostGray,
       appBar: AppBar(
@@ -48,118 +198,172 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            onPressed: _saveProfile,
-            icon: const Icon(Icons.save, color: Colors.white),
+            onPressed: _isSaving ? null : _saveProfile,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.save, color: Colors.white),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Photo de profil
-            Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: mattermostBlue,
-                    child: widget.userProfile['photo'] != null
-                        ? ClipOval(
-                            child: Image.network(widget.userProfile['photo']))
-                        : Text(
-                            "${widget.userProfile['prenom'][0]}${widget.userProfile['nom'][0]}",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _changePhoto,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: mattermostGreen,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.camera_alt,
-                            color: Colors.white, size: 16),
+      body: RefreshIndicator(
+        onRefresh: _loadMyProfile,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Photo de profil
+              Center(
+                child: EditableProfileAvatar(
+                  size: 100,
+                  currentPhotoUrl: _photoUrl,
+                  onPhotoUpdated: (newUrl) {
+                    setState(() {
+                      _photoUrl = newUrl;
+                    });
+                  },
+                  borderColor: mattermostBlue,
+                  borderWidth: 4,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Informations non modifiables (affichées uniquement)
+              _buildReadOnlyCard("Nom", _nomController.text),
+              _buildReadOnlyCard("Prénom", _prenomController.text),
+              _buildReadOnlyCard("Email", _emailController.text),
+              _buildReadOnlyCard("Numéro", _numeroController.text),
+
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+
+              // Formulaire modifiable
+              _buildTextField("Bio", _bioController, maxLines: 3),
+              _buildTextField("Expérience", _experienceController, maxLines: 2),
+              _buildTextField("Formation", _formationController, maxLines: 2),
+
+              const SizedBox(height: 24),
+
+              // Compétences
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Compétences",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Formulaire
-            _buildTextField("Nom", _nomController),
-            _buildTextField("Prénom", _prenomController),
-            _buildTextField("Email", _emailController),
-            _buildTextField("Numéro", _numeroController),
-            _buildTextField("Bio", _bioController, maxLines: 3),
-            _buildTextField("Expérience", _experienceController, maxLines: 2),
-            _buildTextField("Formation", _formationController, maxLines: 2),
-
-            const SizedBox(height: 24),
-
-            // Compétences
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Compétences",
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: (widget.userProfile['competences']
-                            as List<String>)
-                        .map((competence) => Chip(
-                              label: Text(competence,
-                                  style: const TextStyle(fontSize: 12)),
-                              backgroundColor: mattermostBlue.withOpacity(0.1),
-                              deleteIcon: const Icon(Icons.close, size: 16),
-                              onDeleted: () => _removeCompetence(competence),
-                            ))
-                        .toList(),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: _addCompetence,
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text("Ajouter"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: mattermostBlue,
-                      foregroundColor: Colors.white,
+                    const SizedBox(height: 8),
+                    if (_competences.isEmpty)
+                      const Text(
+                        "Aucune compétence ajoutée",
+                        style: TextStyle(color: Colors.grey),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: _competences
+                            .map(
+                              (competence) => Chip(
+                                label: Text(
+                                  competence,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                backgroundColor: mattermostBlue.withOpacity(
+                                  0.1,
+                                ),
+                                deleteIcon: const Icon(Icons.close, size: 16),
+                                onDeleted: () => _removeCompetence(competence),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: _addCompetence,
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text("Ajouter une compétence"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mattermostBlue,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {int maxLines = 1}) {
+  /// Widget pour les champs en lecture seule
+  Widget _buildReadOnlyCard(String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value.isEmpty ? 'Non renseigné' : value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: value.isEmpty ? Colors.grey : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.lock_outline, color: Colors.grey.shade400, size: 20),
+        ],
+      ),
+    );
+  }
+
+  /// Widget pour les champs de texte modifiables
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: TextField(
@@ -173,65 +377,15 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide.none,
           ),
-        ),
-      ),
-    );
-  }
-
-  void _changePhoto() {
-    // Logique pour changer la photo
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Fonctionnalité de changement de photo")),
-    );
-  }
-
-  void _addCompetence() {
-    // Logique pour ajouter une compétence
-    showDialog(
-      context: context,
-      builder: (context) {
-        final controller = TextEditingController();
-        return AlertDialog(
-          title: const Text("Ajouter une compétence"),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: "Ex: Flutter"),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Annuler"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (controller.text.isNotEmpty) {
-                  setState(() {
-                    (widget.userProfile['competences'] as List<String>)
-                        .add(controller.text);
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Ajouter"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _removeCompetence(String competence) {
-    setState(() {
-      (widget.userProfile['competences'] as List<String>).remove(competence);
-    });
-  }
-
-  void _saveProfile() {
-    // Logique pour sauvegarder le profil
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Profil sauvegardé avec succès"),
-        backgroundColor: mattermostGreen,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: mattermostBlue, width: 2),
+          ),
+        ),
       ),
     );
   }

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'api_service.dart';
+import '../api_service.dart';
 
 // ============================================================================
 // ENUMS
@@ -460,8 +460,12 @@ class GroupeAuthService {
   // ==========================================================================
 
   /// Rejoindre un groupe (pour les groupes publics)
+  /// @deprecated Utilisez GroupeMembreService.joinGroupe() à la place
   static Future<void> joinGroupe(int groupeId) async {
-    final response = await ApiService.post('/groupes/$groupeId/membres/join', {});
+    final response = await ApiService.post(
+      '/groupes/$groupeId/membres/join',
+      {},
+    );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       final error = jsonDecode(response.body);
@@ -480,6 +484,7 @@ class GroupeAuthService {
   }
 
   /// Récupérer la liste des membres d'un groupe
+  /// @deprecated Utilisez GroupeMembreService.getMembres() à la place
   static Future<List<Map<String, dynamic>>> getGroupeMembres(
     int groupeId, {
     int? limit,
@@ -503,6 +508,7 @@ class GroupeAuthService {
   }
 
   /// Retirer un membre du groupe
+  /// @deprecated Utilisez GroupeMembreService.removeMembre() à la place
   static Future<void> removeMembre(int groupeId, int userId) async {
     final response = await ApiService.delete(
       '/groupes/$groupeId/membres/$userId',
@@ -515,6 +521,7 @@ class GroupeAuthService {
   }
 
   /// Mettre à jour le rôle d'un membre
+  /// @deprecated Utilisez GroupeMembreService.updateMembreRole() à la place
   static Future<void> updateMembreRole(
     int groupeId,
     int userId,
@@ -534,6 +541,7 @@ class GroupeAuthService {
   }
 
   /// Suspendre un membre
+  /// @deprecated Utilisez GroupeMembreService.suspendMembre() à la place
   static Future<void> suspendMembre(int groupeId, int userId) async {
     final response = await ApiService.post(
       '/groupes/$groupeId/membres/$userId/suspend',
@@ -547,6 +555,7 @@ class GroupeAuthService {
   }
 
   /// Bannir un membre
+  /// @deprecated Utilisez GroupeMembreService.banMembre() à la place
   static Future<void> banMembre(int groupeId, int userId) async {
     final response = await ApiService.post(
       '/groupes/$groupeId/membres/$userId/ban',
@@ -564,6 +573,7 @@ class GroupeAuthService {
   // ==========================================================================
 
   /// Inviter un utilisateur à rejoindre le groupe
+  /// @deprecated Utilisez GroupeInvitationService.inviteMembre() à la place
   static Future<GroupeInvitationModel> inviteMembre({
     required int groupeId,
     required int userId,
@@ -586,6 +596,7 @@ class GroupeAuthService {
   }
 
   /// Récupérer mes invitations en attente
+  /// @deprecated Utilisez GroupeInvitationService.getMyInvitations() à la place
   static Future<List<GroupeInvitationModel>> getMyInvitations() async {
     final response = await ApiService.get('/groupes/invitations/me');
 
@@ -601,6 +612,7 @@ class GroupeAuthService {
   }
 
   /// Accepter une invitation
+  /// @deprecated Utilisez GroupeInvitationService.acceptInvitation() à la place
   static Future<void> acceptInvitation(int invitationId) async {
     final response = await ApiService.post(
       '/groupes/invitations/$invitationId/accept',
@@ -616,6 +628,7 @@ class GroupeAuthService {
   }
 
   /// Refuser une invitation
+  /// @deprecated Utilisez GroupeInvitationService.declineInvitation() à la place
   static Future<void> declineInvitation(int invitationId) async {
     final response = await ApiService.post(
       '/groupes/invitations/$invitationId/decline',
@@ -634,7 +647,22 @@ class GroupeAuthService {
   // GESTION DU PROFIL DU GROUPE
   // ==========================================================================
 
+  /// Récupérer le profil d'un groupe
+  /// GET /groupes/:groupeId/profil
+  /// @deprecated Utilisez GroupeProfilService.getProfil() à la place
+  static Future<GroupeModel> getGroupeProfil(int groupeId) async {
+    final response = await ApiService.get('/groupes/$groupeId/profil');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return GroupeModel.fromJson(jsonResponse['data']);
+    } else {
+      throw Exception('Erreur de récupération du profil');
+    }
+  }
+
   /// Mettre à jour le profil du groupe
+  /// @deprecated Utilisez GroupeProfilService.updateProfil() à la place
   static Future<GroupeProfilModel> updateGroupeProfil(
     int groupeId,
     Map<String, dynamic> updates,

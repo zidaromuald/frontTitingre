@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gestauth_clean/iu/onglets/paramInfo/categorie.dart';
-import 'package:gestauth_clean/iu/onglets/paramInfo/profil.dart';
+import 'package:gestauth_clean/is/onglets/paramInfo/categorie.dart';
+import 'package:gestauth_clean/is/onglets/paramInfo/profil.dart';
 
 class ParametrePage extends StatefulWidget {
   const ParametrePage({super.key});
@@ -495,9 +495,7 @@ class _ParametrePageState extends State<ParametrePage> {
   void _navigateToProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ProfilDetailPage(),
-      ),
+      MaterialPageRoute(builder: (context) => ProfilDetailPage()),
     );
   }
 

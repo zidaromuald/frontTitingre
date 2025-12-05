@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:gestauth_clean/is/AccueilPage.dart';
 import 'package:gestauth_clean/is/InscriptionSPage.dart';
 import 'package:gestauth_clean/iu/HomePage.dart';
-import 'package:gestauth_clean/models/authSIns.dart';
 import 'package:gestauth_clean/iu/InscriptionUPage.dart';
-import 'package:gestauth_clean/models/authIns.dart';
+import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
+import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ALTERNATIVE: Version avec sélecteur de page pour tests
-  Future<void> _handleLogin() async {
+  /*Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -127,10 +127,10 @@ class _LoginScreenState extends State<LoginScreen> {
         },
       );
     }
-  }
+  }*/
 
   // Logique de connexion améliorée
-  /*Future<void> _handleLogin() async {
+  Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -143,52 +143,50 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     try {
-      Map<String, dynamic>? response;
+      // Essayer d'abord de se connecter comme User
+      try {
+        await UserAuthService.login(
+          identifiant: emailOrPhone,
+          password: password,
+        );
+        _showMessage('Connexion réussie !');
 
-      // Déterminer le type d'authentification
-      if (_isValidEmail(emailOrPhone)) {
-        final authService = AuthService();
-        response =
-            await authService.login(emailOrPhone, password, _showMessage);
-      } else if (_isValidPhone(emailOrPhone)) {
-        final authService = AuthsService();
-        response =
-            await authService.login(emailOrPhone, password, _showMessage);
-      } else {
-        _showMessage('Format d\'email ou de téléphone invalide', isError: true);
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomePage()),
+          );
+        }
         return;
-      }
+      } catch (userError) {
+        // Si User échoue, essayer Societe
+        try {
+          await SocieteAuthService.login(
+            identifiant: emailOrPhone,
+            password: password,
+          );
+          _showMessage('Connexion réussie !');
 
-      // Traitement de la réponse
-      if (response != null && response['status'] == true) {
-        final userType = response['userType'] ?? '';
-
-        if (userType == 'societe') {
-          _showMessage('Société connectée avec succès');
           if (mounted) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => AccueilPage()),
             );
           }
-        } else if (userType == 'user') {
-          _showMessage('Utilisateur connecté avec succès');
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => HomePage()),
-            );
-          }
-        } else {
-          _showMessage('Type d\'utilisateur non reconnu', isError: true);
+          return;
+        } catch (societeError) {
+          // Les deux ont échoué
+          _showMessage(
+            'Email/Téléphone ou mot de passe incorrect',
+            isError: true,
+          );
         }
-      } else {
-        final errorMessage = response?['message'] ?? 'Connexion échouée';
-        _showMessage(errorMessage, isError: true);
       }
     } catch (e) {
-      _showMessage('Une erreur est survenue. Veuillez réessayer.',
-          isError: true);
+      _showMessage(
+        'Une erreur est survenue. Veuillez réessayer.',
+        isError: true,
+      );
       debugPrint('Exception lors de la connexion: $e');
     } finally {
       if (mounted) {
@@ -197,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
-  }*/
+  }
 
   // Widget pour le champ Email/Téléphone avec validation
   Widget _buildEmailOrPhoneField() {

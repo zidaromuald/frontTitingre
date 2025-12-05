@@ -385,7 +385,7 @@ POST /media/upload/document
    → Crée le post avec les URLs
 ```
 
-**Voir [MEDIA_USAGE_EXAMPLE.md](./MEDIA_USAGE_EXAMPLE.md) pour des exemples détaillés.**
+**Voir [MEDIA_USAGE_EXAMPLE.md](documentation/MEDIA_USAGE_EXAMPLE.md) pour des exemples détaillés.**
 
 ---
 

@@ -1,7 +1,35 @@
 import 'package:flutter/material.dart';
+import '../services/AuthUS/societe_auth_service.dart';
+import '../widgets/editable_societe_avatar.dart';
+import '../iu/onglets/recherche/global_search_page.dart';
 
-class AccueilPage extends StatelessWidget {
+class AccueilPage extends StatefulWidget {
   const AccueilPage({super.key});
+
+  @override
+  State<AccueilPage> createState() => _AccueilPageState();
+}
+
+class _AccueilPageState extends State<AccueilPage> {
+  String? _currentLogoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSocieteLogo();
+  }
+
+  Future<void> _loadSocieteLogo() async {
+    try {
+      final societe = await SocieteAuthService.getMyProfile();
+      setState(() {
+        _currentLogoUrl = societe.profile?.logo;
+      });
+    } catch (e) {
+      // La société n'est peut-être pas connectée
+      print('Erreur de chargement du logo: $e');
+    }
+  }
 
   Widget buildCerealCard(String imagePath, String title) {
     return Container(
@@ -211,7 +239,15 @@ class AccueilPage extends StatelessWidget {
                       right: 180,
                       child: Row(
                         children: [
-                          _ProfileAvatar(size: size.width * 0.18),
+                          EditableSocieteAvatar(
+                            size: size.width * 0.18,
+                            currentLogoUrl: _currentLogoUrl,
+                            onLogoUpdated: (newUrl) {
+                              setState(() {
+                                _currentLogoUrl = newUrl;
+                              });
+                            },
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -244,18 +280,29 @@ class AccueilPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Boutons carrés (Publication, Page privée, Paramètres)
-                    const Positioned(
+                    // Boutons carrés (Publication, Recherche, Paramètres)
+                    Positioned(
                       top: 16,
                       right: 16,
                       child: Row(
                         children: [
-                          _SquareAction(
+                          const _SquareAction(
                               label: '1', icon: Icons.add_circle_outline),
-                          SizedBox(width: 10),
-                          _SquareAction(label: '2', icon: Icons.group),
-                          SizedBox(width: 10),
+                          const SizedBox(width: 10),
                           _SquareAction(
+                            label: '2',
+                            icon: Icons.search,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const GlobalSearchPage(),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 10),
+                          const _SquareAction(
                               label: '3', icon: Icons.settings_outlined),
                         ],
                       ),
@@ -333,43 +380,11 @@ class AccueilPage extends StatelessWidget {
 }
 
 // ————— Widgets —————
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.size});
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: size,
-      height: size,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [cs.onPrimary.withOpacity(.2), Colors.white24],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.15),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          )
-        ],
-      ),
-      child: const CircleAvatar(
-        backgroundImage: AssetImage('assets/avatar_placeholder.png'),
-      ),
-    );
-  }
-}
-
 class _SquareAction extends StatelessWidget {
-  const _SquareAction({required this.label, required this.icon});
+  const _SquareAction({required this.label, required this.icon, this.onTap});
   final String label;
   final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -393,7 +408,7 @@ class _SquareAction extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () {},
+          onTap: onTap,
           child: Stack(
             alignment: Alignment.center,
             children: [

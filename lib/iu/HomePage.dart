@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gestauth_clean/iu/onglets/parametre.dart';
-import 'package:gestauth_clean/iu/onglets/post.dart';
+import 'package:gestauth_clean/iu/onglets/paramInfo/parametre.dart';
+import 'package:gestauth_clean/iu/onglets/postInfo/post.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/service.dart';
 
 class HomePage extends StatelessWidget {

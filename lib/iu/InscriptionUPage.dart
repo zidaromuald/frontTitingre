@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gestauth_clean/iu/HomePage.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import '../models/authIns.dart';
+import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 
 class InscriptionUPage extends StatefulWidget {
   const InscriptionUPage({super.key});
@@ -100,19 +100,29 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
     }
 
     try {
-      final authService = AuthService();
-      final success = await authService.register(
-        nom,
-        prenom,
-        numero,
-        email,
-        dateNaissance,
-        password,
-        confirmPassword,
-        _showMessage,
+      // Convertir la date de naissance de "dd/mm/yyyy" en DateTime
+      DateTime? dateNaissanceObj;
+      if (dateNaissance.isNotEmpty) {
+        final parts = dateNaissance.split('/');
+        if (parts.length == 3) {
+          dateNaissanceObj = DateTime(
+            int.parse(parts[2]), // année
+            int.parse(parts[1]), // mois
+            int.parse(parts[0]), // jour
+          );
+        }
+      }
+
+      await UserAuthService.register(
+        nom: nom,
+        prenom: prenom,
+        numero: numero,
+        password: password,
+        email: email.isNotEmpty ? email : null,
+        dateNaissance: dateNaissanceObj,
       );
 
-      if (success && mounted) {
+      if (mounted) {
         _showMessage('Inscription réussie !');
         Navigator.pushReplacement(
           context,
@@ -163,6 +173,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
           child: TextFormField(
             controller: _nomController,
             keyboardType: TextInputType.name,
+            maxLength: 255,
             style: const TextStyle(color: Colors.black87),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -180,6 +191,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
               hintText: 'Votre nom',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
+              counterText: '',
             ),
           ),
         ),
@@ -216,6 +228,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
           child: TextFormField(
             controller: _prenomController,
             keyboardType: TextInputType.name,
+            maxLength: 255,
             style: const TextStyle(color: Colors.black87),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -233,6 +246,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
               hintText: 'Votre prénom',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
+              counterText: '',
             ),
           ),
         ),

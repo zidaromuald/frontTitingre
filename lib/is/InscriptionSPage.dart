@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gestauth_clean/is/AccueilPage.dart';
-import 'package:gestauth_clean/models/authSIns.dart';
+import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 
 class InscriptionSPage extends StatefulWidget {
@@ -97,20 +97,18 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
     }
 
     try {
-      final authService = AuthsService();
-      final success = await authService.register(
-        societe,
-        numero,
-        email,
-        _selectedCentreInteret!,
-        _selectedDomaine!,
-        typeProduit,
-        password,
-        confirmPassword,
-        _showMessage,
+      await SocieteAuthService.register(
+        nomSociete: societe,
+        numero: numero,
+        email: email,
+        centreInteret: _selectedCentreInteret!,
+        secteurActivite: _selectedDomaine!,
+        typeProduit: typeProduit,
+        password: password,
+        passwordConfirmation: confirmPassword,
       );
 
-      if (success && mounted) {
+      if (mounted) {
         _showMessage('Inscription réussie !');
         Navigator.pushReplacement(
           context,
@@ -232,7 +230,6 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
               return null;
             },
             onChanged: (phone) {
-              // ✅ SOLUTION: Stocker le numéro complet dans le contrôleur
               setState(() {
                 _numeroController.text = phone.completeNumber;
               });

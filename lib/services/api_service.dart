@@ -88,10 +88,15 @@ class ApiService {
     }
   }
 
-  /// Upload de fichier (image, vidéo, audio)
-  static Future<String?> uploadFile(String filePath, String fileType) async {
+  /// Upload de fichier vers un endpoint spécifique (générique)
+  static Future<http.Response> uploadFileToEndpoint(
+    String filePath,
+    String endpoint, {
+    String fieldName = 'file',
+    Map<String, String>? additionalFields,
+  }) async {
     final token = await _getToken();
-    final uri = Uri.parse('$baseUrl/posts/upload');
+    final uri = Uri.parse('$baseUrl$endpoint');
 
     try {
       var request = http.MultipartRequest('POST', uri);
@@ -103,14 +108,31 @@ class ApiService {
 
       // Ajouter le fichier
       request.files.add(
-        await http.MultipartFile.fromPath('file', filePath),
+        await http.MultipartFile.fromPath(fieldName, filePath),
       );
 
-      // Ajouter le type de fichier
-      request.fields['type'] = fileType;
+      // Ajouter des champs supplémentaires si fournis
+      if (additionalFields != null) {
+        request.fields.addAll(additionalFields);
+      }
 
       final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+      return await http.Response.fromStream(streamedResponse);
+    } catch (e) {
+      throw Exception('Erreur d\'upload: $e');
+    }
+  }
+
+  /// Upload de fichier (image, vidéo, audio) pour les posts
+  /// @deprecated Utiliser uploadFileToEndpoint() pour plus de flexibilité
+  static Future<String?> uploadFile(String filePath, String fileType) async {
+    try {
+      final response = await uploadFileToEndpoint(
+        filePath,
+        '/posts/upload',
+        fieldName: 'file',
+        additionalFields: {'type': fileType},
+      );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);

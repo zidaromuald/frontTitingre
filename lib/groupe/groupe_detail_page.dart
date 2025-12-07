@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/groupe/groupe_service.dart';
 import '../services/groupe/groupe_membre_service.dart';
+import '../services/groupe/groupe_invitation_service.dart';
+import '../services/AuthUS/user_auth_service.dart';
 
 /// Page de détail d'un groupe
 /// Affiche les informations, membres, et permet la gestion
@@ -209,6 +211,204 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
     }
   }
 
+  /// Afficher le dialog de recherche et invitation d'utilisateurs
+  Future<void> _showInviteUserDialog() async {
+    final TextEditingController searchController = TextEditingController();
+    List<UserModel> searchResults = [];
+    bool isSearching = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Inviter un utilisateur'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Champ de recherche
+                TextField(
+                  controller: searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher par nom ou email',
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: isSearching
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) async {
+                    if (value.length < 2) {
+                      setDialogState(() {
+                        searchResults = [];
+                      });
+                      return;
+                    }
+
+                    setDialogState(() => isSearching = true);
+
+                    try {
+                      final results = await UserAuthService.searchUsers(
+                        query: value,
+                        limit: 10,
+                      );
+                      setDialogState(() {
+                        searchResults = results;
+                        isSearching = false;
+                      });
+                    } catch (e) {
+                      setDialogState(() => isSearching = false);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Résultats de recherche
+                if (searchResults.isNotEmpty)
+                  SizedBox(
+                    height: 300,
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: searchResults.length,
+                      itemBuilder: (context, index) {
+                        final user = searchResults[index];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: primaryColor,
+                            backgroundImage: user.profile?.photo != null
+                                ? NetworkImage(user.profile!.photo!)
+                                : null,
+                            child: user.profile?.photo == null
+                                ? Text(
+                                    user.nom.substring(0, 1).toUpperCase(),
+                                    style: const TextStyle(color: Colors.white),
+                                  )
+                                : null,
+                          ),
+                          title: Text('${user.nom} ${user.prenom}'),
+                          subtitle: Text(user.email ?? user.numero),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.send, color: primaryColor),
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              await _sendInvitation(user);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                else if (searchController.text.length >= 2 && !isSearching)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Aucun utilisateur trouvé',
+                      style: TextStyle(color: darkGray),
+                    ),
+                  )
+                else if (searchController.text.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Entrez un nom ou email pour rechercher',
+                      style: TextStyle(color: darkGray),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Fermer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Envoyer une invitation à un utilisateur
+  Future<void> _sendInvitation(UserModel user) async {
+    // Dialog pour message optionnel
+    final messageController = TextEditingController();
+    final message = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Inviter ${user.nom} ${user.prenom}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Envoyer une invitation à rejoindre "${_groupe!.nom}"',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: messageController,
+              decoration: const InputDecoration(
+                hintText: 'Message (optionnel)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, messageController.text),
+            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+            child: const Text('Envoyer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (message == null) return; // User a annulé
+
+    // Envoyer l'invitation
+    try {
+      await GroupeInvitationService.inviteMembre(
+        groupeId: widget.groupeId,
+        invitedUserId: user.id,
+        message: message.isEmpty ? null : message,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Invitation envoyée à ${user.nom} ${user.prenom}',
+            ),
+            backgroundColor: primaryColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur : ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -271,15 +471,30 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                 tabs: const [
                   Tab(text: 'Infos', icon: Icon(Icons.info_outline, size: 20)),
                   Tab(
-                      text: 'Membres',
-                      icon: Icon(Icons.people_outline, size: 20)),
-                  Tab(text: 'Posts', icon: Icon(Icons.article_outlined, size: 20)),
+                    text: 'Membres',
+                    icon: Icon(Icons.people_outline, size: 20),
+                  ),
+                  Tab(
+                    text: 'Posts',
+                    icon: Icon(Icons.article_outlined, size: 20),
+                  ),
                 ],
               )
             : null,
       ),
       body: _buildBody(),
       bottomNavigationBar: _buildBottomBar(),
+      floatingActionButton: _myRole == MembreRole.admin
+          ? FloatingActionButton.extended(
+              onPressed: _showInviteUserDialog,
+              backgroundColor: primaryColor,
+              icon: const Icon(Icons.person_add, color: Colors.white),
+              label: const Text(
+                'Inviter',
+                style: TextStyle(color: Colors.white),
+              ),
+            )
+          : null,
     );
   }
 
@@ -321,11 +536,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
 
     return TabBarView(
       controller: _tabController,
-      children: [
-        _buildInfoTab(),
-        _buildMembresTab(),
-        _buildPostsTab(),
-      ],
+      children: [_buildInfoTab(), _buildMembresTab(), _buildPostsTab()],
     );
   }
 
@@ -541,17 +752,11 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
         children: [
           Icon(icon, size: 20, color: darkGray),
           const SizedBox(width: 12),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 14, color: darkGray),
-          ),
+          Text(label, style: const TextStyle(fontSize: 14, color: darkGray)),
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -660,7 +865,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
       'Sep',
       'Oct',
       'Nov',
-      'Déc'
+      'Déc',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

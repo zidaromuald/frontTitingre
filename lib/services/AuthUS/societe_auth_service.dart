@@ -321,6 +321,37 @@ class SocieteAuthService {
     return null;
   }
 
+  /// Autocomplétion pour la recherche de sociétés
+  static Future<List<SocieteModel>> autocomplete(String term) async {
+    final response = await ApiService.get('/societes/autocomplete?term=$term');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      final List<dynamic> societesData = jsonResponse['data'];
+      return societesData.map((json) => SocieteModel.fromJson(json)).toList();
+    } else {
+      throw Exception('Erreur d\'autocomplétion');
+    }
+  }
+
+  /// Récupérer les filtres disponibles
+  static Future<Map<String, dynamic>> getFilters() async {
+    final response = await ApiService.get('/societes/filters');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data'];
+    } else {
+      throw Exception('Erreur de récupération des filtres');
+    }
+  }
+
+  /// Vérifier si une société est connectée
+  static Future<bool> isLoggedIn() async {
+    final userType = await AuthBaseService.getUserType();
+    return userType == 'societe' && await AuthBaseService.isAuthenticated();
+  }
+
   /// Rechercher des sociétés
   static Future<List<SocieteModel>> searchSocietes({
     String? query,
@@ -394,36 +425,5 @@ class SocieteAuthService {
     } else {
       throw Exception('Erreur de recherche avancée');
     }
-  }
-
-  /// Autocomplétion pour la recherche de sociétés
-  static Future<List<SocieteModel>> autocomplete(String term) async {
-    final response = await ApiService.get('/societes/autocomplete?term=$term');
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> societesData = jsonResponse['data'];
-      return societesData.map((json) => SocieteModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Erreur d\'autocomplétion');
-    }
-  }
-
-  /// Récupérer les filtres disponibles
-  static Future<Map<String, dynamic>> getFilters() async {
-    final response = await ApiService.get('/societes/filters');
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return jsonResponse['data'];
-    } else {
-      throw Exception('Erreur de récupération des filtres');
-    }
-  }
-
-  /// Vérifier si une société est connectée
-  static Future<bool> isLoggedIn() async {
-    final userType = await AuthBaseService.getUserType();
-    return userType == 'societe' && await AuthBaseService.isAuthenticated();
   }
 }

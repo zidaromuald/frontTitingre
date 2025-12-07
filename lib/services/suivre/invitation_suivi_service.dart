@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'api_service.dart';
+import '../api_service.dart';
 
 // ============================================================================
 // ENUMS
@@ -277,26 +277,13 @@ class InvitationSuiviService {
     }
   }
 
-  /// Compter mes invitations en attente
-  /// GET /invitations-suivi/pending/count
-  static Future<int> countInvitationsPending() async {
-    final response = await ApiService.get('/invitations-suivi/pending/count');
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return jsonResponse['data']['count'];
-    } else {
-      throw Exception('Erreur de comptage des invitations');
-    }
-  }
-
   // ==========================================================================
   // MÉTHODES UTILITAIRES
   // ==========================================================================
 
   /// Vérifier si une invitation existe déjà pour une entité
   /// (Utile pour afficher le bon bouton dans l'UI)
-  static Future<InvitationSuiviModel?> checkInvitationExistante({
+  /*static Future<InvitationSuiviModel?> checkInvitationExistante({
     required int receiverId,
     required EntityType receiverType,
   }) async {
@@ -304,7 +291,6 @@ class InvitationSuiviService {
       final invitations = await getMesInvitationsEnvoyees(
         status: InvitationSuiviStatus.pending,
       );
-
       return invitations.firstWhere(
         (inv) =>
             inv.receiverId == receiverId &&
@@ -314,7 +300,7 @@ class InvitationSuiviService {
     } catch (e) {
       return null; // Aucune invitation en attente pour cette entité
     }
-  }
+  }*/
 
   /// Récupérer toutes mes invitations envoyées groupées par statut
   static Future<Map<String, List<InvitationSuiviModel>>>
@@ -356,9 +342,22 @@ class InvitationSuiviService {
     return {'pending': pending, 'accepted': accepted, 'declined': declined};
   }
 
+  /*/// Compter mes invitations en attente
+  /// GET /invitations-suivi/pending/count
+  static Future<int> countInvitationsPending() async {
+    final response = await ApiService.get('/invitations-suivi/pending/count');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['data']['count'];
+    } else {
+      throw Exception('Erreur de comptage des invitations');
+    }
+  }
+  */
   /// Vérifier si je suis en attente d'acceptation
   /// (j'ai envoyé une invitation qui est pending)
-  static Future<bool> isWaitingForAcceptance({
+  /*static Future<bool> isWaitingForAcceptance({
     required int receiverId,
     required EntityType receiverType,
   }) async {
@@ -387,5 +386,5 @@ class InvitationSuiviService {
     } catch (e) {
       return null;
     }
-  }
+  }*/
 }

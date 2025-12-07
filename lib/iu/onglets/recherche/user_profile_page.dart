@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/AuthUS/user_auth_service.dart';
 import '../../../services/suivre/suivre_auth_service.dart';
+import '../../../services/suivre/invitation_suivi_service.dart' as InvitationService;
 import '../../../widgets/editable_profile_avatar.dart';
 
 /// Page de profil pour visualiser le profil d'un AUTRE utilisateur
@@ -18,6 +19,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool _isActionLoading = false;
   UserModel? _user;
   bool _isSuivant = false; // true si on suit déjà cet utilisateur
+  bool _invitationEnvoyee = false; // true si invitation en attente
+  String? _invitationStatut; // 'pending', 'accepted', 'declined'
 
   static const Color primaryColor = Color(0xff5ac18e);
 
@@ -67,25 +70,31 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
-  /// Suivre l'utilisateur
+  /// Envoyer une invitation de suivi (User → User nécessite acceptation)
   Future<void> _suivreUser() async {
+    // Demander un message optionnel
+    final message = await _showInvitationMessageDialog();
+    if (message == null) return; // User a annulé
+
     setState(() => _isActionLoading = true);
 
     try {
-      await SuivreAuthService.suivre(
-        followedId: widget.userId,
-        followedType: EntityType.user,
+      await InvitationService.InvitationSuiviService.envoyerInvitation(
+        receiverId: widget.userId,
+        receiverType: InvitationService.EntityType.user,
+        message: message.isEmpty ? null : message,
       );
 
       if (mounted) {
         setState(() {
-          _isSuivant = true;
+          _invitationEnvoyee = true;
+          _invitationStatut = 'pending';
           _isActionLoading = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Vous suivez maintenant cet utilisateur'),
+            content: Text('Invitation envoyée avec succès'),
             backgroundColor: primaryColor,
           ),
         );
@@ -101,6 +110,48 @@ class _UserProfilePageState extends State<UserProfilePage> {
         );
       }
     }
+  }
+
+  /// Dialog pour le message d'invitation
+  Future<String?> _showInvitationMessageDialog() async {
+    final controller = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Envoyer une invitation'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Envoyer une invitation de suivi à ${_user!.nom} ${_user!.prenom}',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'Message (optionnel)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+            child: const Text('Envoyer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Ne plus suivre l'utilisateur
@@ -355,8 +406,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
       return const CircularProgressIndicator();
     }
 
+    // Si déjà abonné (invitation acceptée)
     if (_isSuivant) {
-      // Déjà abonné → Bouton "Abonné"
       return OutlinedButton.icon(
         onPressed: _unfollowUser,
         icon: const Icon(Icons.check, color: primaryColor),
@@ -369,20 +420,74 @@ class _UserProfilePageState extends State<UserProfilePage> {
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
         ),
       );
-    } else {
-      // Pas encore abonné → Bouton "Suivre"
-      return ElevatedButton.icon(
-        onPressed: _suivreUser,
-        icon: const Icon(Icons.person_add, color: Colors.white),
-        label: const Text(
-          'Suivre',
-          style: TextStyle(color: Colors.white, fontSize: 16),
+    }
+
+    // Si invitation en attente
+    if (_invitationEnvoyee && _invitationStatut == 'pending') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange, width: 2),
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.hourglass_empty, color: Colors.orange),
+            SizedBox(width: 8),
+            Text(
+              'Invitation en attente',
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       );
     }
+
+    // Si invitation refusée
+    if (_invitationEnvoyee && _invitationStatut == 'declined') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red, width: 2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.cancel, color: Colors.red),
+            SizedBox(width: 8),
+            Text(
+              'Invitation refusée',
+              style: TextStyle(
+                color: Colors.red,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Pas encore d'invitation → Bouton "Envoyer une invitation"
+    return ElevatedButton.icon(
+      onPressed: _suivreUser,
+      icon: const Icon(Icons.mail_outline, color: Colors.white),
+      label: const Text(
+        'Envoyer une invitation',
+        style: TextStyle(color: Colors.white, fontSize: 16),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primaryColor,
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+      ),
+    );
   }
 }

@@ -433,13 +433,27 @@ class GroupeAuthService {
   }
 
   /// Rechercher des groupes
+  ///
+  /// Paramètres :
+  /// - [query] : Recherche par nom ou description (optionnel si [tags] est fourni)
+  /// - [tags] : Filtre par tags/catégories (ex: ['Agriculture', 'Élevage'])
+  /// - [type] : Filtre par type (public/prive)
+  /// - [limit] : Nombre maximum de résultats
+  /// - [offset] : Décalage pour la pagination
   static Future<List<GroupeModel>> searchGroupes({
-    required String query,
+    String? query,
+    List<String>? tags,
+    String? type,
     int? limit,
     int? offset,
   }) async {
     final params = <String>[];
-    params.add('q=$query');
+    if (query != null && query.isNotEmpty) params.add('q=$query');
+    if (tags != null && tags.isNotEmpty) {
+      // Envoyer les tags sous forme de liste séparée par virgules
+      params.add('tags=${tags.join(',')}');
+    }
+    if (type != null) params.add('type=$type');
     if (limit != null) params.add('limit=$limit');
     if (offset != null) params.add('offset=$offset');
 

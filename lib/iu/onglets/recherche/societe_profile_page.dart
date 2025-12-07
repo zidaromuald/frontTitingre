@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/AuthUS/societe_auth_service.dart';
 import '../../../services/suivre/suivre_auth_service.dart';
+import '../../../services/suivre/demande_abonnement_service.dart';
 import '../../../widgets/editable_profile_avatar.dart';
 
 /// Page de profil pour visualiser le profil d'une AUTRE société
@@ -19,6 +20,10 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
   SocieteModel? _societe;
   bool _isSuivant = false; // true si on suit déjà cette société
   bool _isAbonne = false; // true si on est abonné (upgrade payant)
+
+  // États de demande d'abonnement
+  bool _demandeAbonnementEnvoyee = false;
+  DemandeAbonnementStatus? _demandeAbonnementStatut;
 
   static const Color primaryColor = Color(0xff5ac18e);
 
@@ -48,15 +53,33 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
         isSuivant = false;
       }
 
-      // TODO: Vérifier si on est abonné (upgrade payant)
+      // 3. Vérifier si on a une demande d'abonnement en attente
+      bool demandeAbonnementEnvoyee = false;
+      DemandeAbonnementStatus? demandeAbonnementStatut;
+      try {
+        final demande = await DemandeAbonnementService.checkDemandeExistante(
+          widget.societeId,
+        );
+        if (demande != null) {
+          demandeAbonnementEnvoyee = true;
+          demandeAbonnementStatut = demande.status;
+        }
+      } catch (e) {
+        // Pas de demande en attente
+        demandeAbonnementEnvoyee = false;
+      }
+
+      // TODO: Vérifier si on est abonné (demande acceptée)
       // Pour l'instant, on considère qu'on n'est pas abonné
-      bool isAbonne = false;
+      bool isAbonne = demandeAbonnementStatut == DemandeAbonnementStatus.accepted;
 
       if (mounted) {
         setState(() {
           _societe = societe;
           _isSuivant = isSuivant;
           _isAbonne = isAbonne;
+          _demandeAbonnementEnvoyee = demandeAbonnementEnvoyee;
+          _demandeAbonnementStatut = demandeAbonnementStatut;
           _isLoading = false;
         });
       }
@@ -170,27 +193,121 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
     }
   }
 
-  /// S'abonner à la société (upgrade payant)
+  /// S'abonner à la société (envoyer une demande d'abonnement premium)
   /// UNIQUEMENT pour User → Societe
   Future<void> _sabonner() async {
+    // Si déjà une demande en attente, afficher un message
+    if (_demandeAbonnementEnvoyee && _demandeAbonnementStatut == DemandeAbonnementStatus.pending) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vous avez déjà une demande d\'abonnement en attente'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Dialog pour message optionnel
+    final messageController = TextEditingController();
+    final message = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('S\'abonner'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Envoyer une demande d\'abonnement à ${_societe!.nom}',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'L\'abonnement premium vous donnera accès à des fonctionnalités exclusives.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: messageController,
+              decoration: const InputDecoration(
+                hintText: 'Message (optionnel)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, messageController.text),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xffFFA500)),
+            child: const Text('Envoyer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (message == null) return;
+
+    setState(() => _isActionLoading = true);
+
+    try {
+      await DemandeAbonnementService.envoyerDemande(
+        societeId: widget.societeId,
+        message: message.isEmpty ? null : message,
+      );
+
+      if (mounted) {
+        setState(() {
+          _demandeAbonnementEnvoyee = true;
+          _demandeAbonnementStatut = DemandeAbonnementStatus.pending;
+          _isActionLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Demande d\'abonnement envoyée avec succès'),
+            backgroundColor: Color(0xffFFA500),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isActionLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Annuler une demande d'abonnement envoyée
+  Future<void> _annulerDemandeAbonnement() async {
     // Demander confirmation
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('S\'abonner'),
-        content: Text(
-          'Voulez-vous vous abonner à ${_societe!.nom} ?\n\nCeci est un abonnement payant qui vous donnera accès à des fonctionnalités premium.',
+        title: const Text('Annuler la demande'),
+        content: const Text(
+          'Voulez-vous vraiment annuler votre demande d\'abonnement ?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: const Text('Non'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-            child: const Text('Confirmer',
-                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Oui, annuler', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -201,25 +318,28 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
     setState(() => _isActionLoading = true);
 
     try {
-      await SuivreAuthService.upgradeToAbonnement(
-        societeId: widget.societeId,
-        planCollaboration: 'Premium', // Peut être personnalisé
+      // On doit retrouver l'ID de la demande
+      final demande = await DemandeAbonnementService.checkDemandeExistante(
+        widget.societeId,
       );
 
-      if (mounted) {
-        setState(() {
-          _isAbonne = true;
-          _isSuivant = true; // Si on est abonné, on suit forcément
-          _isActionLoading = false;
-        });
+      if (demande != null) {
+        await DemandeAbonnementService.annulerDemande(demande.id);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Abonnement réussi ! Vous êtes maintenant abonné à cette société.'),
-            backgroundColor: primaryColor,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        if (mounted) {
+          setState(() {
+            _demandeAbonnementEnvoyee = false;
+            _demandeAbonnementStatut = null;
+            _isActionLoading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Demande d\'abonnement annulée'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() => _isActionLoading = false);
@@ -501,7 +621,7 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
       return const CircularProgressIndicator();
     }
 
-    // Si déjà abonné, afficher seulement le badge "Abonné Premium"
+    // Si déjà abonné (demande acceptée), afficher seulement le badge "Abonné Premium"
     if (_isAbonne) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -533,7 +653,7 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Bouton Suivre / Abonné (gratuit)
+        // Bouton Suivre / Suivi (gratuit)
         if (_isSuivant)
           OutlinedButton.icon(
             onPressed: _unfollowSociete,
@@ -563,20 +683,58 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
 
         const SizedBox(width: 12),
 
-        // Bouton S'abonner (payant)
-        ElevatedButton.icon(
-          onPressed: _sabonner,
-          icon: const Icon(Icons.star, color: Colors.white),
-          label: const Text(
-            'S\'abonner',
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xffFFA500), // Orange pour premium
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-        ),
+        // Bouton S'abonner - Selon l'état de la demande
+        _buildAbonnementButton(),
       ],
+    );
+  }
+
+  /// Bouton d'abonnement selon l'état de la demande
+  Widget _buildAbonnementButton() {
+    // Si demande en attente
+    if (_demandeAbonnementEnvoyee && _demandeAbonnementStatut == DemandeAbonnementStatus.pending) {
+      return OutlinedButton.icon(
+        onPressed: _annulerDemandeAbonnement,
+        icon: const Icon(Icons.hourglass_empty, color: Colors.orange, size: 18),
+        label: const Text(
+          'Demande en attente',
+          style: TextStyle(color: Colors.orange, fontSize: 14),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Colors.orange, width: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        ),
+      );
+    }
+
+    // Si demande refusée
+    if (_demandeAbonnementEnvoyee && _demandeAbonnementStatut == DemandeAbonnementStatus.declined) {
+      return OutlinedButton.icon(
+        onPressed: null, // Désactivé
+        icon: const Icon(Icons.cancel, color: Colors.red, size: 18),
+        label: const Text(
+          'Demande refusée',
+          style: TextStyle(color: Colors.red, fontSize: 14),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Colors.red, width: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        ),
+      );
+    }
+
+    // Sinon, bouton normal "S'abonner"
+    return ElevatedButton.icon(
+      onPressed: _sabonner,
+      icon: const Icon(Icons.star, color: Colors.white),
+      label: const Text(
+        'S\'abonner',
+        style: TextStyle(color: Colors.white, fontSize: 16),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xffFFA500), // Orange pour premium
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      ),
     );
   }
 

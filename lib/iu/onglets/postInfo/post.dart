@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gestauth_clean/services/groupe/groupe_service.dart';
+import 'package:gestauth_clean/services/suivre/suivre_auth_service.dart';
+import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 
 class CreerPostPage extends StatefulWidget {
   const CreerPostPage({super.key});
@@ -21,13 +24,70 @@ class _CreerPostPageState extends State<CreerPostPage> {
   static const Color mattermostDarkGray = Color(0xFF8D8D8D);
   static const Color mattermostGreen = Color(0xFF28A745);
 
-  final List<String> groupes = [
-    "Groupe paysans du faso ",
-    "Tech Team",
-    "UI/UX Designers",
-  ];
-  final List<String> societes = ["SANABI", "BRAKINA", "SOFITEX"];
-  String? selectedTarget;
+  // Données dynamiques chargées depuis le backend
+  List<GroupeModel> _mesGroupes = [];
+  List<SocieteModel> _mesSocietes = [];
+  bool _isLoadingGroupes = false;
+  bool _isLoadingSocietes = false;
+
+  int? _selectedGroupeId;
+  int? _selectedSocieteId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyGroupesAndSocietes();
+  }
+
+  /// Charger mes groupes et sociétés dont je suis membre
+  Future<void> _loadMyGroupesAndSocietes() async {
+    setState(() {
+      _isLoadingGroupes = true;
+      _isLoadingSocietes = true;
+    });
+
+    try {
+      // Charger en parallèle
+      final results = await Future.wait([
+        GroupeAuthService.getMyGroupes(), // Mes groupes
+        SuivreAuthService.getMyFollowing(type: EntityType.societe), // Sociétés que je suis
+      ]);
+
+      // Charger les détails des sociétés
+      final suivisSocietes = results[1] as List<SuivreModel>;
+      List<SocieteModel> societes = [];
+      for (var suivi in suivisSocietes) {
+        try {
+          final societe = await SocieteAuthService.getSocieteProfile(suivi.followedId);
+          societes.add(societe);
+        } catch (e) {
+          debugPrint('Erreur chargement société ${suivi.followedId}: $e');
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _mesGroupes = results[0] as List<GroupeModel>;
+          _mesSocietes = societes;
+          _isLoadingGroupes = false;
+          _isLoadingSocietes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingGroupes = false;
+          _isLoadingSocietes = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de chargement: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -254,8 +314,8 @@ class _CreerPostPageState extends State<CreerPostPage> {
           const SizedBox(height: 8), // Réduit de 12 à 8
           Row(
             children: [
-              //_buildDestinataireOption("Public", "public", Icons.public),
-              //const SizedBox(width: 12),
+              _buildDestinataireOption("Public", "public", Icons.public),
+              const SizedBox(width: 12),
               _buildDestinataireOption("Groupe", "groupe", Icons.group),
               const SizedBox(width: 12),
               _buildDestinataireOption("Société", "societe", Icons.business),
@@ -272,7 +332,8 @@ class _CreerPostPageState extends State<CreerPostPage> {
       child: GestureDetector(
         onTap: () => setState(() {
           destinataire = value;
-          selectedTarget = null;
+          _selectedGroupeId = null;
+          _selectedSocieteId = null;
         }),
         child: Container(
           padding: const EdgeInsets.all(8),
@@ -308,14 +369,13 @@ class _CreerPostPageState extends State<CreerPostPage> {
 
   // Sélecteur de groupe/société RÉDUIT
   Widget _buildTargetSelector() {
-    final targets = destinataire == "groupe" ? groupes : societes;
-    final title = destinataire == "groupe"
-        ? "Choisir un groupe"
-        : "Choisir une société";
+    final isGroupe = destinataire == "groupe";
+    final isLoading = isGroupe ? _isLoadingGroupes : _isLoadingSocietes;
+    final title = isGroupe ? "Choisir un groupe" : "Choisir une société";
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(12), // Réduit de 16 à 12
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -330,54 +390,158 @@ class _CreerPostPageState extends State<CreerPostPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14, // Réduit de 16 à 14
-              fontWeight: FontWeight.w600,
-              color: mattermostDarkBlue,
-            ),
+          Row(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: mattermostDarkBlue,
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isLoading)
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
           ),
-          const SizedBox(height: 8), // Réduit de 12 à 8
+          const SizedBox(height: 8),
           SizedBox(
-            height: 60, // Réduit de 80 à 60
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: targets.length,
-              itemBuilder: (context, index) {
-                final target = targets[index];
-                final isSelected = selectedTarget == target;
-                return GestureDetector(
-                  onTap: () => setState(() => selectedTarget = target),
-                  child: Container(
-                    width: 100, // Réduit de 120 à 100
-                    margin: const EdgeInsets.only(right: 8), // Réduit de 12 à 8
-                    padding: const EdgeInsets.all(8), // Réduit de 12 à 8
-                    decoration: BoxDecoration(
-                      color: isSelected ? mattermostBlue : mattermostGray,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected ? mattermostBlue : mattermostDarkGray,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        target,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : mattermostDarkBlue,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 10, // Réduit de 12 à 10
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+            height: 60,
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : isGroupe
+                    ? _buildGroupesList()
+                    : _buildSocietesList(),
           ),
         ],
       ),
+    );
+  }
+
+  // Liste des groupes
+  Widget _buildGroupesList() {
+    if (_mesGroupes.isEmpty) {
+      return Center(
+        child: Text(
+          'Aucun groupe rejoint',
+          style: TextStyle(color: mattermostDarkGray, fontSize: 12),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: _mesGroupes.length,
+      itemBuilder: (context, index) {
+        final groupe = _mesGroupes[index];
+        final isSelected = _selectedGroupeId == groupe.id;
+        return GestureDetector(
+          onTap: () => setState(() {
+            _selectedGroupeId = groupe.id;
+            _selectedSocieteId = null;
+          }),
+          child: Container(
+            width: 100,
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isSelected ? mattermostBlue : mattermostGray,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? mattermostBlue : mattermostDarkGray,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.group,
+                  color: isSelected ? Colors.white : mattermostBlue,
+                  size: 20,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  groupe.nom,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : mattermostDarkBlue,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 9,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Liste des sociétés
+  Widget _buildSocietesList() {
+    if (_mesSocietes.isEmpty) {
+      return Center(
+        child: Text(
+          'Aucune société suivie',
+          style: TextStyle(color: mattermostDarkGray, fontSize: 12),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: _mesSocietes.length,
+      itemBuilder: (context, index) {
+        final societe = _mesSocietes[index];
+        final isSelected = _selectedSocieteId == societe.id;
+        return GestureDetector(
+          onTap: () => setState(() {
+            _selectedSocieteId = societe.id;
+            _selectedGroupeId = null;
+          }),
+          child: Container(
+            width: 100,
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isSelected ? mattermostBlue : mattermostGray,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isSelected ? mattermostBlue : mattermostDarkGray,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.business,
+                  color: isSelected ? Colors.white : mattermostBlue,
+                  size: 20,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  societe.nom,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : mattermostDarkBlue,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 9,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -714,16 +878,30 @@ class _CreerPostPageState extends State<CreerPostPage> {
   }
 
   void _publierPost() {
-    if (destinataire != "public" && selectedTarget == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Veuillez sélectionner un ${destinataire}"),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+    // Validation du destinataire : si ce n'est pas public, il faut sélectionner une cible
+    if (destinataire != "public") {
+      if (destinataire == "groupe" && _selectedGroupeId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Veuillez sélectionner un groupe"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (destinataire == "societe" && _selectedSocieteId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Veuillez sélectionner une société"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
     }
 
+    // Validation du contenu
     if (typePost == "texte" && _textController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -743,6 +921,25 @@ class _CreerPostPageState extends State<CreerPostPage> {
       );
       return;
     }
+
+    // TODO: Implémenter l'appel API pour créer le post
+    // Trois niveaux de visibilité :
+    // 1. "public" → Visible par tous mes abonnés (followers)
+    // 2. "groupe" → Visible uniquement par les membres du groupe sélectionné
+    // 3. "societe" → Visible uniquement par les membres/abonnés de la société
+    //
+    // final postData = {
+    //   'type': typePost,
+    //   'contenu': typePost == 'texte' ? _textController.text : null,
+    //   'visibilite': destinataire, // 'public', 'groupe', ou 'societe'
+    //   if (destinataire == 'groupe') 'groupe_id': _selectedGroupeId,
+    //   if (destinataire == 'societe') 'societe_id': _selectedSocieteId,
+    //   // Pour les médias (image, video, vocal) :
+    //   // 'media_url': uploadedMediaUrl,
+    //   // 'media_type': typePost, // 'image', 'video', 'vocal'
+    // };
+    //
+    // await PostService.createPost(postData);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

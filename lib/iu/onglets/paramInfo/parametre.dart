@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gestauth_clean/iu/onglets/paramInfo/categorie.dart';
 import 'package:gestauth_clean/iu/onglets/paramInfo/profil.dart';
+import 'package:gestauth_clean/services/suivre/invitation_suivi_service.dart';
 
 class ParametrePage extends StatefulWidget {
   const ParametrePage({super.key});
@@ -73,33 +74,81 @@ class _ParametrePageState extends State<ParametrePage> {
     },
   ];
 
-  // Invitations en attente (exemple)
-  final List<Map<String, dynamic>> invitations = [
-    {
-      'type': 'groupe',
-      'nom': 'Producteurs de Riz BF',
-      'categorie': 'Agriculteur',
-      'membres': 156,
-      'description': 'Groupe des producteurs de riz du Burkina Faso',
-      'expediteur': 'Marie Ouédraogo',
-    },
-    {
-      'type': 'societe',
-      'nom': 'BTP Solutions',
-      'categorie': 'Bâtiment',
-      'projets': 12,
-      'description': 'Entreprise spécialisée dans la construction',
-      'expediteur': 'Amadou Traoré',
-    },
-    {
-      'type': 'collaboration',
-      'nom': 'Pierre Sankara',
-      'categorie': 'Élevage',
-      'poste': 'Vétérinaire',
-      'description': 'Demande de collaboration professionnelle',
-      'expediteur': 'Pierre Sankara',
-    },
-  ];
+  // Données dynamiques des invitations
+  List<InvitationSuiviModel> _invitationsRecues = [];
+  List<InvitationSuiviModel> _invitationsEnvoyees = [];
+  bool _isLoadingInvitationsRecues = false;
+  bool _isLoadingInvitationsEnvoyees = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInvitations();
+  }
+
+  /// Charger les invitations (reçues et envoyées)
+  Future<void> _loadInvitations() async {
+    await Future.wait([
+      _loadInvitationsRecues(),
+      _loadInvitationsEnvoyees(),
+    ]);
+  }
+
+  /// Charger les invitations reçues (pending)
+  Future<void> _loadInvitationsRecues() async {
+    setState(() => _isLoadingInvitationsRecues = true);
+
+    try {
+      final invitations = await InvitationSuiviService.getMesInvitationsRecues(
+        status: InvitationSuiviStatus.pending,
+      );
+
+      if (mounted) {
+        setState(() {
+          _invitationsRecues = invitations;
+          _isLoadingInvitationsRecues = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingInvitationsRecues = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de chargement des invitations reçues: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Charger les invitations envoyées (pending)
+  Future<void> _loadInvitationsEnvoyees() async {
+    setState(() => _isLoadingInvitationsEnvoyees = true);
+
+    try {
+      final invitations = await InvitationSuiviService.getMesInvitationsEnvoyees(
+        status: InvitationSuiviStatus.pending,
+      );
+
+      if (mounted) {
+        setState(() {
+          _invitationsEnvoyees = invitations;
+          _isLoadingInvitationsEnvoyees = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingInvitationsEnvoyees = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de chargement des invitations envoyées: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -256,8 +305,15 @@ class _ParametrePageState extends State<ParametrePage> {
 
             const SizedBox(height: 24),
 
-            // Section Invitations
-            if (invitations.isNotEmpty) ...[
+            // Section Invitations Reçues
+            if (_isLoadingInvitationsRecues)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_invitationsRecues.isNotEmpty) ...[
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(16),
@@ -278,13 +334,13 @@ class _ParametrePageState extends State<ParametrePage> {
                     Row(
                       children: [
                         const Icon(
-                          Icons.notifications,
+                          Icons.mail_outline,
                           color: mattermostBlue,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          "Invitations (${invitations.length})",
+                          "Invitations reçues (${_invitationsRecues.length})",
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -294,8 +350,62 @@ class _ParametrePageState extends State<ParametrePage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ...invitations.map(
-                      (invitation) => _buildInvitationItem(invitation),
+                    ..._invitationsRecues.map(
+                      (invitation) => _buildInvitationRecueItem(invitation),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Section Invitations Envoyées
+            if (_isLoadingInvitationsEnvoyees)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_invitationsEnvoyees.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.send,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Invitations envoyées (${_invitationsEnvoyees.length})",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: mattermostDarkBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ..._invitationsEnvoyees.map(
+                      (invitation) => _buildInvitationEnvoyeeItem(invitation),
                     ),
                   ],
                 ),
@@ -368,27 +478,28 @@ class _ParametrePageState extends State<ParametrePage> {
     );
   }
 
-  // Widget pour les invitations
-  Widget _buildInvitationItem(Map<String, dynamic> invitation) {
-    IconData icon;
-    Color iconColor;
+  // Widget pour les invitations REÇUES (avec boutons accepter/refuser)
+  Widget _buildInvitationRecueItem(InvitationSuiviModel invitation) {
+    final IconData icon;
+    final Color iconColor;
 
-    switch (invitation['type']) {
-      case 'groupe':
-        icon = Icons.group;
-        iconColor = mattermostBlue;
-        break;
-      case 'societe':
-        icon = Icons.business;
-        iconColor = Colors.purple;
-        break;
-      case 'collaboration':
-        icon = Icons.handshake;
-        iconColor = mattermostGreen;
-        break;
-      default:
-        icon = Icons.notifications;
-        iconColor = mattermostDarkGray;
+    // Déterminer l'icône selon le type de sender
+    if (invitation.isSenderUser()) {
+      icon = Icons.person;
+      iconColor = mattermostBlue;
+    } else {
+      icon = Icons.business;
+      iconColor = Colors.purple;
+    }
+
+    // Récupérer le nom de l'expéditeur (depuis les relations)
+    String senderName = 'Utilisateur inconnu';
+    if (invitation.sender != null) {
+      if (invitation.isSenderUser()) {
+        senderName = '${invitation.sender!['nom'] ?? ''} ${invitation.sender!['prenom'] ?? ''}'.trim();
+      } else {
+        senderName = invitation.sender!['nom'] ?? 'Société inconnue';
+      }
     }
 
     return Container(
@@ -418,14 +529,14 @@ class _ParametrePageState extends State<ParametrePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      invitation['nom'],
+                      senderName,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
-                      "Invitation de ${invitation['expediteur']}",
+                      "souhaite vous suivre",
                       style: const TextStyle(
                         fontSize: 11,
                         color: mattermostDarkGray,
@@ -441,7 +552,7 @@ class _ParametrePageState extends State<ParametrePage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  invitation['categorie'],
+                  invitation.isSenderUser() ? 'User' : 'Société',
                   style: TextStyle(
                     fontSize: 9,
                     color: iconColor,
@@ -451,19 +562,21 @@ class _ParametrePageState extends State<ParametrePage> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            invitation['description'],
-            style: const TextStyle(fontSize: 12),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+          if (invitation.message != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              invitation.message!,
+              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
-                onPressed: () => _refuserInvitation(invitation),
+                onPressed: () => _refuserInvitationRecue(invitation),
                 child: const Text(
                   "Refuser",
                   style: TextStyle(color: Colors.red, fontSize: 12),
@@ -471,7 +584,7 @@ class _ParametrePageState extends State<ParametrePage> {
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: () => _accepterInvitation(invitation),
+                onPressed: () => _accepterInvitationRecue(invitation),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: mattermostGreen,
                   padding: const EdgeInsets.symmetric(
@@ -491,13 +604,121 @@ class _ParametrePageState extends State<ParametrePage> {
     );
   }
 
+  // Widget pour les invitations ENVOYÉES (affichage statut uniquement)
+  Widget _buildInvitationEnvoyeeItem(InvitationSuiviModel invitation) {
+    final IconData icon;
+    final Color iconColor;
+
+    // Déterminer l'icône selon le type de receiver
+    if (invitation.isReceiverUser()) {
+      icon = Icons.person;
+      iconColor = mattermostBlue;
+    } else {
+      icon = Icons.business;
+      iconColor = Colors.purple;
+    }
+
+    // Récupérer le nom du destinataire (depuis les relations)
+    String receiverName = 'Utilisateur inconnu';
+    if (invitation.receiver != null) {
+      if (invitation.isReceiverUser()) {
+        receiverName = '${invitation.receiver!['nom'] ?? ''} ${invitation.receiver!['prenom'] ?? ''}'.trim();
+      } else {
+        receiverName = invitation.receiver!['nom'] ?? 'Société inconnue';
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: mattermostGray,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: mattermostDarkGray.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(icon, color: iconColor, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      receiverName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Text(
+                      "En attente de réponse",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  invitation.isReceiverUser() ? 'User' : 'Société',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: iconColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (invitation.message != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Votre message: "${invitation.message}"',
+              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: () => _annulerInvitationEnvoyee(invitation),
+                icon: const Icon(Icons.cancel, size: 16),
+                label: const Text("Annuler", style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // Navigation vers le profil
   void _navigateToProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ProfilDetailPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const ProfilDetailPage()),
     );
   }
 
@@ -506,8 +727,7 @@ class _ParametrePageState extends State<ParametrePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            CategoriePage(categorie: categorie, societes: [], groupes: []),
+        builder: (context) => CategoriePage(categorie: categorie),
       ),
     );
   }
@@ -547,31 +767,115 @@ class _ParametrePageState extends State<ParametrePage> {
     );
   }
 
-  // Accepter une invitation
-  void _accepterInvitation(Map<String, dynamic> invitation) {
-    setState(() {
-      invitations.remove(invitation);
-    });
+  // Accepter une invitation reçue
+  Future<void> _accepterInvitationRecue(InvitationSuiviModel invitation) async {
+    try {
+      await InvitationSuiviService.accepterInvitation(invitation.id);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Invitation acceptée pour ${invitation['nom']}"),
-        backgroundColor: mattermostGreen,
-      ),
-    );
+      // Retirer de la liste locale
+      setState(() {
+        _invitationsRecues.remove(invitation);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Invitation acceptée avec succès"),
+            backgroundColor: mattermostGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur lors de l'acceptation: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  // Refuser une invitation
-  void _refuserInvitation(Map<String, dynamic> invitation) {
-    setState(() {
-      invitations.remove(invitation);
-    });
+  // Refuser une invitation reçue
+  Future<void> _refuserInvitationRecue(InvitationSuiviModel invitation) async {
+    try {
+      await InvitationSuiviService.refuserInvitation(invitation.id);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Invitation refusée pour ${invitation['nom']}"),
-        backgroundColor: Colors.red,
+      // Retirer de la liste locale
+      setState(() {
+        _invitationsRecues.remove(invitation);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Invitation refusée"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur lors du refus: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Annuler une invitation envoyée
+  Future<void> _annulerInvitationEnvoyee(InvitationSuiviModel invitation) async {
+    // Confirmer l'annulation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Annuler l'invitation"),
+        content: const Text("Voulez-vous vraiment annuler cette invitation ?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Non"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Oui, annuler", style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    try {
+      await InvitationSuiviService.annulerInvitation(invitation.id);
+
+      // Retirer de la liste locale
+      setState(() {
+        _invitationsEnvoyees.remove(invitation);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Invitation annulée"),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur lors de l'annulation: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

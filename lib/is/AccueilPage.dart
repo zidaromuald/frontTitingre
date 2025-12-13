@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/AuthUS/societe_auth_service.dart';
+import '../services/posts/post_service.dart';
 import '../widgets/editable_societe_avatar.dart';
-import '../iu/onglets/recherche/global_search_page.dart';
+import '../iu/onglets/postInfo/post.dart';
+import '../iu/onglets/postInfo/post_details_page.dart';
+import '../iu/onglets/postInfo/post_search_page.dart';
 
 class AccueilPage extends StatefulWidget {
   const AccueilPage({super.key});
@@ -12,11 +15,15 @@ class AccueilPage extends StatefulWidget {
 
 class _AccueilPageState extends State<AccueilPage> {
   String? _currentLogoUrl;
+  List<PostModel> _posts = [];
+  bool _isLoadingPosts = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _loadSocieteLogo();
+    _loadPosts();
   }
 
   Future<void> _loadSocieteLogo() async {
@@ -29,6 +36,34 @@ class _AccueilPageState extends State<AccueilPage> {
       // La société n'est peut-être pas connectée
       print('Erreur de chargement du logo: $e');
     }
+  }
+
+  Future<void> _loadPosts() async {
+    setState(() {
+      _isLoadingPosts = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final posts = await PostService.getPublicFeed(limit: 20, offset: 0);
+      if (mounted) {
+        setState(() {
+          _posts = posts;
+          _isLoadingPosts = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Erreur de chargement: $e';
+          _isLoadingPosts = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _refreshPosts() async {
+    await _loadPosts();
   }
 
   Widget buildCerealCard(String imagePath, String title) {
@@ -196,6 +231,84 @@ class _AccueilPageState extends State<AccueilPage> {
     );
   }
 
+  Widget _buildPostsList() {
+    if (_isLoadingPosts) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.red.shade700),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _refreshPosts,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Réessayer'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_posts.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            children: [
+              Icon(Icons.post_add, size: 64, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'Aucun post pour le moment',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Soyez le premier à publier !',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: List.generate(
+        _posts.length,
+        (index) => Padding(
+          padding: EdgeInsets.only(
+            bottom: index < _posts.length - 1 ? 12 : 0,
+          ),
+          child: _PostCard(post: _posts[index]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -286,8 +399,22 @@ class _AccueilPageState extends State<AccueilPage> {
                       right: 16,
                       child: Row(
                         children: [
-                          const _SquareAction(
-                              label: '1', icon: Icons.add_circle_outline),
+                          _SquareAction(
+                            label: '1',
+                            icon: Icons.add_circle_outline,
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CreerPostPage(),
+                                ),
+                              );
+                              // Si un post a été créé, rafraîchir la liste
+                              if (result == true) {
+                                _refreshPosts();
+                              }
+                            },
+                          ),
                           const SizedBox(width: 10),
                           _SquareAction(
                             label: '2',
@@ -296,7 +423,7 @@ class _AccueilPageState extends State<AccueilPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const GlobalSearchPage(),
+                                  builder: (context) => const PostSearchPage(),
                                 ),
                               );
                             },
@@ -361,15 +488,7 @@ class _AccueilPageState extends State<AccueilPage> {
               // CONTENU (posts) - Plus d'Expanded ici
               Container(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                child: Column(
-                  children: List.generate(
-                    6,
-                    (index) => Padding(
-                      padding: EdgeInsets.only(bottom: index < 5 ? 12 : 0),
-                      child: _PostCard(index: index),
-                    ),
-                  ),
-                ),
+                child: _buildPostsList(),
               ),
             ],
           ),
@@ -492,484 +611,74 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _PostCard extends StatelessWidget {
-  const _PostCard({required this.index});
-  final int index;
+  const _PostCard({required this.post});
+  final PostModel post;
+
+  String _formatTimestamp(DateTime dateTime) {
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+
+    if (diff.inDays > 7) {
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    } else if (diff.inDays > 0) {
+      return 'Il y a ${diff.inDays}j';
+    } else if (diff.inHours > 0) {
+      return 'Il y a ${diff.inHours}h';
+    } else if (diff.inMinutes > 0) {
+      return 'Il y a ${diff.inMinutes}min';
+    } else {
+      return 'À l\'instant';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.06),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
+    return InkWell(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PostDetailsPage(postId: post.id),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: cs.primaryContainer,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Utilisateur ${index + 1}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        'Il y a ${index + 1}h',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: cs.onSurface.withOpacity(.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              height: 140,
-              decoration: BoxDecoration(
-                color: cs.secondaryContainer.withOpacity(.3),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outlineVariant.withOpacity(.3)),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.image_outlined,
-                size: 40,
-                color: cs.onSurface.withOpacity(.4),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Voici un exemple de contenu de post ${index + 1}. Ceci pourrait être un texte plus long avec des détails intéressants...',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.4,
-                color: cs.onSurface.withOpacity(.8),
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.favorite_border,
-                    size: 20, color: cs.onSurface.withOpacity(.7)),
-                const SizedBox(width: 6),
-                Text('${120 + index * 5}',
-                    style: TextStyle(
-                        fontSize: 13, color: cs.onSurface.withOpacity(.7))),
-                const SizedBox(width: 20),
-                Icon(Icons.chat_bubble_outline,
-                    size: 20, color: cs.onSurface.withOpacity(.7)),
-                const SizedBox(width: 6),
-                Text('${24 + index * 2}',
-                    style: TextStyle(
-                        fontSize: 13, color: cs.onSurface.withOpacity(.7))),
-                const Spacer(),
-                Icon(Icons.share_outlined,
-                    size: 20, color: cs.onSurface.withOpacity(.7)),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ————— Clipper pour la courbe du header —————
-class _HeaderWaveClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, size.height * 0.62);
-
-    path.quadraticBezierTo(
-      size.width * 0.22,
-      size.height * 0.50,
-      size.width * 0.42,
-      size.height * 0.62,
-    );
-    path.quadraticBezierTo(
-      size.width * 0.70,
-      size.height * 0.78,
-      size.width,
-      size.height * 0.68,
-    );
-
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-/*class AccueilPage extends StatelessWidget {
-  const AccueilPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final size = MediaQuery.of(context).size;
-
-    return Scaffold(
-      backgroundColor: cs.surface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // HEADER avec forme courbe + avatar + actions + nom
-            SizedBox(
-              height: 230,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // fond courbe
-                  Positioned.fill(
-                    child: ClipPath(
-                      clipper: _HeaderWaveClipper(),
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFF3A5BA0), // bleu foncé
-                              Color(0xFF9DB4D6), // bleu clair
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Avatar + Nom/Prénom en haut
-                  Positioned(
-                    top: 20,
-                    left: 16,
-                    right: 180, // Laisser de l'espace pour les boutons
-                    child: Row(
-                      children: [
-                        _ProfileAvatar(size: size.width * 0.18),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'ZIDA Jules',
-                                style: TextStyle(
-                                  color: cs.onPrimary,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 18,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '@johndoe',
-                                style: TextStyle(
-                                  color: cs.onPrimary.withOpacity(.85),
-                                  fontSize: 13,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Boutons carrés (Publication, Page privée, Paramètres)
-                  const Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Row(
-                      children: [
-                        _SquareAction(
-                            label: '1', icon: Icons.add_circle_outline),
-                        SizedBox(width: 10),
-                        _SquareAction(label: '2', icon: Icons.lock_outline),
-                        SizedBox(width: 10),
-                        _SquareAction(
-                            label: '3', icon: Icons.settings_outlined),
-                      ],
-                    ),
-                  ),
-                  // Nom + programme (position originale)
-                  Positioned(
-                    left: 16,
-                    bottom: 18,
-                    right: 16,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Programme / Bio courte',
-                                style: TextStyle(
-                                  color: cs.onPrimary.withOpacity(.9),
-                                  fontSize: 13,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // BARRE d'info (4 cartes arrondies)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(12, 8, 12, 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _InfoChip(title: 'Posts', value: '120'),
-                _InfoChip(title: 'Abonnés', value: '2.4k'),
-                _InfoChip(title: 'Suivis', value: '180'),
-                _InfoChip(title: 'Groupes', value: '12'),
-              ],
-            ),
-          ),
-
-            // CONTENU (fil / cartes placeholders)
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: cs.surface,
-                ),
-                child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                  itemCount: 6,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    return _PostCard(index: index);
-                  },
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ————— Widgets —————
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.size});
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: size,
-      height: size,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [cs.onPrimary.withOpacity(.2), Colors.white24],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.15),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          )
-        ],
-      ),
-      child: const CircleAvatar(
-        backgroundImage: AssetImage('assets/avatar_placeholder.png'),
-        // Fournissez votre image ou remplacez par NetworkImage
-      ),
-    );
-  }
-}
-
-class _SquareAction extends StatelessWidget {
-  const _SquareAction({required this.label, required this.icon});
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: cs.onPrimary.withOpacity(.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(.4), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {
-            // Action à définir selon le bouton
-          },
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Icon(icon, size: 22, color: Colors.white),
-              Positioned(
-                bottom: 3,
-                right: 5,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.9),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: cs.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.title, required this.value});
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Expanded(
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        height: 62,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: cs.surface,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: cs.primary,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 11,
-                color: cs.onSurface.withOpacity(.7),
-                fontWeight: FontWeight.w500,
-              ),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.index});
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.06),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Row(
               children: [
                 CircleAvatar(
                   radius: 18,
                   backgroundColor: cs.primaryContainer,
+                  backgroundImage: post.getAuthorPhoto() != null
+                      ? NetworkImage('http://127.0.0.1:8000${post.getAuthorPhoto()}')
+                      : null,
+                  child: post.getAuthorPhoto() == null
+                      ? Icon(
+                          post.authorType == AuthorType.societe
+                              ? Icons.business
+                              : Icons.person,
+                          size: 18,
+                          color: cs.onPrimaryContainer,
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -977,14 +686,14 @@ class _PostCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Utilisateur ${index + 1}',
+                        post.getAuthorName(),
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
                       ),
                       Text(
-                        'Il y a ${index + 1}h',
+                        _formatTimestamp(post.createdAt),
                         style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurface.withOpacity(.6),
@@ -997,23 +706,47 @@ class _PostCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Container(
-              height: 140,
-              decoration: BoxDecoration(
-                color: cs.secondaryContainer.withOpacity(.3),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outlineVariant.withOpacity(.3)),
+            if (post.hasMedia() && post.mediaUrls!.isNotEmpty)
+              Container(
+                height: 140,
+                decoration: BoxDecoration(
+                  color: cs.secondaryContainer.withOpacity(.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: cs.outlineVariant.withOpacity(.3)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    'http://127.0.0.1:8000${post.mediaUrls!.first}',
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          size: 40,
+                          color: cs.onSurface.withOpacity(.4),
+                        ),
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.image_outlined,
-                size: 40,
-                color: cs.onSurface.withOpacity(.4),
-              ),
-            ),
-            const SizedBox(height: 12),
+            if (post.hasMedia() && post.mediaUrls!.isNotEmpty)
+              const SizedBox(height: 12),
             Text(
-              'Voici un exemple de contenu de post ${index + 1}. Ceci pourrait être un texte plus long avec des détails intéressants...',
+              post.contenu,
               style: TextStyle(
                 fontSize: 13,
                 height: 1.4,
@@ -1023,29 +756,75 @@ class _PostCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.favorite_border,
-                    size: 20, color: cs.onSurface.withOpacity(.7)),
-                const SizedBox(width: 6),
-                Text('${120 + index * 5}',
+// Statistiques et actions (cliquer sur la carte pour interagir)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  // Like
+                  Icon(
+                    Icons.favorite_border,
+                    size: 20,
+                    color: cs.primary.withOpacity(.8),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${post.likesCount}',
                     style: TextStyle(
-                        fontSize: 13, color: cs.onSurface.withOpacity(.7))),
-                const SizedBox(width: 20),
-                Icon(Icons.chat_bubble_outline,
-                    size: 20, color: cs.onSurface.withOpacity(.7)),
-                const SizedBox(width: 6),
-                Text('${24 + index * 2}',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  // Commentaires
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 20,
+                    color: cs.primary.withOpacity(.8),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${post.commentsCount}',
                     style: TextStyle(
-                        fontSize: 13, color: cs.onSurface.withOpacity(.7))),
-                const Spacer(),
-                Icon(Icons.share_outlined,
-                    size: 20, color: cs.onSurface.withOpacity(.7)),
-              ],
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Partages
+                  Icon(
+                    Icons.share_outlined,
+                    size: 20,
+                    color: cs.onSurface.withOpacity(.6),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${post.sharesCount}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurface.withOpacity(.7),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Indicateur visuel pour cliquer
+                  Icon(
+                    Icons.touch_app,
+                    size: 16,
+                    color: cs.primary.withOpacity(.5),
+                  ),
+                ],
+              ),
             )
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -1057,7 +836,6 @@ class _HeaderWaveClipper extends CustomClipper<Path> {
     final path = Path();
     path.lineTo(0, size.height * 0.62);
 
-    // courbe douce type vague
     path.quadraticBezierTo(
       size.width * 0.22,
       size.height * 0.50,
@@ -1078,4 +856,4 @@ class _HeaderWaveClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}*/
+}

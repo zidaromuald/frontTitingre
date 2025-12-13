@@ -395,10 +395,7 @@ class ConversationService {
   static Future<int> getTotalUnreadCount() async {
     try {
       final conversations = await getMyConversations();
-      return conversations.fold<int>(
-        0,
-        (sum, conv) => sum + conv.unreadCount,
-      );
+      return conversations.fold<int>(0, (sum, conv) => sum + conv.unreadCount);
     } catch (e) {
       return 0;
     }

@@ -15,8 +15,17 @@ class GroupeInvitationService {
 
   /// Inviter un utilisateur à rejoindre le groupe
   /// POST /groupes/:id/invite
-  /// Nécessite authentification
-  static Future<GroupeInvitationModel> inviteMembre({
+  ///
+  /// LOGIQUE BACKEND :
+  /// - Si Société + User abonné → Ajout DIRECT (pas d'invitation)
+  /// - Sinon → Invitation classique (nécessite acceptation)
+  ///
+  /// Retourne un Map avec :
+  /// - ajoutDirect: bool (true si ajout direct, false si invitation)
+  /// - message: String (message du backend)
+  /// - invitation: GroupeInvitationModel? (si invitation classique)
+  /// - membre: Map? (si ajout direct)
+  static Future<Map<String, dynamic>> inviteMembre({
     required int groupeId,
     required int invitedUserId,
     String? message,
@@ -30,7 +39,25 @@ class GroupeInvitationService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
-      return GroupeInvitationModel.fromJson(jsonResponse['data']);
+      final ajoutDirect = jsonResponse['ajoutDirect'] ?? false;
+
+      if (ajoutDirect) {
+        // CAS 1 : Ajout direct (Société + Abonné)
+        return {
+          'success': true,
+          'ajoutDirect': true,
+          'message': jsonResponse['message'] ?? 'Membre ajouté directement',
+          'membre': jsonResponse['membre'],
+        };
+      } else {
+        // CAS 2 : Invitation classique
+        return {
+          'success': true,
+          'ajoutDirect': false,
+          'message': jsonResponse['message'] ?? 'Invitation envoyée',
+          'invitation': GroupeInvitationModel.fromJson(jsonResponse['data'] ?? jsonResponse['invitation']),
+        };
+      }
     } else {
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'Erreur d\'invitation');

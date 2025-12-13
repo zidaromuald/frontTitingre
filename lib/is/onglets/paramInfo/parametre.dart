@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gestauth_clean/is/onglets/paramInfo/categorie.dart';
 import 'package:gestauth_clean/is/onglets/paramInfo/profil.dart';
+import 'package:gestauth_clean/services/suivre/demande_abonnement_service.dart';
 
 class ParametrePage extends StatefulWidget {
   const ParametrePage({super.key});
@@ -73,6 +74,10 @@ class _ParametrePageState extends State<ParametrePage> {
     },
   ];
 
+  // Données dynamiques des demandes d'abonnement reçues
+  List<DemandeAbonnementModel> _demandesAbonnementRecues = [];
+  bool _isLoadingDemandesAbonnement = false;
+
   // Invitations en attente (exemple)
   final List<Map<String, dynamic>> invitations = [
     {
@@ -100,6 +105,105 @@ class _ParametrePageState extends State<ParametrePage> {
       'expediteur': 'Pierre Sankara',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDemandesAbonnement();
+  }
+
+  /// Charger les demandes d'abonnement reçues (pending)
+  Future<void> _loadDemandesAbonnement() async {
+    setState(() => _isLoadingDemandesAbonnement = true);
+
+    try {
+      final demandes = await DemandeAbonnementService.getDemandesRecues(
+        status: DemandeAbonnementStatus.pending,
+      );
+
+      if (mounted) {
+        setState(() {
+          _demandesAbonnementRecues = demandes;
+          _isLoadingDemandesAbonnement = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingDemandesAbonnement = false);
+      }
+      // Gestion d'erreur silencieuse (peut afficher un message si nécessaire)
+    }
+  }
+
+  /// Accepter une demande d'abonnement
+  Future<void> _accepterDemandeAbonnement(DemandeAbonnementModel demande) async {
+    setState(() => _isLoadingDemandesAbonnement = true);
+
+    try {
+      await DemandeAbonnementService.accepterDemande(demande.id);
+
+      if (mounted) {
+        setState(() {
+          _demandesAbonnementRecues.remove(demande);
+          _isLoadingDemandesAbonnement = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Demande d\'abonnement acceptée avec succès'),
+            backgroundColor: mattermostGreen,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingDemandesAbonnement = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Refuser une demande d'abonnement
+  Future<void> _refuserDemandeAbonnement(DemandeAbonnementModel demande) async {
+    setState(() => _isLoadingDemandesAbonnement = true);
+
+    try {
+      await DemandeAbonnementService.refuserDemande(demande.id);
+
+      if (mounted) {
+        setState(() {
+          _demandesAbonnementRecues.remove(demande);
+          _isLoadingDemandesAbonnement = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Demande d\'abonnement refusée'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingDemandesAbonnement = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -256,6 +360,74 @@ class _ParametrePageState extends State<ParametrePage> {
 
             const SizedBox(height: 24),
 
+            // Section Demandes d'abonnement reçues
+            if (_isLoadingDemandesAbonnement)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xffFFA500),
+                  ),
+                ),
+              )
+            else if (_demandesAbonnementRecues.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.star,
+                          color: Color(0xffFFA500),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Demandes d'abonnement (${_demandesAbonnementRecues.length})",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: mattermostDarkBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ..._demandesAbonnementRecues.map(
+                      (demande) => _buildDemandeAbonnementItem(demande),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
             // Section Invitations
             if (invitations.isNotEmpty) ...[
               Container(
@@ -364,6 +536,180 @@ class _ParametrePageState extends State<ParametrePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Widget pour les demandes d'abonnement reçues
+  Widget _buildDemandeAbonnementItem(DemandeAbonnementModel demande) {
+    // Récupérer les informations de l'utilisateur qui a envoyé la demande
+    final user = demande.user;
+    final String userName = user != null
+        ? '${user['nom'] ?? ''} ${user['prenom'] ?? ''}'.trim()
+        : 'Utilisateur inconnu';
+    final String? userEmail = user?['email'];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xffFFA500).withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xffFFA500).withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xffFFA500).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.person,
+                  color: Color(0xffFFA500),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: mattermostDarkBlue,
+                      ),
+                    ),
+                    if (userEmail != null)
+                      Text(
+                        userEmail,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: mattermostDarkGray,
+                        ),
+                      ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      "souhaite s'abonner à votre société",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xffFFA500),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xffFFA500).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star, color: Color(0xffFFA500), size: 12),
+                    SizedBox(width: 4),
+                    Text(
+                      'Premium',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Color(0xffFFA500),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (demande.message != null && demande.message!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: mattermostDarkGray.withOpacity(0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Message:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: mattermostDarkGray,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    demande.message!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: mattermostDarkBlue,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _refuserDemandeAbonnement(demande),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.red, width: 1.5),
+                  foregroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+                icon: const Icon(Icons.close, size: 16),
+                label: const Text(
+                  'Refuser',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () => _accepterDemandeAbonnement(demande),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mattermostGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text(
+                  'Accepter',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

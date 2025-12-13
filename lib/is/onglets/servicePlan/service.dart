@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
+import 'package:gestauth_clean/services/suivre/suivre_auth_service.dart';
+import 'package:gestauth_clean/services/suivre/abonnement_auth_service.dart' as abonnement_service;
+import 'package:gestauth_clean/services/groupe/groupe_service.dart';
+import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
+import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
+import 'package:gestauth_clean/services/messagerie/conversation_service.dart';
+import 'package:gestauth_clean/iu/onglets/recherche/user_profile_page.dart';
+import 'package:gestauth_clean/messagerie/conversation_detail_page.dart';
 
 class ServicePage extends StatefulWidget {
   const ServicePage({super.key});
@@ -18,95 +26,178 @@ class _ServicePageState extends State<ServicePage> {
   static const Color mattermostDarkGray = Color(0xFF8D8D8D);
   static const Color mattermostGreen = Color(0xFF28A745);
 
-  // Données simulées - remplacez par vos vraies données
-  final List<Map<String, dynamic>> collaborateurs = [
-    {
-      'nom': 'Jean Dupont',
-      'poste': 'Développeur Flutter',
-      'avatar': 'JD',
-      'statut': 'en ligne',
-      'dernierMessage': 'Salut ! Comment ça va ?',
-      'heureMessage': '14:32',
-    },
-    {
-      'nom': 'Marie Martin',
-      'poste': 'Designer UI/UX',
-      'avatar': 'MM',
-      'statut': 'absent',
-      'dernierMessage': 'Je travaille sur le nouveau design',
-      'heureMessage': '13:15',
-    },
-    {
-      'nom': 'Pierre Durand',
-      'poste': 'Chef de projet',
-      'avatar': 'PD',
-      'statut': 'en ligne',
-      'dernierMessage': 'Réunion à 16h',
-      'heureMessage': '12:45',
-    },
-    {
-      'nom': 'Sophie Leroy',
-      'poste': 'Développeuse Backend',
-      'avatar': 'SL',
-      'statut': 'occupé',
-      'dernierMessage': 'API prête pour les tests',
-      'heureMessage': '11:20',
-    },
-  ];
+  // Données dynamiques
+  List<UserModel> _followersUsers = [];
+  List<abonnement_service.AbonnementModel> _subscribersAbonnements = [];
+  Set<int> _subscriberUserIds = {};
+  bool _isLoadingUsers = false;
 
-  final List<Map<String, dynamic>> canaux = [
-    {
-      'nom': 'Équipe Développement',
-      'description': 'Discussions techniques',
-      'membres': 12,
-      'dernierMessage': 'Nouveau framework disponible',
-      'heureMessage': '15:20',
-      'nonLus': 3,
-    },
-    {
-      'nom': 'Design & UI',
-      'description': 'Créativité et design',
-      'membres': 8,
-      'dernierMessage': 'Prototype validé !',
-      'heureMessage': '14:45',
-      'nonLus': 0,
-    },
-    {
-      'nom': 'Général',
-      'description': 'Discussions générales',
-      'membres': 25,
-      'dernierMessage': 'Pause café à 15h30',
-      'heureMessage': '13:30',
-      'nonLus': 1,
-    },
-  ];
+  List<GroupeModel> _mesGroupes = [];
+  bool _isLoadingGroupes = false;
 
-  final List<Map<String, dynamic>> societes = [
-    {
-      'nom': 'TechCorp Solutions',
-      'type': 'Client',
-      'projets': 3,
-      'statut': 'actif',
-      'dernierMessage': 'Validation du livrable',
-      'heureMessage': '16:10',
-    },
-    {
-      'nom': 'Innovation Lab',
-      'type': 'Partenaire',
-      'projets': 1,
-      'statut': 'actif',
-      'dernierMessage': 'Nouvelle collaboration',
-      'heureMessage': '10:30',
-    },
-    {
-      'nom': 'StartupHub',
-      'type': 'Incubateur',
-      'projets': 2,
-      'statut': 'en attente',
-      'dernierMessage': 'Présentation demain',
-      'heureMessage': 'hier',
-    },
-  ];
+  List<SocieteModel> _suivieSocietes = [];
+  bool _isLoadingSocietes = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyRelations();
+  }
+
+  /// Charge MES relations selon l'onglet actif
+  Future<void> _loadMyRelations() async {
+    switch (selectedTab) {
+      case "suivie":
+        await _loadFollowersAndSubscribers();
+        break;
+      case "canaux":
+        await _loadMesGroupes();
+        break;
+      case "societe":
+        await _loadSuivieSocietes();
+        break;
+    }
+  }
+
+  // Charger les users qui suivent la société (gratuit) + les abonnés premium
+  Future<void> _loadFollowersAndSubscribers() async {
+    setState(() => _isLoadingUsers = true);
+
+    try {
+      // 0. Récupérer l'ID de la société connectée
+      final maSociete = await SocieteAuthService.getMe();
+      final maSocieteId = maSociete.id;
+
+      // 1. Récupérer les abonnés premium (utilisateurs avec abonnement actif)
+      List<abonnement_service.AbonnementModel> abonnements = [];
+      Set<int> subscriberUserIds = {};
+      try {
+        abonnements = await abonnement_service.AbonnementAuthService.getActiveSubscribers();
+        subscriberUserIds = abonnements.map((a) => a.userId).toSet();
+      } catch (e) {
+        debugPrint('Erreur chargement abonnés: $e');
+      }
+
+      // 2. Récupérer les followers gratuits (users qui suivent la société)
+      List<Map<String, dynamic>> followersData = [];
+      try {
+        followersData = await SuivreAuthService.getFollowers(
+          entityId: maSocieteId,
+          entityType: EntityType.societe,
+        );
+      } catch (e) {
+        debugPrint('Erreur chargement followers: $e');
+      }
+
+      // 3. Combiner les IDs des users (followers + abonnés)
+      Set<int> allUserIds = {
+        ...followersData.map((f) => f['user_id'] as int),
+        ...subscriberUserIds,
+      };
+
+      // 4. Charger les profils de tous les utilisateurs
+      List<UserModel> users = [];
+      for (var userId in allUserIds) {
+        try {
+          final user = await UserAuthService.getUserProfile(userId);
+          users.add(user);
+        } catch (e) {
+          debugPrint('Erreur chargement user $userId: $e');
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _followersUsers = users;
+          _subscribersAbonnements = abonnements;
+          _subscriberUserIds = subscriberUserIds;
+          _isLoadingUsers = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erreur globale chargement users: $e');
+      if (mounted) {
+        setState(() => _isLoadingUsers = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de chargement: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Charger les groupes CRÉÉS par la société (pas ceux dont elle est membre)
+  Future<void> _loadMesGroupes() async {
+    setState(() => _isLoadingGroupes = true);
+
+    try {
+      // Récupérer l'ID de la société connectée
+      final maSociete = await SocieteAuthService.getMe();
+      final maSocieteId = maSociete.id;
+
+      // Récupérer tous les groupes
+      final tousLesGroupes = await GroupeAuthService.getMyGroupes();
+
+      // Filtrer pour ne garder que les groupes créés par cette société
+      final groupesCrees = tousLesGroupes.where((groupe) {
+        return groupe.createdByType == 'Societe' && groupe.createdById == maSocieteId;
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _mesGroupes = groupesCrees;
+          _isLoadingGroupes = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erreur chargement groupes: $e');
+      if (mounted) {
+        setState(() => _isLoadingGroupes = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de chargement: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Charger les sociétés que cette société suit
+  Future<void> _loadSuivieSocietes() async {
+    setState(() => _isLoadingSocietes = true);
+
+    try {
+      final suivis = await SuivreAuthService.getMyFollowing(
+        type: EntityType.societe,
+      );
+
+      List<SocieteModel> societes = [];
+      for (var suivi in suivis) {
+        try {
+          final societe = await SocieteAuthService.getSocieteProfile(suivi.followedId);
+          societes.add(societe);
+        } catch (e) {
+          debugPrint('Erreur chargement société ${suivi.followedId}: $e');
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _suivieSocietes = societes;
+          _isLoadingSocietes = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erreur chargement sociétés suivies: $e');
+      if (mounted) {
+        setState(() => _isLoadingSocietes = false);
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +345,10 @@ class _ServicePageState extends State<ServicePage> {
     final isSelected = selectedTab == value;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => selectedTab = value),
+        onTap: () {
+          setState(() => selectedTab = value);
+          _loadMyRelations(); // Charger les données
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
@@ -301,118 +395,411 @@ class _ServicePageState extends State<ServicePage> {
 
   // Liste des collaborateurs (onglet Suivie)
   Widget _buildCollaborateursList() {
+    if (_isLoadingUsers) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xffFFA500)),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Text(
-            "Collaborateurs suivis (${collaborateurs.length})",
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: mattermostDarkBlue,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "Utilisateurs (${_followersUsers.length})",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: mattermostDarkBlue,
+                  ),
+                ),
+              ),
+              if (_subscribersAbonnements.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xffFFD700), Color(0xffFFA500)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star, color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_subscribersAbonnements.length} Premium',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            itemCount: collaborateurs.length,
-            itemBuilder: (context, index) {
-              final collab = collaborateurs[index];
-              return _buildCollaborateurItem(collab);
-            },
+          child: RefreshIndicator(
+            onRefresh: _loadFollowersAndSubscribers,
+            child: _followersUsers.isEmpty
+                ? ListView(
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                      Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Aucun utilisateur pour le moment',
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    itemCount: _followersUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = _followersUsers[index];
+                      return _buildUserItem(user);
+                    },
+                  ),
           ),
         ),
       ],
     );
   }
 
-  // Item collaborateur
-  Widget _buildCollaborateurItem(Map<String, dynamic> collab) {
-    Color statutColor;
-    switch (collab['statut']) {
-      case 'en ligne':
-        statutColor = mattermostGreen;
-        break;
-      case 'occupé':
-        statutColor = Colors.orange;
-        break;
-      default:
-        statutColor = mattermostDarkGray;
+  /// Afficher les options pour un utilisateur (Profil ou Conversation)
+  void _showUserOptionsDialog(UserModel user) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header avec photo et nom
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: mattermostBlue,
+                    radius: 30,
+                    backgroundImage: user.profile?.getPhotoUrl() != null
+                        ? NetworkImage(user.profile!.getPhotoUrl()!)
+                        : null,
+                    child: user.profile?.getPhotoUrl() == null
+                        ? Text(
+                            '${user.nom[0]}${user.prenom[0]}'.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${user.nom} ${user.prenom}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (user.email != null)
+                          Text(
+                            user.email!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: mattermostDarkGray,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (_subscriberUserIds.contains(user.id))
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xffFFA500),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.star,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 20),
+            // Option: Voir le profil
+            ListTile(
+              leading: const Icon(Icons.person_outline, color: mattermostBlue),
+              title: const Text('Voir le profil'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserProfilePage(userId: user.id),
+                  ),
+                );
+              },
+            ),
+            // Option: Envoyer un message
+            ListTile(
+              leading: const Icon(Icons.message_outlined, color: mattermostGreen),
+              title: const Text('Envoyer un message'),
+              onTap: () async {
+                Navigator.pop(context);
+                await _startConversation(user);
+              },
+            ),
+            // Option: Transaction/Partenariat (seulement pour abonnés premium)
+            if (_subscriberUserIds.contains(user.id))
+              ListTile(
+                leading: const Icon(Icons.handshake, color: Color(0xffFFA500)),
+                title: const Text('Transaction / Partenariat'),
+                subtitle: const Text(
+                  'Gérer transactions et partenariat',
+                  style: TextStyle(fontSize: 11, color: Color(0xffFFA500)),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateToTransactionPage(user);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Naviguer vers la page Transaction/Partenariat
+  void _navigateToTransactionPage(UserModel user) {
+    // Préparer les données pour la page de transaction
+    final Map<String, dynamic> societeData = {
+      'nom': '${user.nom} ${user.prenom}',
+      'type': 'Utilisateur Premium',
+    };
+
+    final Map<String, dynamic> categorieData = {
+      'color': const Color(0xffFFA500), // Couleur premium
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SocieteDetailsPage(
+          societe: societeData,
+          categorie: categorieData,
+        ),
+      ),
+    );
+  }
+
+  /// Démarrer une conversation avec un utilisateur
+  Future<void> _startConversation(UserModel user) async {
+    try {
+      // Afficher un indicateur de chargement
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Créer ou récupérer la conversation
+      final conversation = await ConversationService.createOrGetConversation(
+        CreateConversationDto(
+          participantId: user.id,
+          participantType: 'User',
+        ),
+      );
+
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+
+      // Naviguer vers la page de conversation
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConversationDetailPage(
+              conversationId: conversation.id,
+              participantName: '${user.nom} ${user.prenom}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Fermer le loader si ouvert
+      if (mounted) Navigator.pop(context);
+
+      // Afficher l'erreur
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
+  }
+
+  // Item utilisateur avec indication premium
+  Widget _buildUserItem(UserModel user) {
+    final bool isPremium = _subscriberUserIds.contains(user.id);
+    final String initials = '${user.nom[0]}${user.prenom[0]}'.toUpperCase();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: isPremium
+          ? BoxDecoration(
+              border: Border.all(
+                color: const Color(0xffFFA500).withOpacity(0.3),
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            )
+          : null,
       child: ListTile(
         leading: Stack(
+          clipBehavior: Clip.none,
           children: [
             CircleAvatar(
               backgroundColor: mattermostBlue,
               radius: 24,
-              child: Text(
-                collab['avatar'],
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+              backgroundImage: user.profile?.getPhotoUrl() != null
+                  ? NetworkImage(user.profile!.getPhotoUrl()!)
+                  : null,
+              child: user.profile?.getPhotoUrl() == null
+                  ? Text(
+                      initials,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
+            ),
+            if (isPremium)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xffFFA500),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.star,
+                    color: Colors.white,
+                    size: 12,
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: statutColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
-            ),
           ],
         ),
-        title: Text(
-          collab['nom'],
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${user.nom} ${user.prenom}',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+            ),
+            if (isPremium)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xffFFD700), Color(0xffFFA500)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star, color: Colors.white, size: 10),
+                    SizedBox(width: 2),
+                    Text(
+                      'Premium',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              collab['poste'],
-              style: TextStyle(color: mattermostDarkGray, fontSize: 12),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              collab['dernierMessage'],
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            if (user.email != null)
+              Text(
+                user.email!,
+                style: const TextStyle(color: mattermostDarkGray, fontSize: 12),
+              ),
+            if (user.profile?.bio != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                user.profile!.bio!,
+                style: const TextStyle(fontSize: 12, color: Colors.black87),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
-        trailing: Text(
-          collab['heureMessage'],
-          style: TextStyle(color: mattermostDarkGray, fontSize: 11),
-        ),
-        onTap: () {
-          _showCollaborateurDetails(collab);
-        },
+        onTap: () => _showUserOptionsDialog(user),
       ),
     );
   }
 
   // Liste des canaux
   Widget _buildCanauxList() {
+    if (_isLoadingGroupes) {
+      return const Center(
+        child: CircularProgressIndicator(color: mattermostBlue),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            "Canaux (${canaux.length})",
+            "Canaux (${_mesGroupes.length})",
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -421,20 +808,46 @@ class _ServicePageState extends State<ServicePage> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            itemCount: canaux.length,
-            itemBuilder: (context, index) {
-              final canal = canaux[index];
-              return _buildCanalItem(canal);
-            },
+          child: RefreshIndicator(
+            onRefresh: _loadMesGroupes,
+            child: _mesGroupes.isEmpty
+                ? ListView(
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                      Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.group_outlined, size: 64, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Aucun groupe créé',
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Créez des groupes pour vos abonnés',
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    itemCount: _mesGroupes.length,
+                    itemBuilder: (context, index) {
+                      final groupe = _mesGroupes[index];
+                      return _buildGroupeItem(groupe);
+                    },
+                  ),
           ),
         ),
       ],
     );
   }
 
-  // Item canal
-  Widget _buildCanalItem(Map<String, dynamic> canal) {
+  // Item groupe/canal
+  Widget _buildGroupeItem(GroupeModel groupe) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
@@ -442,62 +855,49 @@ class _ServicePageState extends State<ServicePage> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: mattermostBlue.withOpacity(0.1),
+            color: mattermostBlue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.tag, color: mattermostBlue, size: 20),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                canal['nom'],
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            if (canal['nonLus'] > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  canal['nonLus'].toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+          child: groupe.profil?.getLogoUrl() != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    groupe.profil!.getLogoUrl()!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.tag, color: mattermostBlue, size: 20);
+                    },
                   ),
-                ),
-              ),
-          ],
+                )
+              : const Icon(Icons.tag, color: mattermostBlue, size: 20),
+        ),
+        title: Text(
+          groupe.nom,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "${canal['membres']} membres • ${canal['description']}",
-              style: TextStyle(color: mattermostDarkGray, fontSize: 12),
+              "${groupe.membresCount ?? 0} membres • ${groupe.type.value}",
+              style: const TextStyle(color: mattermostDarkGray, fontSize: 12),
             ),
-            const SizedBox(height: 2),
-            Text(
-              canal['dernierMessage'],
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            if (groupe.profil?.description != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                groupe.profil!.description!,
+                style: const TextStyle(fontSize: 12, color: Colors.black87),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
-        trailing: Text(
-          canal['heureMessage'],
-          style: TextStyle(color: mattermostDarkGray, fontSize: 11),
-        ),
         onTap: () {
-          _showCanalDetails(canal);
+          // Navigation vers le groupe
         },
       ),
     );
@@ -505,13 +905,19 @@ class _ServicePageState extends State<ServicePage> {
 
   // Liste des sociétés
   Widget _buildSocietesList() {
+    if (_isLoadingSocietes) {
+      return const Center(
+        child: CircularProgressIndicator(color: mattermostBlue),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            "Sociétés (${societes.length})",
+            "Sociétés (${_suivieSocietes.length})",
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -520,32 +926,41 @@ class _ServicePageState extends State<ServicePage> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            itemCount: societes.length,
-            itemBuilder: (context, index) {
-              final societe = societes[index];
-              return _buildSocieteItem(societe);
-            },
+          child: RefreshIndicator(
+            onRefresh: _loadSuivieSocietes,
+            child: _suivieSocietes.isEmpty
+                ? ListView(
+                    children: [
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                      Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Aucune société suivie',
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    itemCount: _suivieSocietes.length,
+                    itemBuilder: (context, index) {
+                      final societe = _suivieSocietes[index];
+                      return _buildSocieteItemDynamic(societe);
+                    },
+                  ),
           ),
         ),
       ],
     );
   }
 
-  // Item société
-  Widget _buildSocieteItem(Map<String, dynamic> societe) {
-    Color statutColor;
-    switch (societe['statut']) {
-      case 'actif':
-        statutColor = mattermostGreen;
-        break;
-      case 'en attente':
-        statutColor = Colors.orange;
-        break;
-      default:
-        statutColor = mattermostDarkGray;
-    }
-
+  // Item société dynamique
+  Widget _buildSocieteItemDynamic(SocieteModel societe) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
@@ -556,58 +971,46 @@ class _ServicePageState extends State<ServicePage> {
             color: mattermostBlue,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.business, color: Colors.white, size: 20),
+          child: societe.profile?.getLogoUrl() != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    societe.profile!.getLogoUrl()!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.business, color: Colors.white, size: 20);
+                    },
+                  ),
+                )
+              : const Icon(Icons.business, color: Colors.white, size: 20),
         ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                societe['nom'],
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: statutColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                societe['statut'],
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
+        title: Text(
+          societe.nom,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "${societe['type']} • ${societe['projets']} projet(s)",
-              style: TextStyle(color: mattermostDarkGray, fontSize: 12),
+              societe.secteurActivite ?? 'Secteur non spécifié',
+              style: const TextStyle(color: mattermostDarkGray, fontSize: 12),
             ),
-            const SizedBox(height: 2),
-            Text(
-              societe['dernierMessage'],
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            if (societe.profile?.description != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                societe.profile!.description!,
+                style: const TextStyle(fontSize: 12, color: Colors.black87),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
-        trailing: Text(
-          societe['heureMessage'],
-          style: const TextStyle(color: mattermostDarkGray, fontSize: 11),
-        ),
         onTap: () {
-          _showSocieteDetails(societe);
+          // Navigation vers le profil de la société
         },
       ),
     );
@@ -643,162 +1046,4 @@ class _ServicePageState extends State<ServicePage> {
   //   );
   // }
 
-  // Détails collaborateur
-  void _showCollaborateurDetails(Map<String, dynamic> collab) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                backgroundColor: mattermostBlue,
-                radius: 30,
-                child: Text(
-                  collab['avatar'],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                collab['nom'],
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                collab['poste'],
-                style: TextStyle(color: mattermostDarkGray, fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.message, size: 16),
-                    label: const Text("Message"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: mattermostBlue,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.call, size: 16),
-                    label: const Text("Appeler"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: mattermostGreen,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // Détails canal
-  void _showCanalDetails(Map<String, dynamic> canal) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            backgroundColor: mattermostBlue,
-            title: Text(
-              canal['nom'],
-              style: const TextStyle(color: Colors.white),
-            ),
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-          body: Center(child: Text("Contenu du canal ${canal['nom']}")),
-        ),
-      ),
-    );
-  }
-
-  // Dans votre CategoriePage, modifiez la fonction _showSocieteDetails
-  void _showSocieteDetails(Map<String, dynamic> societe) {
-    // Catégorie par défaut si pas disponible
-    Map<String, dynamic> defaultCategorie = {
-      'nom': 'Service',
-      'color': const Color(0xFF1E4A8C), // mattermostBlue
-      'icon': Icons.business,
-      'description': 'Services généraux',
-    };
-
-    if (societe['statut'] == 'actif') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SocieteDetailsPage(
-            societe: societe,
-            categorie: defaultCategorie, // Catégorie par défaut
-          ),
-        ),
-      );
-    } else {
-      // Pour les sociétés non actives, afficher la modal simple
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => Container(
-          height: MediaQuery.of(context).size.height * 0.6,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 50,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                societe['nom'],
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                societe['description'],
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Cette société n\'est pas encore active. Vous pouvez envoyer une demande de partenariat.',
-                style: TextStyle(fontSize: 14, color: Colors.orange[700]),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-  }
 }

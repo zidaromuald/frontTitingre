@@ -129,7 +129,9 @@ class AbonnementModel {
       dateDebut: json['date_debut'] != null
           ? DateTime.parse(json['date_debut'])
           : null,
-      dateFin: json['date_fin'] != null ? DateTime.parse(json['date_fin']) : null,
+      dateFin: json['date_fin'] != null
+          ? DateTime.parse(json['date_fin'])
+          : null,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -248,9 +250,7 @@ class SuivreAuthService {
 
   /// Récupérer mes suivis (les entités que je suis)
   /// GET /suivis/my-following?type=User|Societe
-  static Future<List<SuivreModel>> getMyFollowing({
-    EntityType? type,
-  }) async {
+  static Future<List<SuivreModel>> getMyFollowing({EntityType? type}) async {
     final queryParams = type != null ? '?type=${type.value}' : '';
     final response = await ApiService.get('/suivis/my-following$queryParams');
 
@@ -292,12 +292,17 @@ class SuivreAuthService {
       if (planCollaboration != null) 'plan_collaboration': planCollaboration,
     };
 
-    final response = await ApiService.post('/suivis/upgrade-to-abonnement', data);
+    final response = await ApiService.post(
+      '/suivis/upgrade-to-abonnement',
+      data,
+    );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
       return {
-        'abonnement': AbonnementModel.fromJson(jsonResponse['data']['abonnement']),
+        'abonnement': AbonnementModel.fromJson(
+          jsonResponse['data']['abonnement'],
+        ),
         'page_partenariat': PagePartenariatModel.fromJson(
           jsonResponse['data']['page_partenariat'],
         ),
@@ -310,7 +315,7 @@ class SuivreAuthService {
 
   /// Statistiques d'une société
   /// GET /suivis/societe/:id/stats
-  static Future<Map<String, dynamic>> getSocieteStats(int societeId) async {
+  /*static Future<Map<String, dynamic>> getSocieteStats(int societeId) async {
     final response = await ApiService.get('/suivis/societe/$societeId/stats');
 
     if (response.statusCode == 200) {
@@ -319,5 +324,5 @@ class SuivreAuthService {
     } else {
       throw Exception('Erreur de récupération des statistiques');
     }
-  }
+  }*/
 }

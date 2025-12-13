@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/AuthUS/societe_auth_service.dart';
 import '../../../services/suivre/suivre_auth_service.dart';
 import '../../../services/suivre/demande_abonnement_service.dart';
+import '../../../services/suivre/abonnement_auth_service.dart' as abonnement_service;
 import '../../../widgets/editable_profile_avatar.dart';
 
 /// Page de profil pour visualiser le profil d'une AUTRE société
@@ -20,6 +21,7 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
   SocieteModel? _societe;
   bool _isSuivant = false; // true si on suit déjà cette société
   bool _isAbonne = false; // true si on est abonné (upgrade payant)
+  abonnement_service.AbonnementModel? _abonnementDetails; // Détails de l'abonnement actif
 
   // États de demande d'abonnement
   bool _demandeAbonnementEnvoyee = false;
@@ -69,15 +71,29 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
         demandeAbonnementEnvoyee = false;
       }
 
-      // TODO: Vérifier si on est abonné (demande acceptée)
-      // Pour l'instant, on considère qu'on n'est pas abonné
-      bool isAbonne = demandeAbonnementStatut == DemandeAbonnementStatus.accepted;
+      // 4. Vérifier si on est abonné à cette société (via checkAbonnement)
+      bool isAbonne = false;
+      abonnement_service.AbonnementModel? abonnementDetails;
+      try {
+        final abonnementCheck = await abonnement_service.AbonnementAuthService.checkAbonnement(widget.societeId);
+        isAbonne = abonnementCheck['is_abonne'] == true;
+
+        // Si abonné, récupérer les détails de l'abonnement
+        if (isAbonne && abonnementCheck['abonnement'] != null) {
+          abonnementDetails = abonnement_service.AbonnementModel.fromJson(abonnementCheck['abonnement']);
+        }
+      } catch (e) {
+        // Pas d'abonnement actif
+        isAbonne = false;
+        abonnementDetails = null;
+      }
 
       if (mounted) {
         setState(() {
           _societe = societe;
           _isSuivant = isSuivant;
           _isAbonne = isAbonne;
+          _abonnementDetails = abonnementDetails;
           _demandeAbonnementEnvoyee = demandeAbonnementEnvoyee;
           _demandeAbonnementStatut = demandeAbonnementStatut;
           _isLoading = false;
@@ -272,6 +288,185 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
           const SnackBar(
             content: Text('Demande d\'abonnement envoyée avec succès'),
             backgroundColor: Color(0xffFFA500),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isActionLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Gérer l'abonnement actif (voir détails et annuler)
+  Future<void> _gererAbonnement() async {
+    if (_abonnementDetails == null) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.star, color: Color(0xffFFA500)),
+            const SizedBox(width: 8),
+            const Text('Abonnement Premium'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Vous êtes abonné à cette société',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            _buildAbonnementInfoRow(
+              Icons.business,
+              'Société',
+              _societe!.nom,
+            ),
+            _buildAbonnementInfoRow(
+              Icons.calendar_today,
+              'Date de début',
+              _abonnementDetails!.dateDebut != null
+                  ? '${_abonnementDetails!.dateDebut!.day}/${_abonnementDetails!.dateDebut!.month}/${_abonnementDetails!.dateDebut!.year}'
+                  : 'Non définie',
+            ),
+            _buildAbonnementInfoRow(
+              Icons.event,
+              'Date de fin',
+              _abonnementDetails!.dateFin != null
+                  ? '${_abonnementDetails!.dateFin!.day}/${_abonnementDetails!.dateFin!.month}/${_abonnementDetails!.dateFin!.year}'
+                  : 'Indéterminée',
+            ),
+            if (_abonnementDetails!.planCollaboration != null)
+              _buildAbonnementInfoRow(
+                Icons.workspace_premium,
+                'Plan',
+                _abonnementDetails!.planCollaboration!,
+              ),
+            _buildAbonnementInfoRow(
+              Icons.verified,
+              'Statut',
+              _abonnementDetails!.statut.value,
+              valueColor: const Color(0xff28A745),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _annulerAbonnement();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            icon: const Icon(Icons.cancel, color: Colors.white),
+            label: const Text(
+              'Annuler l\'abonnement',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget helper pour afficher une ligne d'info dans le dialog
+  Widget _buildAbonnementInfoRow(IconData icon, String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: const Color(0xffFFA500)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: valueColor ?? Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Annuler l'abonnement actif
+  Future<void> _annulerAbonnement() async {
+    if (_abonnementDetails == null) return;
+
+    // Demander confirmation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler l\'abonnement'),
+        content: Text(
+          'Êtes-vous sûr de vouloir annuler votre abonnement premium à ${_societe!.nom} ?\n\nCette action est irréversible et vous perdrez l\'accès aux fonctionnalités exclusives.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Non'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text(
+              'Oui, annuler',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isActionLoading = true);
+
+    try {
+      await abonnement_service.AbonnementAuthService.deleteAbonnement(_abonnementDetails!.id);
+
+      if (mounted) {
+        setState(() {
+          _isAbonne = false;
+          _abonnementDetails = null;
+          _isActionLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Abonnement annulé avec succès'),
+            backgroundColor: Colors.orange,
             duration: Duration(seconds: 3),
           ),
         );
@@ -621,31 +816,46 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
       return const CircularProgressIndicator();
     }
 
-    // Si déjà abonné (demande acceptée), afficher seulement le badge "Abonné Premium"
+    // Si déjà abonné (demande acceptée), afficher le badge "Abonné Premium" avec bouton de gestion
     if (_isAbonne) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xffFFD700), Color(0xffFFA500)],
-          ),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.star, color: Colors.white),
-            SizedBox(width: 8),
-            Text(
-              'Abonné Premium',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xffFFD700), Color(0xffFFA500)],
               ),
+              borderRadius: BorderRadius.circular(30),
             ),
-          ],
-        ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.star, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Abonné Premium',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _gererAbonnement,
+            icon: const Icon(Icons.settings, size: 18),
+            label: const Text('Gérer l\'abonnement'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xffFFA500),
+              side: const BorderSide(color: Color(0xffFFA500), width: 1.5),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+          ),
+        ],
       );
     }
 

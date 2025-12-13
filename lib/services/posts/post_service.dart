@@ -183,11 +183,7 @@ class UpdatePostDto {
   final PostVisibility? visibility;
   final List<String>? mediaUrls;
 
-  UpdatePostDto({
-    this.contenu,
-    this.visibility,
-    this.mediaUrls,
-  });
+  UpdatePostDto({this.contenu, this.visibility, this.mediaUrls});
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
@@ -313,32 +309,6 @@ class PostService {
   // FEEDS
   // ==========================================================================
 
-  /// Récupérer le feed personnalisé (posts des personnes/sociétés suivies)
-  /// GET /posts/feed/my-feed
-  /// Nécessite authentification
-  static Future<List<PostModel>> getMyFeed({
-    int limit = 20,
-    int offset = 0,
-    bool onlyWithMedia = false,
-  }) async {
-    final params = <String, String>{
-      'limit': limit.toString(),
-      'offset': offset.toString(),
-      'onlyWithMedia': onlyWithMedia.toString(),
-    };
-
-    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
-    final response = await ApiService.get('/posts/feed/my-feed?$queryString');
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> postsData = jsonResponse['data'];
-      return postsData.map((json) => PostModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Erreur de récupération du feed');
-    }
-  }
-
   /// Récupérer le feed public (tous les posts publics)
   /// GET /posts/feed/public
   static Future<List<PostModel>> getPublicFeed({
@@ -352,7 +322,9 @@ class PostService {
       'onlyWithMedia': onlyWithMedia.toString(),
     };
 
-    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    final queryString = params.entries
+        .map((e) => '${e.key}=${e.value}')
+        .join('&');
     final response = await ApiService.get('/posts/feed/public?$queryString');
 
     if (response.statusCode == 200) {
@@ -361,52 +333,6 @@ class PostService {
       return postsData.map((json) => PostModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération du feed public');
-    }
-  }
-
-  /// Récupérer les posts tendances
-  /// GET /posts/trending/top
-  static Future<List<PostModel>> getTrendingPosts({int limit = 10}) async {
-    final response = await ApiService.get('/posts/trending/top?limit=$limit');
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> postsData = jsonResponse['data'];
-      return postsData.map((json) => PostModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Erreur de récupération des posts tendances');
-    }
-  }
-
-  // ==========================================================================
-  // RECHERCHE
-  // ==========================================================================
-
-  /// Rechercher des posts avec des filtres
-  /// GET /posts/search/query
-  /// Au moins un paramètre de recherche est requis
-  static Future<List<PostModel>> searchPosts(SearchPostDto searchDto) async {
-    final params = searchDto.toQueryParams();
-
-    if (params.isEmpty) {
-      throw Exception('Au moins un critère de recherche est requis');
-    }
-
-    final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
-    final response = await ApiService.get('/posts/search/query?$queryString');
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-
-      // Vérifier si la recherche a réussi
-      if (jsonResponse['success'] == false) {
-        throw Exception(jsonResponse['message'] ?? 'Erreur de recherche');
-      }
-
-      final List<dynamic> postsData = jsonResponse['data'];
-      return postsData.map((json) => PostModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Erreur de recherche');
     }
   }
 
@@ -442,8 +368,9 @@ class PostService {
     int groupeId, {
     PostVisibility? visibility,
   }) async {
-    final visibilityParam =
-        visibility != null ? '?visibility=${visibility.value}' : '';
+    final visibilityParam = visibility != null
+        ? '?visibility=${visibility.value}'
+        : '';
     final response = await ApiService.get(
       '/posts/groupe/$groupeId$visibilityParam',
     );
@@ -457,81 +384,80 @@ class PostService {
     }
   }
 
+  /// Récupérer le feed personnalisé (posts des personnes/sociétés suivies)
+  /// GET /posts/feed/my-feed
+  /// Nécessite authentification
+  static Future<List<PostModel>> getMyFeed({
+    int limit = 20,
+    int offset = 0,
+    bool onlyWithMedia = false,
+  }) async {
+    final params = <String, String>{
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+      'onlyWithMedia': onlyWithMedia.toString(),
+    };
+
+    final queryString = params.entries
+        .map((e) => '${e.key}=${e.value}')
+        .join('&');
+    final response = await ApiService.get('/posts/feed/my-feed?$queryString');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      final List<dynamic> postsData = jsonResponse['data'];
+      return postsData.map((json) => PostModel.fromJson(json)).toList();
+    } else {
+      throw Exception('Erreur de récupération du feed');
+    }
+  }
+
   // ==========================================================================
   // ACTIONS
   // ==========================================================================
 
-  /// Épingler/Désépingler un post
-  /// PUT /posts/:id/pin
-  /// Nécessite authentification (et être admin du groupe/société)
-  static Future<PostModel> togglePin(int postId) async {
-    final response = await ApiService.put('/posts/$postId/pin', {});
-
-    if (response.statusCode == 200) {
-      // Récupérer le post complet mis à jour
-      return await getPost(postId);
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['message'] ?? 'Erreur d\'épinglage du post');
-    }
-  }
-
   /// Partager un post (incrémenter le compteur)
   /// POST /posts/:id/share
-  static Future<void> sharePost(int postId) async {
+  /// À implémenter côté backend NestJS avant d'utiliser
+  /* static Future<void> sharePost(int postId) async {
     final response = await ApiService.post('/posts/$postId/share', {});
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'Erreur de partage du post');
     }
-  }
+  } */
 
   // ==========================================================================
-  // MÉTHODES UTILITAIRES
+  // RECHERCHE
   // ==========================================================================
 
-  /// Récupérer mes posts uniquement
-  static Future<List<PostModel>> getMyPosts({
-    bool includeGroupPosts = false,
-  }) async {
-    // Nécessite de connaître mon ID et mon type
-    // On peut appeler /auth/me pour récupérer ces infos
-    // Pour simplifier, on peut utiliser searchPosts avec des filtres
-    throw UnimplementedError(
-      'Utilisez getPostsByAuthor avec votre ID et type',
-    );
-  }
+  /// Rechercher des posts avec des filtres avancés
+  /// GET /posts/search/query
+  /// Au moins un paramètre de recherche est requis
+  static Future<List<PostModel>> searchPosts(SearchPostDto searchDto) async {
+    final params = searchDto.toQueryParams();
 
-  /// Recherche rapide par texte uniquement
-  static Future<List<PostModel>> quickSearch(String query) async {
-    return searchPosts(SearchPostDto(query: query));
-  }
+    if (params.isEmpty) {
+      throw Exception('Au moins un critère de recherche est requis');
+    }
 
-  /// Rechercher les posts avec média d'un auteur
-  static Future<List<PostModel>> getMediaPostsByAuthor(
-    int authorId,
-    AuthorType authorType,
-  ) async {
-    return searchPosts(SearchPostDto(
-      authorId: authorId,
-      authorType: authorType,
-      hasMedia: true,
-    ));
-  }
+    final queryString =
+        params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    final response = await ApiService.get('/posts/search/query?$queryString');
 
-  /// Rechercher les posts publics uniquement
-  static Future<List<PostModel>> getPublicPosts({int limit = 20}) async {
-    return searchPosts(SearchPostDto(
-      visibility: PostVisibility.public,
-    ));
-  }
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
 
-  /// Rechercher les posts épinglés d'un groupe
-  static Future<List<PostModel>> getPinnedPostsOfGroupe(int groupeId) async {
-    return searchPosts(SearchPostDto(
-      groupeId: groupeId,
-      isPinned: true,
-    ));
+      // Vérifier si la recherche a réussi
+      if (jsonResponse['success'] == false) {
+        throw Exception(jsonResponse['message'] ?? 'Erreur de recherche');
+      }
+
+      final List<dynamic> postsData = jsonResponse['data'];
+      return postsData.map((json) => PostModel.fromJson(json)).toList();
+    } else {
+      throw Exception('Erreur de recherche');
+    }
   }
 }

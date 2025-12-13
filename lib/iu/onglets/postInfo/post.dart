@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:gestauth_clean/services/groupe/groupe_service.dart';
 import 'package:gestauth_clean/services/suivre/suivre_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
+import 'package:gestauth_clean/services/posts/post_service.dart';
+import 'package:gestauth_clean/services/media_service.dart';
 
 class CreerPostPage extends StatefulWidget {
   const CreerPostPage({super.key});
@@ -16,6 +20,11 @@ class _CreerPostPageState extends State<CreerPostPage> {
   final TextEditingController _textController = TextEditingController();
   bool _isRecording = false;
   bool _hasSelectedMedia = false;
+
+  // Fichiers sélectionnés pour upload
+  List<File> _selectedFiles = [];
+  final ImagePicker _picker = ImagePicker();
+  bool _isPublishing = false;
 
   // Couleurs Mattermost
   static const Color mattermostBlue = Color(0xFF1E4A8C);
@@ -212,11 +221,20 @@ class _CreerPostPageState extends State<CreerPostPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed: _publierPost,
-                    icon: const Icon(Icons.send, size: 18), // Réduit de 20 à 18
-                    label: const Text(
-                      "Publier",
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                    onPressed: _isPublishing ? null : _publierPost,
+                    icon: _isPublishing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Icon(Icons.send, size: 18), // Réduit de 20 à 18
+                    label: Text(
+                      _isPublishing ? "Publication..." : "Publier",
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -820,34 +838,88 @@ class _CreerPostPageState extends State<CreerPostPage> {
     }
   }
 
-  void _selectFromGallery() {
-    setState(() {
-      _hasSelectedMedia = true;
-    });
+  Future<void> _selectFromGallery() async {
+    try {
+      if (typePost == "image") {
+        // Sélection multiple d'images
+        final List<XFile> images = await _picker.pickMultiImage();
+        if (images.isNotEmpty) {
+          setState(() {
+            _selectedFiles = images.map((xFile) => File(xFile.path)).toList();
+            _hasSelectedMedia = true;
+          });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "${typePost == 'image' ? 'Image' : 'Vidéo'} sélectionnée",
-        ),
-        backgroundColor: mattermostGreen,
-        duration: const Duration(seconds: 1),
-      ),
-    );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("${images.length} image(s) sélectionnée(s)"),
+                backgroundColor: mattermostGreen,
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          }
+        }
+      } else if (typePost == "video") {
+        // Sélection d'une vidéo
+        final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+        if (video != null) {
+          setState(() {
+            _selectedFiles = [File(video.path)];
+            _hasSelectedMedia = true;
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Vidéo sélectionnée"),
+                backgroundColor: mattermostGreen,
+                duration: Duration(seconds: 1),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  void _takeVideo() {
-    setState(() {
-      _hasSelectedMedia = true;
-    });
+  Future<void> _takeVideo() async {
+    try {
+      final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+      if (video != null) {
+        setState(() {
+          _selectedFiles = [File(video.path)];
+          _hasSelectedMedia = true;
+        });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Vidéo filmée"),
-        backgroundColor: mattermostGreen,
-        duration: Duration(seconds: 1),
-      ),
-    );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Vidéo filmée"),
+              backgroundColor: mattermostGreen,
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _startRecording() {
@@ -877,7 +949,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
     );
   }
 
-  void _publierPost() {
+  Future<void> _publierPost() async {
     // Validation du destinataire : si ce n'est pas public, il faut sélectionner une cible
     if (destinataire != "public") {
       if (destinataire == "groupe" && _selectedGroupeId == null) {
@@ -915,40 +987,82 @@ class _CreerPostPageState extends State<CreerPostPage> {
     if (typePost != "texte" && !_hasSelectedMedia) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Veuillez sélectionner un ${typePost}"),
+          content: Text("Veuillez sélectionner un $typePost"),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // TODO: Implémenter l'appel API pour créer le post
-    // Trois niveaux de visibilité :
-    // 1. "public" → Visible par tous mes abonnés (followers)
-    // 2. "groupe" → Visible uniquement par les membres du groupe sélectionné
-    // 3. "societe" → Visible uniquement par les membres/abonnés de la société
-    //
-    // final postData = {
-    //   'type': typePost,
-    //   'contenu': typePost == 'texte' ? _textController.text : null,
-    //   'visibilite': destinataire, // 'public', 'groupe', ou 'societe'
-    //   if (destinataire == 'groupe') 'groupe_id': _selectedGroupeId,
-    //   if (destinataire == 'societe') 'societe_id': _selectedSocieteId,
-    //   // Pour les médias (image, video, vocal) :
-    //   // 'media_url': uploadedMediaUrl,
-    //   // 'media_type': typePost, // 'image', 'video', 'vocal'
-    // };
-    //
-    // await PostService.createPost(postData);
+    // Démarrer le processus de publication
+    setState(() => _isPublishing = true);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Post publié avec succès !"),
-        backgroundColor: mattermostGreen,
-      ),
-    );
+    try {
+      // 1. Upload des médias si nécessaire
+      List<String> mediaUrls = [];
+      if (_selectedFiles.isNotEmpty) {
+        if (typePost == "image") {
+          // Upload des images
+          mediaUrls = await MediaService.uploadImages(_selectedFiles);
+        } else if (typePost == "video") {
+          // Upload de la vidéo
+          final response = await MediaService.uploadVideo(_selectedFiles.first);
+          mediaUrls = [response.url];
+        } else if (typePost == "vocal") {
+          // Upload de l'audio
+          final response = await MediaService.uploadAudio(_selectedFiles.first);
+          mediaUrls = [response.url];
+        }
+      }
 
-    Navigator.pop(context);
+      // 2. Mapper la visibilité vers l'enum PostVisibility
+      PostVisibility visibility;
+      if (destinataire == "groupe") {
+        visibility = PostVisibility.groupe;
+      } else {
+        visibility = PostVisibility.public;
+      }
+
+      // 3. Créer le DTO pour le post
+      final createDto = CreatePostDto(
+        contenu: typePost == "texte"
+            ? _textController.text.trim()
+            : "Post ${typePost == 'image' ? 'image' : typePost == 'video' ? 'vidéo' : 'vocal'}",
+        visibility: visibility,
+        groupeId: destinataire == "groupe" ? _selectedGroupeId : null,
+        mediaUrls: mediaUrls.isNotEmpty ? mediaUrls : null,
+      );
+
+      // 4. Créer le post via l'API
+      await PostService.createPost(createDto);
+
+      // 5. Afficher le succès et fermer la page
+      if (mounted) {
+        setState(() => _isPublishing = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Post publié avec succès !"),
+            backgroundColor: mattermostGreen,
+          ),
+        );
+
+        Navigator.pop(context, true); // true indique que le post a été créé
+      }
+    } catch (e) {
+      // Gérer les erreurs
+      if (mounted) {
+        setState(() => _isPublishing = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erreur de publication: $e"),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override

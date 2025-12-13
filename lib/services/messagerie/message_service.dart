@@ -146,9 +146,7 @@ class SendMessageDto {
   });
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {
-      'contenu': contenu,
-    };
+    final Map<String, dynamic> data = {'contenu': contenu};
 
     if (transactionId != null) {
       data['transaction_id'] = transactionId;
@@ -166,14 +164,10 @@ class SendMessageDto {
 class MessageStatsModel {
   final int totalUnreadMessages;
 
-  MessageStatsModel({
-    required this.totalUnreadMessages,
-  });
+  MessageStatsModel({required this.totalUnreadMessages});
 
   factory MessageStatsModel.fromJson(Map<String, dynamic> json) {
-    return MessageStatsModel(
-      totalUnreadMessages: json['count'] ?? 0,
-    );
+    return MessageStatsModel(totalUnreadMessages: json['count'] ?? 0);
   }
 }
 
@@ -262,9 +256,7 @@ class MessageService {
       final List<dynamic> messagesData = jsonResponse['messages'];
       return messagesData.map((json) => MessageModel.fromJson(json)).toList();
     } else {
-      throw Exception(
-        'Erreur de récupération des messages de la transaction',
-      );
+      throw Exception('Erreur de récupération des messages de la transaction');
     }
   }
 
@@ -283,9 +275,7 @@ class MessageService {
       final List<dynamic> messagesData = jsonResponse['messages'];
       return messagesData.map((json) => MessageModel.fromJson(json)).toList();
     } else {
-      throw Exception(
-        'Erreur de récupération des messages de l\'abonnement',
-      );
+      throw Exception('Erreur de récupération des messages de l\'abonnement');
     }
   }
 
@@ -296,7 +286,7 @@ class MessageService {
   /// Marquer un message comme lu
   /// PUT /messages/:id/read
   /// Nécessite authentification
-  static Future<MessageModel> markMessageAsRead(int messageId) async {
+  /*static Future<MessageModel> markMessageAsRead(int messageId) async {
     final response = await ApiService.put('/messages/$messageId/read', {});
 
     if (response.statusCode == 200) {
@@ -308,7 +298,7 @@ class MessageService {
         error['message'] ?? 'Erreur de marquage du message comme lu',
       );
     }
-  }
+  }*/
 
   /// Marquer tous les messages d'une conversation comme lus
   /// PUT /messages/conversations/:conversationId/read-all
@@ -358,14 +348,11 @@ class MessageService {
     int conversationId,
     String contenu,
   ) async {
-    return await sendMessage(
-      conversationId,
-      SendMessageDto(contenu: contenu),
-    );
+    return await sendMessage(conversationId, SendMessageDto(contenu: contenu));
   }
 
   /// Envoyer un message lié à une transaction
-  static Future<MessageModel> sendTransactionMessage(
+  /*static Future<MessageModel> sendTransactionMessage(
     int conversationId,
     String contenu,
     int transactionId,
@@ -392,10 +379,10 @@ class MessageService {
         abonnementId: abonnementId,
       ),
     );
-  }
+  }*/
 
   /// Compter les messages non lus dans une conversation spécifique
-  static Future<int> countUnreadInConversation(int conversationId) async {
+  /*static Future<int> countUnreadInConversation(int conversationId) async {
     try {
       final unreadMessages = await getUnreadMessages(conversationId);
       return unreadMessages.length;
@@ -403,7 +390,7 @@ class MessageService {
       return 0;
     }
   }
-
+ 
   /// Récupérer les derniers messages d'une conversation (limité)
   static Future<List<MessageModel>> getRecentMessages(
     int conversationId, {
@@ -424,7 +411,7 @@ class MessageService {
     } catch (e) {
       return false;
     }
-  }
+  }*/
 
   /// Grouper les messages par date (utile pour l'affichage)
   static Map<DateTime, List<MessageModel>> groupMessagesByDate(
@@ -470,7 +457,7 @@ class MessageService {
         'Jeudi',
         'Vendredi',
         'Samedi',
-        'Dimanche'
+        'Dimanche',
       ];
       return weekDays[date.weekday - 1];
     } else {

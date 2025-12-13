@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/AuthUS/user_auth_service.dart';
 import '../../../services/suivre/suivre_auth_service.dart';
 import '../../../services/suivre/invitation_suivi_service.dart' as InvitationService;
+import '../../../services/suivre/abonnement_auth_service.dart' as abonnement_service;
 import '../../../widgets/editable_profile_avatar.dart';
 
 /// Page de profil pour visualiser le profil d'un AUTRE utilisateur
@@ -21,6 +22,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool _isSuivant = false; // true si on suit déjà cet utilisateur
   bool _invitationEnvoyee = false; // true si invitation en attente
   String? _invitationStatut; // 'pending', 'accepted', 'declined'
+  bool _userEstAbonne = false; // true si l'utilisateur est abonné à MA société (pour les sociétés)
+  abonnement_service.AbonnementModel? _abonnementDetails; // Détails de l'abonnement si existant
 
   static const Color primaryColor = Color(0xff5ac18e);
 
@@ -50,10 +53,30 @@ class _UserProfilePageState extends State<UserProfilePage> {
         isSuivant = false;
       }
 
+      // 3. Vérifier si cet utilisateur est abonné à MA société (pour sociétés uniquement)
+      // Note: Cette vérification n'a de sens que si JE suis une société
+      bool userEstAbonne = false;
+      abonnement_service.AbonnementModel? abonnementDetails;
+      try {
+        // Récupérer mes abonnés (si je suis une société)
+        final subscribers = await abonnement_service.AbonnementAuthService.getActiveSubscribers();
+        // Chercher si cet utilisateur est dans mes abonnés
+        final abonnement = subscribers.where((a) => a.userId == widget.userId).firstOrNull;
+        if (abonnement != null) {
+          userEstAbonne = true;
+          abonnementDetails = abonnement;
+        }
+      } catch (e) {
+        // Si erreur ou si je ne suis pas une société, ignorer
+        userEstAbonne = false;
+      }
+
       if (mounted) {
         setState(() {
           _user = user;
           _isSuivant = isSuivant;
+          _userEstAbonne = userEstAbonne;
+          _abonnementDetails = abonnementDetails;
           _isLoading = false;
         });
       }
@@ -262,13 +285,44 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
             const SizedBox(height: 16),
 
-            // Nom complet
-            Text(
-              '${_user!.nom} ${_user!.prenom}',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+            // Nom complet avec badge premium si abonné
+            Column(
+              children: [
+                Text(
+                  '${_user!.nom} ${_user!.prenom}',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (_userEstAbonne) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xffFFD700), Color(0xffFFA500)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.star, color: Colors.white, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'Abonné Premium',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
 
             const SizedBox(height: 8),
@@ -288,6 +342,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
             // Bouton Suivre / Abonné
             _buildActionButton(),
+
+            // Boutons de gestion d'abonnement (pour les sociétés)
+            if (_userEstAbonne && _abonnementDetails != null) ...[
+              const SizedBox(height: 16),
+              _buildAbonnementManagementButtons(),
+            ],
 
             const SizedBox(height: 24),
 
@@ -489,5 +549,308 @@ class _UserProfilePageState extends State<UserProfilePage> {
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       ),
     );
+  }
+
+  /// Widget pour les boutons de gestion d'abonnement (société uniquement)
+  Widget _buildAbonnementManagementButtons() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xffFFA500).withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xffFFA500).withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.admin_panel_settings, color: Color(0xffFFA500), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Gestion de l\'abonnement',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xff0B2340),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Informations de l'abonnement
+          _buildAbonnementInfo(),
+
+          const SizedBox(height: 16),
+
+          // Boutons d'action
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _modifierAbonnement,
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Modifier'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xffFFA500),
+                    side: const BorderSide(color: Color(0xffFFA500), width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _annulerAbonnement,
+                  icon: const Icon(Icons.cancel, size: 18),
+                  label: const Text('Annuler'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget pour afficher les informations de l'abonnement
+  Widget _buildAbonnementInfo() {
+    final abonnement = _abonnementDetails!;
+
+    return Column(
+      children: [
+        _buildInfoRow(
+          icon: Icons.calendar_today,
+          label: 'Date de début',
+          value: abonnement.dateDebut != null
+              ? '${abonnement.dateDebut!.day}/${abonnement.dateDebut!.month}/${abonnement.dateDebut!.year}'
+              : 'Non définie',
+        ),
+        const SizedBox(height: 8),
+        _buildInfoRow(
+          icon: Icons.event,
+          label: 'Date de fin',
+          value: abonnement.dateFin != null
+              ? '${abonnement.dateFin!.day}/${abonnement.dateFin!.month}/${abonnement.dateFin!.year}'
+              : 'Indéfinie',
+        ),
+        const SizedBox(height: 8),
+        _buildInfoRow(
+          icon: Icons.workspace_premium,
+          label: 'Plan',
+          value: abonnement.planCollaboration ?? 'Standard',
+        ),
+        const SizedBox(height: 8),
+        _buildInfoRow(
+          icon: Icons.verified,
+          label: 'Statut',
+          value: abonnement.statut.value,
+          valueColor: abonnement.isActif() ? Colors.green : Colors.orange,
+        ),
+      ],
+    );
+  }
+
+  /// Widget helper pour une ligne d'information
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            color: valueColor ?? const Color(0xff0B2340),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Modifier l'abonnement (mettre à jour le plan ou la date de fin)
+  Future<void> _modifierAbonnement() async {
+    final planController = TextEditingController(
+      text: _abonnementDetails!.planCollaboration ?? '',
+    );
+    DateTime? selectedDate = _abonnementDetails!.dateFin;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Modifier l\'abonnement'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: planController,
+                decoration: const InputDecoration(
+                  labelText: 'Plan de collaboration',
+                  hintText: 'Ex: Premium, Enterprise, etc.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: const Text('Date de fin'),
+                subtitle: Text(
+                  selectedDate != null
+                      ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+                      : 'Non définie',
+                ),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 365)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 3650)),
+                  );
+                  if (date != null) {
+                    setDialogState(() => selectedDate = date);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, {
+                'plan': planController.text,
+                'dateFin': selectedDate,
+              }),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xffFFA500),
+              ),
+              child: const Text('Enregistrer', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    setState(() => _isActionLoading = true);
+
+    try {
+      final updatedAbonnement = await abonnement_service.AbonnementAuthService.updateAbonnement(
+        _abonnementDetails!.id,
+        planCollaboration: result['plan'].toString().isEmpty ? null : result['plan'],
+        dateFin: result['dateFin'],
+      );
+
+      if (mounted) {
+        setState(() {
+          _abonnementDetails = updatedAbonnement;
+          _isActionLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Abonnement modifié avec succès'),
+            backgroundColor: primaryColor,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isActionLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Annuler/Supprimer l'abonnement
+  Future<void> _annulerAbonnement() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler l\'abonnement'),
+        content: Text(
+          'Êtes-vous sûr de vouloir annuler l\'abonnement de ${_user!.nom} ${_user!.prenom} ?\n\nCette action est irréversible.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Non'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Oui, annuler', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isActionLoading = true);
+
+    try {
+      await abonnement_service.AbonnementAuthService.deleteAbonnement(
+        _abonnementDetails!.id,
+      );
+
+      if (mounted) {
+        setState(() {
+          _userEstAbonne = false;
+          _abonnementDetails = null;
+          _isActionLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Abonnement annulé avec succès'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isActionLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

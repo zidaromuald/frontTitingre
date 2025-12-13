@@ -84,9 +84,12 @@ class AbonnementModel {
       userId: json['user_id'],
       societeId: json['societe_id'],
       statut: AbonnementStatut.fromString(json['statut'] ?? 'actif'),
-      dateDebut:
-          json['date_debut'] != null ? DateTime.parse(json['date_debut']) : null,
-      dateFin: json['date_fin'] != null ? DateTime.parse(json['date_fin']) : null,
+      dateDebut: json['date_debut'] != null
+          ? DateTime.parse(json['date_debut'])
+          : null,
+      dateFin: json['date_fin'] != null
+          ? DateTime.parse(json['date_fin'])
+          : null,
       planCollaboration: json['plan_collaboration'],
       permissions: json['permissions'] != null
           ? List<String>.from(json['permissions'])
@@ -269,7 +272,7 @@ class AbonnementAuthService {
   /// Mettre à jour les permissions d'un abonnement
   /// PUT /abonnements/:id/permissions
   /// Réservé à la société propriétaire
-  static Future<AbonnementModel> updatePermissions(
+  /*static Future<AbonnementModel> updatePermissions(
     int abonnementId,
     List<String> permissions,
   ) async {
@@ -289,43 +292,7 @@ class AbonnementAuthService {
         error['message'] ?? 'Erreur de mise à jour des permissions',
       );
     }
-  }
-
-  /// Suspendre un abonnement
-  /// PUT /abonnements/:id/suspend
-  /// Réservé à la société propriétaire
-  static Future<AbonnementModel> suspendAbonnement(int abonnementId) async {
-    final response = await ApiService.put(
-      '/abonnements/$abonnementId/suspend',
-      {},
-    );
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return AbonnementModel.fromJson(jsonResponse['data']);
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['message'] ?? 'Erreur de suspension');
-    }
-  }
-
-  /// Réactiver un abonnement suspendu
-  /// PUT /abonnements/:id/reactivate
-  /// Réservé à la société propriétaire
-  static Future<AbonnementModel> reactivateAbonnement(int abonnementId) async {
-    final response = await ApiService.put(
-      '/abonnements/$abonnementId/reactivate',
-      {},
-    );
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return AbonnementModel.fromJson(jsonResponse['data']);
-    } else {
-      final error = jsonDecode(response.body);
-      throw Exception(error['message'] ?? 'Erreur de réactivation');
-    }
-  }
+  }*/
 
   /// Supprimer (annuler) un abonnement
   /// DELETE /abonnements/:id
@@ -338,46 +305,6 @@ class AbonnementAuthService {
       throw Exception(error['message'] ?? 'Erreur de suppression');
     }
   }
-
-  // ==========================================================================
-  // STATISTIQUES
-  // ==========================================================================
-
-  /// Récupérer mes statistiques d'abonnements (utilisateur)
-  /// GET /abonnements/stats/my-subscriptions
-  /// Réservé aux utilisateurs
-  static Future<AbonnementStats> getMySubscriptionStats() async {
-    final response = await ApiService.get(
-      '/abonnements/stats/my-subscriptions',
-    );
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return AbonnementStats.fromJson(jsonResponse['data']);
-    } else {
-      throw Exception('Erreur de récupération des statistiques');
-    }
-  }
-
-  /// Récupérer mes statistiques d'abonnés (société)
-  /// GET /abonnements/stats/my-subscribers
-  /// Réservé aux sociétés
-  static Future<AbonnementStats> getMySubscriberStats() async {
-    final response = await ApiService.get(
-      '/abonnements/stats/my-subscribers',
-    );
-
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return AbonnementStats.fromJson(jsonResponse['data']);
-    } else {
-      throw Exception('Erreur de récupération des statistiques');
-    }
-  }
-
-  // ==========================================================================
-  // MÉTHODES UTILITAIRES
-  // ==========================================================================
 
   /// Récupérer tous mes abonnements actifs (utilisateur)
   static Future<List<AbonnementModel>> getActiveSubscriptions() async {
@@ -424,8 +351,80 @@ class AbonnementAuthService {
   static List<AbonnementPermission> stringsToPermissions(
     List<String> permissions,
   ) {
-    return permissions
-        .map((s) => AbonnementPermission.fromString(s))
-        .toList();
+    return permissions.map((s) => AbonnementPermission.fromString(s)).toList();
   }
+
+  // ==========================================================================
+  // STATISTIQUES
+  // ==========================================================================
+
+  /// Récupérer mes statistiques d'abonnements (utilisateur)
+  /// GET /abonnements/stats/my-subscriptions
+  /// Réservé aux utilisateurs
+  static Future<AbonnementStats> getMySubscriptionStats() async {
+    final response = await ApiService.get(
+      '/abonnements/stats/my-subscriptions',
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return AbonnementStats.fromJson(jsonResponse['data']);
+    } else {
+      throw Exception('Erreur de récupération des statistiques');
+    }
+  }
+
+  /// Récupérer mes statistiques d'abonnés (société)
+  /// GET /abonnements/stats/my-subscribers
+  /// Réservé aux sociétés
+  static Future<AbonnementStats> getMySubscriberStats() async {
+    final response = await ApiService.get('/abonnements/stats/my-subscribers');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return AbonnementStats.fromJson(jsonResponse['data']);
+    } else {
+      throw Exception('Erreur de récupération des statistiques');
+    }
+  }
+  // ==========================================================================
+  // MÉTHODES UTILITAIRES
+  // ==========================================================================
+
+  /*/// Suspendre un abonnement
+  /// PUT /abonnements/:id/suspend
+  /// Réservé à la société propriétaire
+  static Future<AbonnementModel> suspendAbonnement(int abonnementId) async {
+    final response = await ApiService.put(
+      '/abonnements/$abonnementId/suspend',
+      {},
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return AbonnementModel.fromJson(jsonResponse['data']);
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Erreur de suspension');
+    }
+  }
+
+  /// Réactiver un abonnement suspendu
+  /// PUT /abonnements/:id/reactivate
+  /// Réservé à la société propriétaire
+  static Future<AbonnementModel> reactivateAbonnement(int abonnementId) async {
+    final response = await ApiService.put(
+      '/abonnements/$abonnementId/reactivate',
+      {},
+    );
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return AbonnementModel.fromJson(jsonResponse['data']);
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Erreur de réactivation');
+    }
+  }
+*/
 }

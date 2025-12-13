@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:gestauth_clean/iu/onglets/recherche/global_search_page.dart';
 import 'package:gestauth_clean/services/suivre/suivre_auth_service.dart';
+import 'package:gestauth_clean/services/suivre/abonnement_auth_service.dart' as abonnement_service;
 import 'package:gestauth_clean/services/groupe/groupe_service.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/iu/onglets/recherche/user_profile_page.dart';
 import 'package:gestauth_clean/iu/onglets/recherche/societe_profile_page.dart';
 import 'package:gestauth_clean/groupe/groupe_detail_page.dart';
+import 'package:gestauth_clean/services/messagerie/conversation_service.dart';
+import 'package:gestauth_clean/messagerie/conversation_detail_page.dart';
+import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
 
 class ServicePage extends StatefulWidget {
   const ServicePage({super.key});
@@ -29,6 +33,8 @@ class _ServicePageState extends State<ServicePage> {
   List<UserModel> _suivieUsers = [];
   List<GroupeModel> _mesGroupes = [];
   List<SocieteModel> _suivieSocietes = [];
+  List<abonnement_service.AbonnementModel> _mesAbonnements = [];
+  Set<int> _societeIdsAbonnees = {}; // IDs des sociétés avec abonnement premium
 
   // États de chargement
   bool _isLoadingSuivie = false;
@@ -123,31 +129,45 @@ class _ServicePageState extends State<ServicePage> {
     }
   }
 
-  /// Charger les sociétés que je suis
+  /// Charger les sociétés que je suis ET mes abonnements premium
   Future<void> _loadSuivieSocietes() async {
     setState(() => _isLoadingSocietes = true);
 
     try {
-      // Récupérer les relations de suivi
+      // 1. Récupérer les abonnements actifs (premium)
+      List<abonnement_service.AbonnementModel> abonnements = [];
+      Set<int> societeIdsAbonnees = {};
+      try {
+        abonnements = await abonnement_service.AbonnementAuthService.getActiveSubscriptions();
+        societeIdsAbonnees = abonnements.map((a) => a.societeId).toSet();
+      } catch (e) {
+        debugPrint('Erreur chargement abonnements: $e');
+      }
+
+      // 2. Récupérer les relations de suivi gratuit
       final suivis = await SuivreAuthService.getMyFollowing(
         type: EntityType.societe,
       );
 
-      // Charger les détails des sociétés
+      // 3. Combiner les IDs des sociétés (suivies + abonnées)
+      Set<int> allSocieteIds = {...suivis.map((s) => s.followedId), ...societeIdsAbonnees};
+
+      // 4. Charger les détails des sociétés
       List<SocieteModel> societes = [];
-      for (var suivi in suivis) {
+      for (var societeId in allSocieteIds) {
         try {
-          final societe = await SocieteAuthService.getSocieteProfile(suivi.followedId);
+          final societe = await SocieteAuthService.getSocieteProfile(societeId);
           societes.add(societe);
         } catch (e) {
-          // Ignorer les erreurs individuelles
-          debugPrint('Erreur chargement société ${suivi.followedId}: $e');
+          debugPrint('Erreur chargement société $societeId: $e');
         }
       }
 
       if (mounted) {
         setState(() {
           _suivieSocietes = societes;
+          _mesAbonnements = abonnements;
+          _societeIdsAbonnees = societeIdsAbonnees;
           _isLoadingSocietes = false;
         });
       }
@@ -540,13 +560,44 @@ class _ServicePageState extends State<ServicePage> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Text(
-            "Sociétés suivies (${_suivieSocietes.length})",
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: mattermostDarkBlue,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "Sociétés (${_suivieSocietes.length})",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: mattermostDarkBlue,
+                  ),
+                ),
+              ),
+              if (_mesAbonnements.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xffFFD700), Color(0xffFFA500)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star, color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${_mesAbonnements.length} Premium',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
         Expanded(
@@ -565,51 +616,327 @@ class _ServicePageState extends State<ServicePage> {
     );
   }
 
+  /// Afficher les options pour une société (Profil ou Conversation)
+  void _showSocieteOptionsDialog(SocieteModel societe) {
+    final bool isPremium = _societeIdsAbonnees.contains(societe.id);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header avec logo et nom
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: mattermostBlue,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: societe.profile?.logo != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              societe.profile!.logo!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.business,
+                                    color: Colors.white, size: 30);
+                              },
+                            ),
+                          )
+                        : const Icon(Icons.business, color: Colors.white, size: 30),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          societe.nom,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (societe.secteurActivite != null)
+                          Text(
+                            societe.secteurActivite!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: mattermostDarkGray,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (isPremium)
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xffFFA500),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.star,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 20),
+            // Option: Voir le profil
+            ListTile(
+              leading: const Icon(Icons.business_outlined, color: mattermostBlue),
+              title: const Text('Voir le profil'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SocieteProfilePage(societeId: societe.id),
+                  ),
+                );
+              },
+            ),
+            // Option: Envoyer un message (seulement si abonné premium)
+            if (isPremium)
+              ListTile(
+                leading: const Icon(Icons.message_outlined, color: mattermostGreen),
+                title: const Text('Envoyer un message'),
+                subtitle: const Text(
+                  'Disponible avec abonnement premium',
+                  style: TextStyle(fontSize: 11, color: Color(0xffFFA500)),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _startConversationWithSociete(societe);
+                },
+              )
+            else
+              ListTile(
+                leading: Icon(Icons.message_outlined, color: Colors.grey[400]),
+                title: const Text(
+                  'Envoyer un message',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                subtitle: const Text(
+                  'Nécessite un abonnement premium',
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                enabled: false,
+              ),
+            // Option: Transaction/Partenariat (seulement si abonné premium)
+            if (isPremium)
+              ListTile(
+                leading: const Icon(Icons.handshake, color: Color(0xffFFA500)),
+                title: const Text('Transaction / Partenariat'),
+                subtitle: const Text(
+                  'Consulter transactions et partenariat',
+                  style: TextStyle(fontSize: 11, color: Color(0xffFFA500)),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _navigateToTransactionPageForSociete(societe);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Démarrer une conversation avec une société (User → Société)
+  Future<void> _startConversationWithSociete(SocieteModel societe) async {
+    try {
+      // Afficher un indicateur de chargement
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Créer ou récupérer la conversation
+      final conversation = await ConversationService.createOrGetConversation(
+        CreateConversationDto(
+          participantId: societe.id,
+          participantType: 'Societe',
+        ),
+      );
+
+      // Fermer le loader
+      if (mounted) Navigator.pop(context);
+
+      // Naviguer vers la page de conversation
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConversationDetailPage(
+              conversationId: conversation.id,
+              participantName: societe.nom,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Fermer le loader si ouvert
+      if (mounted) Navigator.pop(context);
+
+      // Afficher l'erreur
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Naviguer vers la page Transaction/Partenariat pour une société
+  void _navigateToTransactionPageForSociete(SocieteModel societe) {
+    // Préparer les données de la société pour la page de transaction
+    final Map<String, dynamic> societeData = {
+      'id': societe.id,
+      'nom': societe.nom,
+      'secteurActivite': societe.secteurActivite ?? 'Secteur non spécifié',
+      'logo': societe.profile?.logo,
+    };
+
+    // Préparer les données de catégorie si disponibles
+    final Map<String, dynamic> categorieData = {
+      'nom': societe.secteurActivite ?? 'Général',
+      'description': 'Transactions et partenariat avec ${societe.nom}',
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SocieteDetailsPage(
+          societe: societeData,
+          categorie: categorieData,
+        ),
+      ),
+    );
+  }
+
   // Item société
   Widget _buildSocieteItem(SocieteModel societe) {
+    final bool isPremium = _societeIdsAbonnees.contains(societe.id);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: isPremium
+          ? BoxDecoration(
+              border: Border.all(
+                color: const Color(0xffFFA500).withOpacity(0.3),
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            )
+          : null,
       child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: mattermostBlue,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: societe.profile?.logo != null
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    societe.profile!.logo!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.business,
-                          color: Colors.white, size: 20);
-                    },
+        leading: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: mattermostBlue,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: societe.profile?.logo != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        societe.profile!.logo!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.business,
+                              color: Colors.white, size: 20);
+                        },
+                      ),
+                    )
+                  : const Icon(Icons.business, color: Colors.white, size: 20),
+            ),
+            if (isPremium)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xffFFA500),
+                    shape: BoxShape.circle,
                   ),
-                )
-              : const Icon(Icons.business, color: Colors.white, size: 20),
+                  child: const Icon(
+                    Icons.star,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                ),
+              ),
+          ],
         ),
-        title: Text(
-          societe.nom,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                societe.nom,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            if (isPremium)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xffFFD700), Color(0xffFFA500)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star, color: Colors.white, size: 10),
+                    SizedBox(width: 2),
+                    Text(
+                      'Premium',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
         subtitle: Text(
           societe.secteurActivite ?? 'Secteur non spécifié',
           style: const TextStyle(fontSize: 12, color: mattermostDarkGray),
         ),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SocieteProfilePage(societeId: societe.id),
-            ),
-          );
-        },
+        onTap: () => _showSocieteOptionsDialog(societe),
       ),
     );
   }

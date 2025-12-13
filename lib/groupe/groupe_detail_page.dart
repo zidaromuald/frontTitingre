@@ -3,6 +3,7 @@ import '../services/groupe/groupe_service.dart';
 import '../services/groupe/groupe_membre_service.dart';
 import '../services/groupe/groupe_invitation_service.dart';
 import '../services/AuthUS/user_auth_service.dart';
+import 'groupe_chat_page.dart';
 
 /// Page de détail d'un groupe
 /// Affiche les informations, membres, et permet la gestion
@@ -423,6 +424,25 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
         backgroundColor: primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          // Bouton de messagerie de groupe (visible pour tous les membres)
+          if (_isMember)
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+              onPressed: () {
+                if (_groupe != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GroupeChatPage(
+                        groupeId: widget.groupeId,
+                        groupeName: _groupe!.nom,
+                      ),
+                    ),
+                  );
+                }
+              },
+              tooltip: 'Messagerie du groupe',
+            ),
           if (_myRole == MembreRole.admin)
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),

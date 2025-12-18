@@ -1,12 +1,61 @@
 import 'dart:convert';
-import '../api_service.dart';
-import '../messagerie/message_service.dart';
+import 'package:gestauth_clean/services/api_service.dart';
 
 // ============================================================================
-// MODÈLES SPÉCIFIQUES AU CHAT DE GROUPE
+// MODÈLES
 // ============================================================================
 
-/// Modèle de message de groupe (étend MessageModel avec groupeId)
+/// Modèle de l'expéditeur d'un message de groupe
+class GroupeSenderModel {
+  final int id;
+  final String type; // 'User' ou 'Societe'
+  final String? nom;
+  final String? prenom;
+  final String? nomSociete;
+  final String? photoUrl;
+
+  GroupeSenderModel({
+    required this.id,
+    required this.type,
+    this.nom,
+    this.prenom,
+    this.nomSociete,
+    this.photoUrl,
+  });
+
+  factory GroupeSenderModel.fromJson(Map<String, dynamic> json) {
+    return GroupeSenderModel(
+      id: json['id'],
+      type: json['type'],
+      nom: json['nom'],
+      prenom: json['prenom'],
+      nomSociete: json['nom_societe'],
+      photoUrl: json['photo_url'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': type,
+      'nom': nom,
+      'prenom': prenom,
+      'nom_societe': nomSociete,
+      'photo_url': photoUrl,
+    };
+  }
+
+  /// Obtenir le nom d'affichage de l'expéditeur
+  String getDisplayName() {
+    if (type == 'User') {
+      return '${prenom ?? ''} ${nom ?? ''}'.trim();
+    } else {
+      return nomSociete ?? nom ?? 'Société';
+    }
+  }
+}
+
+/// Modèle de message de groupe
 class GroupeMessageModel {
   final int id;
   final int groupeId;
@@ -14,8 +63,11 @@ class GroupeMessageModel {
   final String senderType; // 'User' ou 'Societe'
   final String contenu;
   final bool isRead;
+  final bool isPinned;
+  final bool isEdited;
   final DateTime createdAt;
-  final SenderModel? sender; // Informations complètes de l'expéditeur
+  final DateTime updatedAt;
+  final GroupeSenderModel? sender; // Informations complètes de l'expéditeur
 
   GroupeMessageModel({
     required this.id,
@@ -24,7 +76,10 @@ class GroupeMessageModel {
     required this.senderType,
     required this.contenu,
     this.isRead = false,
+    this.isPinned = false,
+    this.isEdited = false,
     required this.createdAt,
+    required this.updatedAt,
     this.sender,
   });
 
@@ -36,9 +91,12 @@ class GroupeMessageModel {
       senderType: json['sender_type'],
       contenu: json['contenu'],
       isRead: json['is_read'] ?? false,
+      isPinned: json['is_pinned'] ?? false,
+      isEdited: json['is_edited'] ?? false,
       createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
       sender: json['sender'] != null
-          ? SenderModel.fromJson(json['sender'])
+          ? GroupeSenderModel.fromJson(json['sender'])
           : null,
     );
   }
@@ -51,7 +109,10 @@ class GroupeMessageModel {
       'sender_type': senderType,
       'contenu': contenu,
       'is_read': isRead,
+      'is_pinned': isPinned,
+      'is_edited': isEdited,
       'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
@@ -62,65 +123,69 @@ class GroupeMessageModel {
 
   /// Obtenir le nom de l'expéditeur
   String getSenderName() {
-    return sender?.getDisplayName() ?? 'Membre';
-  }
-
-  /// Obtenir la couleur de l'avatar basée sur l'ID de l'expéditeur
-  int getAvatarColorIndex() {
-    return senderId % 10; // Retourne un index entre 0 et 9
+    return sender?.getDisplayName() ?? 'Expéditeur inconnu';
   }
 }
 
 /// DTO pour envoyer un message dans un groupe
-class SendGroupeMessageDto {
+class SendGroupMessageDto {
   final String contenu;
 
-  SendGroupeMessageDto({
-    required this.contenu,
-  });
+  SendGroupMessageDto({required this.contenu});
 
   Map<String, dynamic> toJson() {
     return {'contenu': contenu};
   }
 }
 
-/// Statistiques de messages d'un groupe
-class GroupeChatStatsModel {
+/// DTO pour modifier un message de groupe
+class UpdateGroupMessageDto {
+  final String contenu;
+
+  UpdateGroupMessageDto({required this.contenu});
+
+  Map<String, dynamic> toJson() {
+    return {'contenu': contenu};
+  }
+}
+
+/// Statistiques des messages d'un groupe
+class GroupeMessageStatsModel {
   final int totalMessages;
   final int unreadMessages;
-  final int myMessagesCount;
+  final int pinnedMessages;
 
-  GroupeChatStatsModel({
+  GroupeMessageStatsModel({
     required this.totalMessages,
     required this.unreadMessages,
-    required this.myMessagesCount,
+    required this.pinnedMessages,
   });
 
-  factory GroupeChatStatsModel.fromJson(Map<String, dynamic> json) {
-    return GroupeChatStatsModel(
+  factory GroupeMessageStatsModel.fromJson(Map<String, dynamic> json) {
+    return GroupeMessageStatsModel(
       totalMessages: json['total_messages'] ?? 0,
       unreadMessages: json['unread_messages'] ?? 0,
-      myMessagesCount: json['my_messages_count'] ?? 0,
+      pinnedMessages: json['pinned_messages'] ?? 0,
     );
   }
 }
 
 // ============================================================================
-// SERVICE CHAT DE GROUPE
+// SERVICE MESSAGES GROUPE
 // ============================================================================
 
-/// Service pour gérer la messagerie des groupes
-class GroupeChatService {
+/// Service pour gérer les messages dans les groupes
+class GroupeMessageService {
   // ==========================================================================
-  // ENVOI ET RÉCUPÉRATION DES MESSAGES
+  // ENVOI ET RÉCUPÉRATION
   // ==========================================================================
 
   /// Envoyer un message dans un groupe
   /// POST /groupes/:groupeId/messages
-  /// Nécessite authentification et être membre du groupe
+  /// Nécessite authentification
   static Future<GroupeMessageModel> sendMessage(
     int groupeId,
-    SendGroupeMessageDto dto,
+    SendGroupMessageDto dto,
   ) async {
     final response = await ApiService.post(
       '/groupes/$groupeId/messages',
@@ -138,20 +203,15 @@ class GroupeChatService {
 
   /// Récupérer tous les messages d'un groupe
   /// GET /groupes/:groupeId/messages
-  /// Nécessite authentification et être membre du groupe
+  /// Nécessite authentification
   /// Retourne les messages triés par date (plus ancien en premier)
-  static Future<List<GroupeMessageModel>> getGroupeMessages(
+  static Future<List<GroupeMessageModel>> getMessagesByGroupe(
     int groupeId, {
-    int? limit,
-    int? offset,
+    int limit = 100,
+    int offset = 0,
   }) async {
-    final params = <String>[];
-    if (limit != null) params.add('limit=$limit');
-    if (offset != null) params.add('offset=$offset');
-
-    final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
     final response = await ApiService.get(
-      '/groupes/$groupeId/messages$queryString',
+      '/groupes/$groupeId/messages?limit=$limit&offset=$offset',
     );
 
     if (response.statusCode == 200) {
@@ -161,16 +221,8 @@ class GroupeChatService {
           .map((json) => GroupeMessageModel.fromJson(json))
           .toList();
     } else {
-      throw Exception('Erreur de récupération des messages du groupe');
+      throw Exception('Erreur de récupération des messages');
     }
-  }
-
-  /// Récupérer les messages récents d'un groupe (derniers 50)
-  /// Utile pour l'affichage initial du chat
-  static Future<List<GroupeMessageModel>> getRecentMessages(
-    int groupeId,
-  ) async {
-    return getGroupeMessages(groupeId, limit: 50);
   }
 
   /// Récupérer les messages non lus d'un groupe
@@ -179,9 +231,7 @@ class GroupeChatService {
   static Future<List<GroupeMessageModel>> getUnreadMessages(
     int groupeId,
   ) async {
-    final response = await ApiService.get(
-      '/groupes/$groupeId/messages/unread',
-    );
+    final response = await ApiService.get('/groupes/$groupeId/messages/unread');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
@@ -194,12 +244,26 @@ class GroupeChatService {
     }
   }
 
+  /// Récupérer les statistiques de messages d'un groupe
+  /// GET /groupes/:groupeId/messages/stats
+  /// Nécessite authentification
+  static Future<GroupeMessageStatsModel> getMessagesStats(int groupeId) async {
+    final response = await ApiService.get('/groupes/$groupeId/messages/stats');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return GroupeMessageStatsModel.fromJson(jsonResponse['data']);
+    } else {
+      throw Exception('Erreur de récupération des statistiques');
+    }
+  }
+
   // ==========================================================================
   // MARQUAGE COMME LU
   // ==========================================================================
 
   /// Marquer un message comme lu
-  /// PUT /groupes/:groupeId/messages/:messageId/read
+  /// PUT /groupes/:groupeId/messages/:id/read
   /// Nécessite authentification
   static Future<GroupeMessageModel> markMessageAsRead(
     int groupeId,
@@ -224,13 +288,16 @@ class GroupeChatService {
   /// Marquer tous les messages d'un groupe comme lus
   /// PUT /groupes/:groupeId/messages/mark-all-read
   /// Nécessite authentification
-  static Future<void> markAllMessagesAsRead(int groupeId) async {
+  static Future<bool> markAllMessagesAsRead(int groupeId) async {
     final response = await ApiService.put(
       '/groupes/$groupeId/messages/mark-all-read',
       {},
     );
 
-    if (response.statusCode != 200 && response.statusCode != 204) {
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse['success'] ?? true;
+    } else {
       final error = jsonDecode(response.body);
       throw Exception(
         error['message'] ?? 'Erreur de marquage des messages comme lus',
@@ -239,7 +306,7 @@ class GroupeChatService {
   }
 
   // ==========================================================================
-  // MODIFICATION
+  // MODIFICATION ET SUPPRESSION
   // ==========================================================================
 
   /// Modifier un message (uniquement si je suis l'expéditeur)
@@ -248,11 +315,11 @@ class GroupeChatService {
   static Future<GroupeMessageModel> updateMessage(
     int groupeId,
     int messageId,
-    String newContenu,
+    UpdateGroupMessageDto dto,
   ) async {
     final response = await ApiService.put(
       '/groupes/$groupeId/messages/$messageId',
-      {'contenu': newContenu},
+      dto.toJson(),
     );
 
     if (response.statusCode == 200) {
@@ -260,65 +327,107 @@ class GroupeChatService {
       return GroupeMessageModel.fromJson(jsonResponse['data']);
     } else {
       final error = jsonDecode(response.body);
-      throw Exception(
-        error['message'] ?? 'Erreur de modification du message',
-      );
+      throw Exception(error['message'] ?? 'Erreur de modification du message');
     }
   }
 
-  // ==========================================================================
-  // SUPPRESSION
-  // ==========================================================================
-
-  /// Supprimer un message (seulement si on est l'auteur ou admin/modérateur)
-  /// DELETE /groupes/:groupeId/messages/:messageId
+  /// Supprimer un message (uniquement si je suis l'expéditeur ou admin)
+  /// DELETE /groupes/:groupeId/messages/:id
   /// Nécessite authentification
   static Future<void> deleteMessage(int groupeId, int messageId) async {
     final response = await ApiService.delete(
       '/groupes/$groupeId/messages/$messageId',
     );
 
-    if (response.statusCode != 200 && response.statusCode != 204) {
+    if (response.statusCode != 200) {
       final error = jsonDecode(response.body);
-      throw Exception(
-        error['message'] ?? 'Erreur de suppression du message',
-      );
+      throw Exception(error['message'] ?? 'Erreur de suppression du message');
+    }
+  }
+
+  /// Récupérer les messages épinglés d'un groupe
+  /// GET /groupes/:groupeId/messages/pinned
+  /// Nécessite authentification
+  static Future<List<GroupeMessageModel>> getPinnedMessages(
+    int groupeId,
+  ) async {
+    final response = await ApiService.get('/groupes/$groupeId/messages/pinned');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      final List<dynamic> messagesData = jsonResponse['data'];
+      return messagesData
+          .map((json) => GroupeMessageModel.fromJson(json))
+          .toList();
+    } else {
+      throw Exception('Erreur de récupération des messages épinglés');
     }
   }
 
   // ==========================================================================
-  // STATISTIQUES
+  // ÉPINGLAGE (Admin/Modérateur uniquement)
   // ==========================================================================
 
-  /// Récupérer les statistiques du chat du groupe
-  /// GET /groupes/:groupeId/messages/stats
-  /// Nécessite authentification
-  static Future<GroupeChatStatsModel> getGroupeChatStats(int groupeId) async {
-    final response = await ApiService.get(
-      '/groupes/$groupeId/messages/stats',
+  /// Épingler/Désépingler un message (admin/modérateur uniquement)
+  /// PUT /groupes/:groupeId/messages/:id/pin
+  /// Nécessite authentification + rôle admin/modérateur
+  static Future<GroupeMessageModel> pinMessage(
+    int groupeId,
+    int messageId,
+  ) async {
+    final response = await ApiService.put(
+      '/groupes/$groupeId/messages/$messageId/pin',
+      {},
     );
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return GroupeChatStatsModel.fromJson(jsonResponse['data']);
+      return GroupeMessageModel.fromJson(jsonResponse['data']);
     } else {
-      throw Exception('Erreur de récupération des statistiques');
-    }
-  }
-
-  /// Compter les messages non lus d'un groupe
-  static Future<int> countUnreadMessages(int groupeId) async {
-    try {
-      final stats = await getGroupeChatStats(groupeId);
-      return stats.unreadMessages;
-    } catch (e) {
-      return 0;
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Erreur d\'épinglage du message');
     }
   }
 
   // ==========================================================================
   // MÉTHODES UTILITAIRES
   // ==========================================================================
+
+  /// Envoyer un message simple dans un groupe
+  static Future<GroupeMessageModel> sendSimpleMessage(
+    int groupeId,
+    String contenu,
+  ) async {
+    return await sendMessage(groupeId, SendGroupMessageDto(contenu: contenu));
+  }
+
+  /// Compter les messages non lus dans un groupe
+  static Future<int> countUnreadInGroupe(int groupeId) async {
+    try {
+      final unreadMessages = await getUnreadMessages(groupeId);
+      return unreadMessages.length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Récupérer les derniers messages d'un groupe (limité)
+  static Future<List<GroupeMessageModel>> getRecentMessages(
+    int groupeId, {
+    int limit = 50,
+  }) async {
+    return await getMessagesByGroupe(groupeId, limit: limit, offset: 0);
+  }
+
+  /// Vérifier si un groupe a des messages non lus
+  static Future<bool> hasUnreadMessages(int groupeId) async {
+    try {
+      final unreadMessages = await getUnreadMessages(groupeId);
+      return unreadMessages.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
 
   /// Grouper les messages par date (utile pour l'affichage)
   static Map<DateTime, List<GroupeMessageModel>> groupMessagesByDate(
@@ -364,11 +473,11 @@ class GroupeChatService {
         'Jeudi',
         'Vendredi',
         'Samedi',
-        'Dimanche'
+        'Dimanche',
       ];
       return weekDays[date.weekday - 1];
     } else {
-      // Format: 15/03/2025
+      // Format: 15/12/2025
       return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     }
   }
@@ -376,21 +485,5 @@ class GroupeChatService {
   /// Formater l'heure d'un message pour l'affichage
   static String formatMessageTime(DateTime date) {
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  /// Obtenir une liste de couleurs pour les avatars
-  static List<int> getAvatarColors() {
-    return [
-      0xFF2196F3, // Blue
-      0xFF4CAF50, // Green
-      0xFFF44336, // Red
-      0xFFFF9800, // Orange
-      0xFF9C27B0, // Purple
-      0xFF00BCD4, // Cyan
-      0xFFFFEB3B, // Yellow
-      0xFFE91E63, // Pink
-      0xFF795548, // Brown
-      0xFF607D8B, // Blue Grey
-    ];
   }
 }

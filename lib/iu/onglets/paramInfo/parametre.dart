@@ -51,26 +51,20 @@ class _ParametrePageState extends State<ParametrePage> {
       'description': 'Construction, rénovation, BTP',
     },
     {
-      'nom': 'Vente & Distribution',
+      'nom': 'Distribution',
       'icon': Icons.store,
       'color': Colors.purple,
       'description': 'Commerce, distribution, vente',
     },
   ];
 
-  // Catégories spéciales (Canaux et Collaboration)
+  // Catégories spéciales (Canaux)
   final List<Map<String, dynamic>> categoriesSpeciales = [
     {
-      'nom': 'Créer Canaux',
+      'nom': 'Canaux',
       'icon': Icons.tag,
       'color': mattermostBlue,
       'description': 'Groupes de discussion thématiques',
-    },
-    {
-      'nom': 'Créer Collaboration',
-      'icon': Icons.handshake,
-      'color': mattermostGreen,
-      'description': 'Partenariats et collaborations',
     },
   ];
 
@@ -274,7 +268,7 @@ class _ParametrePageState extends State<ParametrePage> {
 
             const SizedBox(height: 16),
 
-            // Conteneur parent transparent pour Canaux et Collaboration
+            // Conteneur parent transparent pour Canaux
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(12),
@@ -286,20 +280,10 @@ class _ParametrePageState extends State<ParametrePage> {
                   width: 1.5,
                 ),
               ),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.0,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: categoriesSpeciales.length,
-                itemBuilder: (context, index) {
-                  final categorie = categoriesSpeciales[index];
-                  return _buildCategorieCard(categorie);
-                },
+              child: Column(
+                children: categoriesSpeciales.map((categorie) {
+                  return _buildCategorieCardFullWidth(categorie);
+                }).toList(),
               ),
             ),
 
@@ -471,6 +455,79 @@ class _ParametrePageState extends State<ParametrePage> {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget pour les cartes de catégories pleine largeur (Canaux)
+  Widget _buildCategorieCardFullWidth(Map<String, dynamic> categorie) {
+    return GestureDetector(
+      onTap: () => _navigateToCategorie(categorie),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          border: Border.all(
+            color: categorie['color'].withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: categorie['color'].withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                categorie['icon'],
+                color: categorie['color'],
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    categorie['nom'],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: mattermostDarkBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    categorie['description'],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: mattermostDarkGray,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: categorie['color'],
             ),
           ],
         ),

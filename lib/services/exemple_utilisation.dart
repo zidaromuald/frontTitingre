@@ -8,8 +8,10 @@
 /// NE PAS INCLURE CE FICHIER DANS VOTRE BUILD FINAL.
 /// ========================================
 
-import 'post_service.dart';
-import 'auth_service.dart';
+import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
+
+import 'posts/post_service.dart';
+import 'AuthUS/auth_base_service.dart';
 import 'api_service.dart';
 
 /// ========================================
@@ -18,8 +20,8 @@ import 'api_service.dart';
 
 void exempleLogin() async {
   try {
-    final user = await AuthService.login(
-      email: 'user@example.com',
+    final user = await UserAuthService.login(
+      identifiant: 'user@example.com',
       password: 'password123',
     );
 
@@ -31,12 +33,12 @@ void exempleLogin() async {
 
 void exempleRegister() async {
   try {
-    final user = await AuthService.register(
+    final user = await UserAuthService.register(
       nom: 'Doe',
       prenom: 'John',
       email: 'john.doe@example.com',
       password: 'password123',
-      telephone: '+226 70 12 34 56',
+      numero: '+226 70 12 34 56',
     );
 
     print('Inscription réussie: ${user.email}');
@@ -97,10 +99,7 @@ void exemplePostSociete() async {
 void exemplePostAvecImage() async {
   try {
     // D'abord, uploader l'image
-    final imageUrl = await ApiService.uploadFile(
-      '/path/to/image.jpg',
-      'image',
-    );
+    final imageUrl = await ApiService.uploadFile('/path/to/image.jpg', 'image');
 
     // Ensuite, créer le post avec l'URL de l'image
     final post = await PostService.createPost(
@@ -119,10 +118,7 @@ void exemplePostAvecImage() async {
 void exemplePostAvecVideo() async {
   try {
     // Uploader la vidéo
-    final videoUrl = await ApiService.uploadFile(
-      '/path/to/video.mp4',
-      'video',
-    );
+    final videoUrl = await ApiService.uploadFile('/path/to/video.mp4', 'video');
 
     // Créer le post
     final post = await PostService.createPost(
@@ -141,10 +137,7 @@ void exemplePostAvecVideo() async {
 void exemplePostAvecAudio() async {
   try {
     // Uploader l'audio
-    final audioUrl = await ApiService.uploadFile(
-      '/path/to/audio.mp3',
-      'audio',
-    );
+    final audioUrl = await ApiService.uploadFile('/path/to/audio.mp3', 'audio');
 
     // Créer le post
     final post = await PostService.createPost(

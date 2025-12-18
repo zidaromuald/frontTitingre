@@ -74,7 +74,7 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Créer un groupe',
+          'Créer un canal',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
         ),
         backgroundColor: primaryColor,
@@ -95,11 +95,7 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
                     color: primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.group,
-                    size: 64,
-                    color: primaryColor,
-                  ),
+                  child: const Icon(Icons.group, size: 64, color: primaryColor),
                 ),
               ),
               const SizedBox(height: 32),
@@ -107,10 +103,7 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
               // Nom du groupe
               const Text(
                 'Nom du groupe *',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               TextFormField(
@@ -141,10 +134,7 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
               // Description
               const Text(
                 'Description',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               TextFormField(
@@ -170,10 +160,7 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
               // Type de groupe
               const Text(
                 'Type de groupe *',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Container(
@@ -184,9 +171,13 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
                 child: Column(
                   children: [
                     InkWell(
-                      onTap: () => setState(() => _selectedType = GroupeType.prive),
+                      onTap: () =>
+                          setState(() => _selectedType = GroupeType.prive),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
                         child: Row(
                           children: [
                             Icon(
@@ -206,11 +197,16 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
                                 children: [
                                   Text(
                                     'Privé',
-                                    style: TextStyle(fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                   Text(
                                     'Les membres doivent être invités',
-                                    style: TextStyle(fontSize: 12, color: darkGray),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: darkGray,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -221,9 +217,13 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
                     ),
                     const Divider(height: 1),
                     InkWell(
-                      onTap: () => setState(() => _selectedType = GroupeType.public),
+                      onTap: () =>
+                          setState(() => _selectedType = GroupeType.public),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 16,
+                        ),
                         child: Row(
                           children: [
                             Icon(
@@ -243,11 +243,16 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
                                 children: [
                                   Text(
                                     'Public',
-                                    style: TextStyle(fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                   Text(
                                     'N\'importe qui peut rejoindre',
-                                    style: TextStyle(fontSize: 12, color: darkGray),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: darkGray,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -264,10 +269,7 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
               // Nombre maximum de membres
               const Text(
                 'Nombre maximum de membres',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Container(
@@ -315,10 +317,22 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('10', style: TextStyle(fontSize: 12, color: darkGray)),
-                        Text('Simple ≤ 100', style: TextStyle(fontSize: 10, color: darkGray)),
-                        Text('Professionnel ≤ 9999', style: TextStyle(fontSize: 10, color: darkGray)),
-                        Text('10 000+', style: TextStyle(fontSize: 12, color: darkGray)),
+                        Text(
+                          '10',
+                          style: TextStyle(fontSize: 12, color: darkGray),
+                        ),
+                        Text(
+                          'Simple ≤ 100',
+                          style: TextStyle(fontSize: 10, color: darkGray),
+                        ),
+                        Text(
+                          'Professionnel ≤ 9999',
+                          style: TextStyle(fontSize: 10, color: darkGray),
+                        ),
+                        Text(
+                          '10 000+',
+                          style: TextStyle(fontSize: 12, color: darkGray),
+                        ),
                       ],
                     ),
                   ],
@@ -346,7 +360,9 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Text(

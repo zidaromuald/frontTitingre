@@ -127,6 +127,12 @@ class LikeService {
     }
   }
 
+  /// Compter les likes d'un post
+  static Future<int> countPostLikes(int postId) async {
+    final likes = await getPostLikes(postId);
+    return likes.length;
+  }
+
   /// Récupérer tous les likes d'un post avec leurs auteurs
   /// GET /likes/post/:postId
   static Future<List<LikeModel>> getPostLikes(int postId) async {
@@ -160,14 +166,8 @@ class LikeService {
   // MÉTHODES UTILITAIRES
   // ==========================================================================
 
-  /// Compter les likes d'un post
-  static Future<int> countPostLikes(int postId) async {
-    final likes = await getPostLikes(postId);
-    return likes.length;
-  }
-
   /// Récupérer la liste des IDs des posts que j'ai likés
-  static Future<List<int>> getMyLikedPostIds() async {
+  /*static Future<List<int>> getMyLikedPostIds() async {
     try {
       final likedPosts = await getMyLikedPosts();
       return likedPosts.map<int>((post) => post['id'] as int).toList();
@@ -197,5 +197,5 @@ class LikeService {
     }
 
     return likeStatus;
-  }
+  }*/
 }

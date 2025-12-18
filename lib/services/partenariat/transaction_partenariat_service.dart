@@ -1,9 +1,6 @@
 import 'dart:convert';
 import 'package:gestauth_clean/services/api_service.dart';
 
-/// Service pour gérer les transactions partenariat
-/// Basé sur le contrôleur backend: TransactionPartenaritController
-///
 /// Règles de gestion:
 /// - SOCIÉTÉ: Peut créer, modifier, supprimer des transactions (si pas validées)
 /// - USER: Peut valider les transactions, consulter les transactions en attente
@@ -17,16 +14,15 @@ class TransactionPartenaritService {
   static Future<TransactionPartenaritModel> createTransaction(
     CreateTransactionPartenaritDto dto,
   ) async {
-    final response = await ApiService.post(
-      baseUrl,
-      dto.toJson(),
-    );
+    final response = await ApiService.post(baseUrl, dto.toJson());
 
     if (response.statusCode == 201 || response.statusCode == 200) {
       final data = json.decode(response.body);
       return TransactionPartenaritModel.fromJson(data['data']);
     } else {
-      throw Exception('Erreur lors de la création de la transaction: ${response.body}');
+      throw Exception(
+        'Erreur lors de la création de la transaction: ${response.body}',
+      );
     }
   }
 
@@ -47,7 +43,9 @@ class TransactionPartenaritService {
           .map((json) => TransactionPartenaritModel.fromJson(json))
           .toList();
     } else {
-      throw Exception('Erreur lors du chargement des transactions: ${response.body}');
+      throw Exception(
+        'Erreur lors du chargement des transactions: ${response.body}',
+      );
     }
   }
 
@@ -55,7 +53,8 @@ class TransactionPartenaritService {
   /// GET /transactions-partenariat/pending
   ///
   /// ⚠️ Restriction: Seul un User peut accéder aux transactions en attente
-  static Future<List<TransactionPartenaritModel>> getPendingTransactions() async {
+  static Future<List<TransactionPartenaritModel>>
+  getPendingTransactions() async {
     final response = await ApiService.get('$baseUrl/pending');
 
     if (response.statusCode == 200) {
@@ -65,7 +64,9 @@ class TransactionPartenaritService {
           .map((json) => TransactionPartenaritModel.fromJson(json))
           .toList();
     } else {
-      throw Exception('Erreur lors du chargement des transactions en attente: ${response.body}');
+      throw Exception(
+        'Erreur lors du chargement des transactions en attente: ${response.body}',
+      );
     }
   }
 
@@ -81,7 +82,9 @@ class TransactionPartenaritService {
       final data = json.decode(response.body);
       return data['data']['count'] as int;
     } else {
-      throw Exception('Erreur lors du comptage des transactions: ${response.body}');
+      throw Exception(
+        'Erreur lors du comptage des transactions: ${response.body}',
+      );
     }
   }
 
@@ -94,7 +97,9 @@ class TransactionPartenaritService {
       final data = json.decode(response.body);
       return TransactionPartenaritModel.fromJson(data['data']);
     } else {
-      throw Exception('Erreur lors du chargement de la transaction: ${response.body}');
+      throw Exception(
+        'Erreur lors du chargement de la transaction: ${response.body}',
+      );
     }
   }
 
@@ -108,16 +113,15 @@ class TransactionPartenaritService {
     int id,
     UpdateTransactionPartenaritDto dto,
   ) async {
-    final response = await ApiService.put(
-      '$baseUrl/$id',
-      dto.toJson(),
-    );
+    final response = await ApiService.put('$baseUrl/$id', dto.toJson());
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return TransactionPartenaritModel.fromJson(data['data']);
     } else {
-      throw Exception('Erreur lors de la modification de la transaction: ${response.body}');
+      throw Exception(
+        'Erreur lors de la modification de la transaction: ${response.body}',
+      );
     }
   }
 
@@ -138,7 +142,9 @@ class TransactionPartenaritService {
       final data = json.decode(response.body);
       return TransactionPartenaritModel.fromJson(data['data']);
     } else {
-      throw Exception('Erreur lors de la validation de la transaction: ${response.body}');
+      throw Exception(
+        'Erreur lors de la validation de la transaction: ${response.body}',
+      );
     }
   }
 
@@ -152,7 +158,9 @@ class TransactionPartenaritService {
     final response = await ApiService.delete('$baseUrl/$id');
 
     if (response.statusCode != 200) {
-      throw Exception('Erreur lors de la suppression de la transaction: ${response.body}');
+      throw Exception(
+        'Erreur lors de la suppression de la transaction: ${response.body}',
+      );
     }
   }
 }
@@ -170,16 +178,16 @@ class TransactionPartenaritModel {
   final int userId;
 
   // Données BRUTES du backend
-  final String produit;           // Ex: "Café arabica"
-  final int quantite;             // Ex: 2038
-  final double prixUnitaire;      // Ex: 1000.0
-  final DateTime dateDebut;       // Date de début
-  final DateTime dateFin;         // Date de fin
-  final String? periodeLabel;     // Label optionnel: "Janvier à Mars 2023"
-  final String? unite;            // Ex: "Kg", "Litres"
-  final String? categorie;        // Ex: "Agriculture"
+  final String produit; // Ex: "Café arabica"
+  final int quantite; // Ex: 2038
+  final double prixUnitaire; // Ex: 1000.0
+  final DateTime dateDebut; // Date de début
+  final DateTime dateFin; // Date de fin
+  final String? periodeLabel; // Label optionnel: "Janvier à Mars 2023"
+  final String? unite; // Ex: "Kg", "Litres"
+  final String? categorie; // Ex: "Agriculture"
 
-  final String statut;            // 'en_attente' | 'validee' | 'rejetee'
+  final String statut; // 'en_attente' | 'validee' | 'rejetee'
   final DateTime? dateValidation;
   final String? commentaire;
   final DateTime createdAt;
@@ -232,8 +240,10 @@ class TransactionPartenaritModel {
       prixUnitaire: json['prixUnitaire'] is double
           ? json['prixUnitaire']
           : json['prix_unitaire'] is double
-              ? json['prix_unitaire']
-              : double.parse((json['prixUnitaire'] ?? json['prix_unitaire']).toString()),
+          ? json['prix_unitaire']
+          : double.parse(
+              (json['prixUnitaire'] ?? json['prix_unitaire']).toString(),
+            ),
       dateDebut: DateTime.parse(json['dateDebut'] ?? json['date_debut']),
       dateFin: DateTime.parse(json['dateFin'] ?? json['date_fin']),
       periodeLabel: json['periodeLabel'] ?? json['periode_label'],
@@ -247,7 +257,8 @@ class TransactionPartenaritModel {
       createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
       updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
       societeNom: json['societe']?['nom'] ?? json['societe_nom'],
-      societeSecteur: json['societe']?['secteurActivite'] ?? json['societe_secteur'],
+      societeSecteur:
+          json['societe']?['secteurActivite'] ?? json['societe_secteur'],
       userNom: json['user']?['nom'] ?? json['user_nom'],
       userPrenom: json['user']?['prenom'] ?? json['user_prenom'],
       userEmail: json['user']?['email'] ?? json['user_email'],
@@ -289,8 +300,18 @@ class TransactionPartenaritModel {
 
     // Formater les dates manuellement
     final mois = [
-      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
+      'Mai',
+      'Juin',
+      'Juillet',
+      'Août',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre',
     ];
 
     final debutMois = mois[dateDebut.month - 1];
@@ -404,16 +425,16 @@ class TransactionPartenaritModel {
 /// DTO pour créer une transaction (Société uniquement)
 /// Conforme au backend NestJS: CreateTransactionPartenaritDto
 class CreateTransactionPartenaritDto {
-  final int pagePartenaritId;    // page_partenariat_id dans le backend
-  final String produit;           // Nom du produit/service
-  final int quantite;             // Quantité (nombre entier)
-  final double prixUnitaire;      // Prix unitaire (nombre décimal)
-  final String dateDebut;         // Date de début (ISO string)
-  final String dateFin;           // Date de fin (ISO string)
-  final String? periodeLabel;     // Label de la période (ex: "Janvier à Mars 2023")
-  final String? unite;            // Unité de mesure (ex: "Kg", "Litres")
-  final String? categorie;        // Catégorie du produit
-  final String? statut;           // Statut: 'en_attente' | 'validee' | 'rejetee'
+  final int pagePartenaritId; // page_partenariat_id dans le backend
+  final String produit; // Nom du produit/service
+  final int quantite; // Quantité (nombre entier)
+  final double prixUnitaire; // Prix unitaire (nombre décimal)
+  final String dateDebut; // Date de début (ISO string)
+  final String dateFin; // Date de fin (ISO string)
+  final String? periodeLabel; // Label de la période (ex: "Janvier à Mars 2023")
+  final String? unite; // Unité de mesure (ex: "Kg", "Litres")
+  final String? categorie; // Catégorie du produit
+  final String? statut; // Statut: 'en_attente' | 'validee' | 'rejetee'
   final Map<String, dynamic>? metadata; // Métadonnées additionnelles
 
   CreateTransactionPartenaritDto({
@@ -453,15 +474,15 @@ class CreateTransactionPartenaritDto {
 /// DTO pour modifier une transaction (Société uniquement)
 /// Conforme au backend NestJS: UpdateTransactionPartenaritDto
 class UpdateTransactionPartenaritDto {
-  final String? produit;          // Nom du produit/service
-  final int? quantite;            // Quantité (nombre entier)
-  final double? prixUnitaire;     // Prix unitaire (nombre décimal)
-  final String? dateDebut;        // Date de début (ISO string)
-  final String? dateFin;          // Date de fin (ISO string)
-  final String? periodeLabel;     // Label de la période
-  final String? unite;            // Unité de mesure
-  final String? categorie;        // Catégorie du produit
-  final String? statut;           // Statut: 'en_attente' | 'validee' | 'rejetee'
+  final String? produit; // Nom du produit/service
+  final int? quantite; // Quantité (nombre entier)
+  final double? prixUnitaire; // Prix unitaire (nombre décimal)
+  final String? dateDebut; // Date de début (ISO string)
+  final String? dateFin; // Date de fin (ISO string)
+  final String? periodeLabel; // Label de la période
+  final String? unite; // Unité de mesure
+  final String? categorie; // Catégorie du produit
+  final String? statut; // Statut: 'en_attente' | 'validee' | 'rejetee'
   final Map<String, dynamic>? metadata; // Métadonnées additionnelles
 
   UpdateTransactionPartenaritDto({
@@ -498,11 +519,9 @@ class UpdateTransactionPartenaritDto {
 /// DTO pour valider une transaction (User uniquement)
 /// Conforme au backend NestJS: ValidateTransactionDto
 class ValidateTransactionDto {
-  final String? commentaire;     // Commentaire optionnel lors de la validation
+  final String? commentaire; // Commentaire optionnel lors de la validation
 
-  ValidateTransactionDto({
-    this.commentaire,
-  });
+  ValidateTransactionDto({this.commentaire});
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{};

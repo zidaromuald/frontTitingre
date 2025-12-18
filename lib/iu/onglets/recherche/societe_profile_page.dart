@@ -3,6 +3,9 @@ import '../../../services/AuthUS/societe_auth_service.dart';
 import '../../../services/suivre/suivre_auth_service.dart';
 import '../../../services/suivre/demande_abonnement_service.dart';
 import '../../../services/suivre/abonnement_auth_service.dart' as abonnement_service;
+import '../../../services/posts/post_service.dart';
+import '../../../services/messagerie/conversation_service.dart';
+import '../../../messagerie/conversation_detail_page.dart';
 import '../../../widgets/editable_profile_avatar.dart';
 
 /// Page de profil pour visualiser le profil d'une AUTRE société
@@ -15,7 +18,8 @@ class SocieteProfilePage extends StatefulWidget {
   State<SocieteProfilePage> createState() => _SocieteProfilePageState();
 }
 
-class _SocieteProfilePageState extends State<SocieteProfilePage> {
+class _SocieteProfilePageState extends State<SocieteProfilePage>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   bool _isActionLoading = false;
   SocieteModel? _societe;
@@ -27,12 +31,23 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
   bool _demandeAbonnementEnvoyee = false;
   DemandeAbonnementStatus? _demandeAbonnementStatut;
 
+  // TabController pour Posts et Messages
+  late TabController _tabController;
+
   static const Color primaryColor = Color(0xff5ac18e);
 
   @override
   void initState() {
     super.initState();
     _loadSocieteProfile();
+  }
+
+  @override
+  void dispose() {
+    if (_societe != null) {
+      _tabController.dispose();
+    }
+    super.dispose();
   }
 
   /// Charge le profil de la société et son statut de suivi
@@ -97,6 +112,12 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
           _demandeAbonnementEnvoyee = demandeAbonnementEnvoyee;
           _demandeAbonnementStatut = demandeAbonnementStatut;
           _isLoading = false;
+
+          // Initialiser le TabController avec le bon nombre d'onglets
+          _tabController = TabController(
+            length: _isAbonne ? 3 : 2,
+            vsync: this,
+          );
         });
       }
     } catch (e) {
@@ -578,8 +599,31 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
         title: Text(_societe!.nom),
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: [
+            const Tab(text: 'Infos', icon: Icon(Icons.info_outline, size: 20)),
+            const Tab(text: 'Posts', icon: Icon(Icons.article_outlined, size: 20)),
+            if (_isAbonne) const Tab(text: 'Messages', icon: Icon(Icons.chat_outlined, size: 20)),
+          ],
+        ),
       ),
-      body: SingleChildScrollView(
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildInfoTab(),
+          _buildPostsTab(),
+          if (_isAbonne) _buildMessagesTab(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoTab() {
+    return SingleChildScrollView(
         child: Column(
           children: [
             const SizedBox(height: 20),
@@ -806,8 +850,208 @@ class _SocieteProfilePageState extends State<SocieteProfilePage> {
             const SizedBox(height: 40),
           ],
         ),
+    );
+  }
+
+  Widget _buildPostsTab() {
+    return FutureBuilder<List<PostModel>>(
+      future: PostService.getPostsBySociete(widget.societeId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Erreur: ${snapshot.error}'),
+              ],
+            ),
+          );
+        }
+
+        final posts = snapshot.data ?? [];
+
+        if (posts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.article_outlined, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                const Text('Aucun post pour le moment'),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final post = posts[index];
+            return _buildPostCard(post);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPostCard(PostModel post) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: primaryColor,
+                child: Text(
+                  post.getAuthorName()[0].toUpperCase(),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      post.getAuthorName(),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      _formatPostDate(post.createdAt),
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Contenu
+          Text(post.contenu),
+          const SizedBox(height: 12),
+          // Actions
+          Row(
+            children: [
+              Icon(Icons.favorite_border, size: 20, color: Colors.grey.shade600),
+              const SizedBox(width: 4),
+              Text('${post.likesCount}'),
+              const SizedBox(width: 20),
+              Icon(Icons.comment_outlined, size: 20, color: Colors.grey.shade600),
+              const SizedBox(width: 4),
+              Text('${post.commentsCount}'),
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildMessagesTab() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.message_outlined, size: 80, color: primaryColor),
+          const SizedBox(height: 24),
+          const Text(
+            'Messagerie Premium',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Envoyez des messages privés à cette société',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => _startConversation(),
+            icon: const Icon(Icons.send, color: Colors.white),
+            label: const Text('Envoyer un message'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _startConversation() async {
+    try {
+      // Créer ou récupérer la conversation
+      final conversation = await ConversationService.createOrGetConversation(
+        CreateConversationDto(
+          participantId: widget.societeId,
+          participantType: 'Societe',
+        ),
+      );
+
+      // Naviguer vers la page de conversation
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConversationDetailPage(
+              conversationId: conversation.id,
+              participantName: _societe!.nom,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _formatPostDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays > 0) {
+      return '${diff.inDays}j';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours}h';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes}min';
+    } else {
+      return 'maintenant';
+    }
   }
 
   /// Boutons d'action selon le statut de suivi et d'abonnement

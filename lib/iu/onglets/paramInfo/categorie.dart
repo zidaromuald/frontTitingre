@@ -8,10 +8,7 @@ import 'package:gestauth_clean/groupe/create_groupe_page.dart';
 class CategoriePage extends StatefulWidget {
   final Map<String, dynamic> categorie;
 
-  const CategoriePage({
-    super.key,
-    required this.categorie,
-  });
+  const CategoriePage({super.key, required this.categorie});
 
   @override
   State<CategoriePage> createState() => _CategoriePageState();
@@ -32,8 +29,12 @@ class _CategoriePageState extends State<CategoriePage> {
   @override
   void initState() {
     super.initState();
-    // Charger les données filtrées par catégorie
-    if (widget.categorie['nom'] != 'Canaux') {
+    // Charger les données selon la catégorie
+    if (widget.categorie['nom'] == 'Canaux') {
+      // Pour Canaux, charger MES groupes créés
+      _loadMyGroupes();
+    } else {
+      // Pour les autres catégories, charger les données filtrées
       _loadCategoryData();
     }
   }
@@ -107,14 +108,42 @@ class _CategoriePageState extends State<CategoriePage> {
     }
   }
 
+  /// Charge MES groupes (canaux créés ou auxquels je participe)
+  Future<void> _loadMyGroupes() async {
+    setState(() => _isLoadingGroupes = true);
+
+    try {
+      final groupes = await GroupeAuthService.getMyGroupes();
+
+      if (mounted) {
+        setState(() {
+          _groupes = groupes;
+          _isLoadingGroupes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingGroupes = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur de chargement de vos canaux: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: mattermostGray,
       appBar: AppBar(
         backgroundColor: widget.categorie['color'],
-        title: Text(widget.categorie['nom'],
-            style: const TextStyle(color: Colors.white)),
+        title: Text(
+          widget.categorie['nom'],
+          style: const TextStyle(color: Colors.white),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -158,10 +187,7 @@ class _CategoriePageState extends State<CategoriePage> {
           ),
           Expanded(
             child: TabBarView(
-              children: [
-                _buildSocietesList(),
-                _buildGroupesList(),
-              ],
+              children: [_buildSocietesList(), _buildGroupesList()],
             ),
           ),
         ],
@@ -172,14 +198,14 @@ class _CategoriePageState extends State<CategoriePage> {
   // Contenu pour la catégorie Canaux
   Widget _buildCanauxContent() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Bouton pour créer un nouveau canal
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -195,44 +221,43 @@ class _CategoriePageState extends State<CategoriePage> {
               children: [
                 Icon(
                   Icons.add_circle_outline,
-                  size: 48,
+                  size: 40,
                   color: widget.categorie['color'],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   "Créer un nouveau canal",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: widget.categorie['color'],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 const Text(
                   "Lancez des discussions thématiques avec vos collègues",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: mattermostDarkGray,
-                  ),
+                  style: TextStyle(fontSize: 13, color: mattermostDarkGray),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 ElevatedButton.icon(
                   onPressed: () => _navigateToCreateGroupe(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: widget.categorie['color'],
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                   ),
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(Icons.add, size: 20),
                   label: const Text("Créer un canal"),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Mes canaux
           const Text(
@@ -245,15 +270,25 @@ class _CategoriePageState extends State<CategoriePage> {
           ),
           const SizedBox(height: 12),
 
-          // Message si pas de canaux
-          if (_groupes.isEmpty)
+          // Indicateur de chargement
+          if (_isLoadingGroupes)
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
+                child: CircularProgressIndicator(
+                  color: widget.categorie['color'],
+                ),
+              ),
+            )
+          // Message si pas de canaux
+          else if (_groupes.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    Icon(Icons.tag, size: 64, color: Colors.grey[400]),
-                    const SizedBox(height: 16),
+                    Icon(Icons.tag, size: 56, color: Colors.grey[400]),
+                    const SizedBox(height: 12),
                     Text(
                       'Aucun canal pour le moment',
                       style: TextStyle(color: Colors.grey[600]),
@@ -295,11 +330,7 @@ class _CategoriePageState extends State<CategoriePage> {
               color: widget.categorie['color'].withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              Icons.tag,
-              color: widget.categorie['color'],
-              size: 24,
-            ),
+            child: Icon(Icons.tag, color: widget.categorie['color'], size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -350,9 +381,7 @@ class _CategoriePageState extends State<CategoriePage> {
   Widget _buildSocietesList() {
     if (_isLoadingSocietes) {
       return Center(
-        child: CircularProgressIndicator(
-          color: widget.categorie['color'],
-        ),
+        child: CircularProgressIndicator(color: widget.categorie['color']),
       );
     }
 
@@ -361,18 +390,11 @@ class _CategoriePageState extends State<CategoriePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.business_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'Aucune société dans ${widget.categorie['nom']}',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -393,7 +415,7 @@ class _CategoriePageState extends State<CategoriePage> {
       onRefresh: () => _loadSocietes(widget.categorie['nom']),
       color: widget.categorie['color'],
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         itemCount: _societes.length,
         itemBuilder: (context, index) {
           final societe = _societes[index];
@@ -458,10 +480,7 @@ class _CategoriePageState extends State<CategoriePage> {
                   const SizedBox(height: 8),
                   Text(
                     societe.profile!.description!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -498,9 +517,7 @@ class _CategoriePageState extends State<CategoriePage> {
   Widget _buildGroupesList() {
     if (_isLoadingGroupes) {
       return Center(
-        child: CircularProgressIndicator(
-          color: widget.categorie['color'],
-        ),
+        child: CircularProgressIndicator(color: widget.categorie['color']),
       );
     }
 
@@ -509,18 +526,11 @@ class _CategoriePageState extends State<CategoriePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.group_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.group_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'Aucun groupe dans ${widget.categorie['nom']}',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -541,7 +551,7 @@ class _CategoriePageState extends State<CategoriePage> {
       onRefresh: () => _loadGroupes(widget.categorie['nom']),
       color: widget.categorie['color'],
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         itemCount: _groupes.length,
         itemBuilder: (context, index) {
           final groupe = _groupes[index];
@@ -627,10 +637,7 @@ class _CategoriePageState extends State<CategoriePage> {
                   const SizedBox(height: 8),
                   Text(
                     groupe.description!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -700,8 +707,10 @@ class _CategoriePageState extends State<CategoriePage> {
               TextField(
                 decoration: InputDecoration(
                   hintText: "Nom du canal...",
-                  prefixIcon:
-                      Icon(Icons.search, color: widget.categorie['color']),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: widget.categorie['color'],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -722,9 +731,12 @@ class _CategoriePageState extends State<CategoriePage> {
                 // Logique de recherche de canaux
               },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.categorie['color']),
-              child: const Text("Rechercher",
-                  style: TextStyle(color: Colors.white)),
+                backgroundColor: widget.categorie['color'],
+              ),
+              child: const Text(
+                "Rechercher",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -736,9 +748,7 @@ class _CategoriePageState extends State<CategoriePage> {
   void _navigateToCreateGroupe() async {
     final groupe = await Navigator.push<GroupeModel>(
       context,
-      MaterialPageRoute(
-        builder: (context) => const CreateGroupePage(),
-      ),
+      MaterialPageRoute(builder: (context) => const CreateGroupePage()),
     );
 
     if (groupe != null && mounted) {
@@ -749,8 +759,10 @@ class _CategoriePageState extends State<CategoriePage> {
         ),
       );
 
-      // Recharger la liste des groupes
-      _loadGroupes(widget.categorie['nom']);
+      // Ajouter le nouveau groupe à la liste locale sans recharger
+      setState(() {
+        _groupes.insert(0, groupe);
+      });
     }
   }
 
@@ -780,7 +792,6 @@ class _CategoriePageState extends State<CategoriePage> {
       ),
     );
   }
-
 }
 
 // SEARCH DELEGATE pour les catégories standard avec filtrage dynamique
@@ -792,10 +803,7 @@ class CategorySearchDelegate extends SearchDelegate<String> {
   static const Color mattermostGreen = Color(0xFF28A745);
   static const Color mattermostGray = Color(0xFFF4F4F4);
 
-  CategorySearchDelegate({
-    required this.categorie,
-    required this.categoryName,
-  });
+  CategorySearchDelegate({required this.categorie, required this.categoryName});
 
   @override
   String get searchFieldLabel => 'Rechercher dans $categoryName';
@@ -834,9 +842,7 @@ class CategorySearchDelegate extends SearchDelegate<String> {
 
   Widget _buildSearchResults(BuildContext context) {
     if (query.isEmpty) {
-      return const Center(
-        child: Text('Tapez pour rechercher...'),
-      );
+      return const Center(child: Text('Tapez pour rechercher...'));
     }
 
     return FutureBuilder<Map<String, List>>(
@@ -849,18 +855,14 @@ class CategorySearchDelegate extends SearchDelegate<String> {
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text('Erreur: ${snapshot.error}'),
-          );
+          return Center(child: Text('Erreur: ${snapshot.error}'));
         }
 
         final societes = snapshot.data?['societes'] ?? [];
         final groupes = snapshot.data?['groupes'] ?? [];
 
         if (societes.isEmpty && groupes.isEmpty) {
-          return const Center(
-            child: Text('Aucun résultat trouvé'),
-          );
+          return const Center(child: Text('Aucun résultat trouvé'));
         }
 
         return ListView(
@@ -870,53 +872,51 @@ class CategorySearchDelegate extends SearchDelegate<String> {
                 padding: EdgeInsets.all(16),
                 child: Text(
                   'Sociétés',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              ...societes.map((societe) => ListTile(
-                    leading: Icon(Icons.business, color: categorie['color']),
-                    title: Text(societe.nom),
-                    subtitle: Text(societe.secteurActivite ?? ''),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              SocieteProfilePage(societeId: societe.id),
-                        ),
-                      );
-                    },
-                  )),
+              ...societes.map(
+                (societe) => ListTile(
+                  leading: Icon(Icons.business, color: categorie['color']),
+                  title: Text(societe.nom),
+                  subtitle: Text(societe.secteurActivite ?? ''),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SocieteProfilePage(societeId: societe.id),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
             if (groupes.isNotEmpty) ...[
               const Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
                   'Groupes',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              ...groupes.map((groupe) => ListTile(
-                    leading: Icon(Icons.group, color: categorie['color']),
-                    title: Text(groupe.nom),
-                    subtitle: Text(groupe.description ?? ''),
-                    trailing: Text('${groupe.membresCount ?? 0} membres'),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              GroupeProfilePage(groupeId: groupe.id),
-                        ),
-                      );
-                    },
-                  )),
+              ...groupes.map(
+                (groupe) => ListTile(
+                  leading: Icon(Icons.group, color: categorie['color']),
+                  title: Text(groupe.nom),
+                  subtitle: Text(groupe.description ?? ''),
+                  trailing: Text('${groupe.membresCount ?? 0} membres'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            GroupeProfilePage(groupeId: groupe.id),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ],
         );
@@ -926,7 +926,9 @@ class CategorySearchDelegate extends SearchDelegate<String> {
 
   /// Recherche dynamique avec filtrage par catégorie
   Future<Map<String, List>> _performSearch(
-      String query, String categoryName) async {
+    String query,
+    String categoryName,
+  ) async {
     try {
       // Recherche en parallèle avec filtrage par catégorie
       final results = await Future.wait([
@@ -942,15 +944,9 @@ class CategorySearchDelegate extends SearchDelegate<String> {
         ),
       ]);
 
-      return {
-        'societes': results[0],
-        'groupes': results[1],
-      };
+      return {'societes': results[0], 'groupes': results[1]};
     } catch (e) {
-      return {
-        'societes': [],
-        'groupes': [],
-      };
+      return {'societes': [], 'groupes': []};
     }
   }
 }

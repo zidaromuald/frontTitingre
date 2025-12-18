@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ALTERNATIVE: Version avec sélecteur de page pour tests
-  /*Future<void> _handleLogin() async {
+  Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -127,10 +127,10 @@ class _LoginScreenState extends State<LoginScreen> {
         },
       );
     }
-  }*/
+  }
 
   // Logique de connexion améliorée
-  Future<void> _handleLogin() async {
+  /* Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -195,7 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
-  }
+  }*/
 
   // Widget pour le champ Email/Téléphone avec validation
   Widget _buildEmailOrPhoneField() {

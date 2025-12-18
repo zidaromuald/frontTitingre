@@ -3,6 +3,8 @@ import '../../../services/groupe/groupe_service.dart';
 import '../../../services/groupe/groupe_membre_service.dart';
 import '../../../services/groupe/groupe_invitation_service.dart';
 import '../../../services/groupe/groupe_profil_service.dart';
+import '../../../services/posts/post_service.dart';
+import '../../../groupe/groupe_chat_page.dart';
 
 /// Page de profil PUBLIC d'un groupe
 /// Accessible depuis la recherche GlobalSearchPage
@@ -36,7 +38,7 @@ class _GroupeProfilePageState extends State<GroupeProfilePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadGroupeProfile();
   }
 
@@ -294,9 +296,9 @@ class _GroupeProfilePageState extends State<GroupeProfilePage>
                 unselectedLabelColor: Colors.white70,
                 tabs: const [
                   Tab(text: 'Infos', icon: Icon(Icons.info_outline, size: 20)),
-                  Tab(
-                      text: 'Membres',
-                      icon: Icon(Icons.people_outline, size: 20)),
+                  Tab(text: 'Posts', icon: Icon(Icons.article_outlined, size: 20)),
+                  Tab(text: 'Messages', icon: Icon(Icons.chat_outlined, size: 20)),
+                  Tab(text: 'Membres', icon: Icon(Icons.people_outline, size: 20)),
                 ],
               )
             : null,
@@ -337,6 +339,8 @@ class _GroupeProfilePageState extends State<GroupeProfilePage>
       controller: _tabController,
       children: [
         _buildInfoTab(),
+        _buildPostsTab(),
+        _buildMessagesTab(),
         _buildMembresTab(),
       ],
     );
@@ -544,6 +548,192 @@ class _GroupeProfilePageState extends State<GroupeProfilePage>
             value: _getCategorieLabel(_groupe!.categorie),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPostsTab() {
+    return FutureBuilder<List<PostModel>>(
+      future: PostService.getPostsByGroupe(widget.groupeId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Erreur: ${snapshot.error}'),
+              ],
+            ),
+          );
+        }
+
+        final posts = snapshot.data ?? [];
+
+        if (posts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.article_outlined, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'Aucun post dans ce groupe',
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final post = posts[index];
+            return _buildPostCard(post);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPostCard(PostModel post) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: primaryColor,
+                child: Text(
+                  post.getAuthorName()[0].toUpperCase(),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      post.getAuthorName(),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      _formatPostDate(post.createdAt),
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Contenu
+          Text(post.contenu),
+          const SizedBox(height: 12),
+          // Actions
+          Row(
+            children: [
+              Icon(Icons.favorite_border, size: 20, color: Colors.grey.shade600),
+              const SizedBox(width: 4),
+              Text('${post.likesCount}'),
+              const SizedBox(width: 20),
+              Icon(Icons.comment_outlined, size: 20, color: Colors.grey.shade600),
+              const SizedBox(width: 4),
+              Text('${post.commentsCount}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessagesTab() {
+    if (!_isMember) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            const Text(
+              'Rejoignez le groupe pour accéder aux messages',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.chat_outlined, size: 80, color: primaryColor),
+          const SizedBox(height: 24),
+          const Text(
+            'Discussion du groupe',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Discutez avec tous les membres du groupe',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => _openGroupChat(),
+            icon: const Icon(Icons.chat, color: Colors.white),
+            label: const Text('Ouvrir la discussion'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openGroupChat() {
+    if (_groupe == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GroupeChatPage(
+          groupeId: widget.groupeId,
+          groupeName: _groupe!.nom,
+        ),
       ),
     );
   }
@@ -917,6 +1107,21 @@ class _GroupeProfilePageState extends State<GroupeProfilePage>
         return Icons.shield;
       case MembreRole.admin:
         return Icons.admin_panel_settings;
+    }
+  }
+
+  String _formatPostDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays > 0) {
+      return '${diff.inDays}j';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours}h';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes}min';
+    } else {
+      return 'maintenant';
     }
   }
 

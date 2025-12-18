@@ -810,26 +810,16 @@ class _ServicePageState extends State<ServicePage> {
 
   /// Naviguer vers la page Transaction/Partenariat pour une société
   void _navigateToTransactionPageForSociete(SocieteModel societe) {
-    // Préparer les données de la société pour la page de transaction
-    final Map<String, dynamic> societeData = {
-      'id': societe.id,
-      'nom': societe.nom,
-      'secteurActivite': societe.secteurActivite ?? 'Secteur non spécifié',
-      'logo': societe.profile?.logo,
-    };
-
-    // Préparer les données de catégorie si disponibles
-    final Map<String, dynamic> categorieData = {
-      'nom': societe.secteurActivite ?? 'Général',
-      'description': 'Transactions et partenariat avec ${societe.nom}',
-    };
-
+    // Naviguer vers la page de détails du partenariat
+    // Note: pagePartenaritId doit être récupéré depuis le backend
+    // Pour l'instant, on utilise l'ID de la société comme placeholder
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SocieteDetailsPage(
-          societe: societeData,
-          categorie: categorieData,
+        builder: (context) => PartenaireDetailsPage(
+          pagePartenaritId: societe.id, // TODO: Récupérer le vrai ID de page partenariat
+          partenaireName: societe.nom,
+          themeColor: mattermostBlue,
         ),
       ),
     );

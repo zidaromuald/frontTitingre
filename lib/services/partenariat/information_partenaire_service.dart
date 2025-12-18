@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:gestauth_clean/services/api_service.dart';
-import 'package:gestauth_clean/services/AuthUS/auth_base_service.dart';
 
 /// Service pour gérer les informations partenaires
 /// Basé sur le contrôleur backend: InformationPartenaireController
@@ -12,16 +11,15 @@ class InformationPartenaireService {
   static Future<InformationPartenaireModel> createInformation(
     CreateInformationPartenaireDto dto,
   ) async {
-    final response = await ApiService.post(
-      baseUrl,
-      dto.toJson(),
-    );
+    final response = await ApiService.post(baseUrl, dto.toJson());
 
     if (response.statusCode == 201 || response.statusCode == 200) {
       final data = json.decode(response.body);
       return InformationPartenaireModel.fromJson(data['data']);
     } else {
-      throw Exception('Erreur lors de la création de l\'information: ${response.body}');
+      throw Exception(
+        'Erreur lors de la création de l\'information: ${response.body}',
+      );
     }
   }
 
@@ -39,7 +37,9 @@ class InformationPartenaireService {
           .map((json) => InformationPartenaireModel.fromJson(json))
           .toList();
     } else {
-      throw Exception('Erreur lors du chargement des informations: ${response.body}');
+      throw Exception(
+        'Erreur lors du chargement des informations: ${response.body}',
+      );
     }
   }
 
@@ -52,7 +52,9 @@ class InformationPartenaireService {
       final data = json.decode(response.body);
       return InformationPartenaireModel.fromJson(data['data']);
     } else {
-      throw Exception('Erreur lors du chargement de l\'information: ${response.body}');
+      throw Exception(
+        'Erreur lors du chargement de l\'information: ${response.body}',
+      );
     }
   }
 
@@ -62,16 +64,15 @@ class InformationPartenaireService {
     int id,
     UpdateInformationPartenaireDto dto,
   ) async {
-    final response = await ApiService.put(
-      '$baseUrl/$id',
-      dto.toJson(),
-    );
+    final response = await ApiService.put('$baseUrl/$id', dto.toJson());
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return InformationPartenaireModel.fromJson(data['data']);
     } else {
-      throw Exception('Erreur lors de la modification de l\'information: ${response.body}');
+      throw Exception(
+        'Erreur lors de la modification de l\'information: ${response.body}',
+      );
     }
   }
 
@@ -81,7 +82,9 @@ class InformationPartenaireService {
     final response = await ApiService.delete('$baseUrl/$id');
 
     if (response.statusCode != 200) {
-      throw Exception('Erreur lors de la suppression de l\'information: ${response.body}');
+      throw Exception(
+        'Erreur lors de la suppression de l\'information: ${response.body}',
+      );
     }
   }
 }
@@ -137,7 +140,8 @@ class InformationPartenaireModel {
       createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
       updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
       createdByNom: json['createdBy']?['nom'] ?? json['created_by_nom'],
-      createdByPrenom: json['createdBy']?['prenom'] ?? json['created_by_prenom'],
+      createdByPrenom:
+          json['createdBy']?['prenom'] ?? json['created_by_prenom'],
       createdByEmail: json['createdBy']?['email'] ?? json['created_by_email'],
     );
   }
@@ -162,7 +166,9 @@ class InformationPartenaireModel {
 
   /// Obtenir le nom complet du créateur
   String getCreatorName() {
-    if (createdByType == 'User' && createdByNom != null && createdByPrenom != null) {
+    if (createdByType == 'User' &&
+        createdByNom != null &&
+        createdByPrenom != null) {
       return '$createdByPrenom $createdByNom';
     } else if (createdByType == 'Societe' && createdByNom != null) {
       return createdByNom!;
@@ -183,37 +189,38 @@ class InformationPartenaireModel {
 /// DTO pour créer une information partenaire
 /// Conforme au backend NestJS: CreateInformationPartenaireDto
 class CreateInformationPartenaireDto {
-  final int pagePartenaritId;        // page_partenariat_id
-  final int partenaireId;            // partenaire_id (ID du User ou Societe)
-  final String partenaireType;       // partenaire_type: 'User' ou 'Societe'
-  final String nomAffichage;         // nom_affichage
-  final String? description;         // Description du partenaire
-  final String? logoUrl;             // logo_url
-  final String? localite;            // Localité
-  final String? adresseComplete;     // adresse_complete
-  final String? numeroTelephone;     // numero_telephone
-  final String? emailContact;        // email_contact
-  final String secteurActivite;      // secteur_activite (obligatoire)
+  final int pagePartenaritId; // page_partenariat_id
+  final int partenaireId; // partenaire_id (ID du User ou Societe)
+  final String partenaireType; // partenaire_type: 'User' ou 'Societe'
+  final String nomAffichage; // nom_affichage
+  final String? description; // Description du partenaire
+  final String? logoUrl; // logo_url
+  final String? localite; // Localité
+  final String? adresseComplete; // adresse_complete
+  final String? numeroTelephone; // numero_telephone
+  final String? emailContact; // email_contact
+  final String secteurActivite; // secteur_activite (obligatoire)
 
   // Champs spécifiques Agriculture
-  final String? superficie;          // Superficie cultivée
-  final String? typeCulture;         // type_culture
+  final String? superficie; // Superficie cultivée
+  final String? typeCulture; // type_culture
   final String? maisonEtablissement; // maison_etablissement
-  final String? contactControleur;   // contact_controleur
+  final String? contactControleur; // contact_controleur
 
   // Champs spécifiques Entreprise
-  final String? siegeSocial;         // siege_social
-  final String? dateCreation;        // date_creation (ISO string)
-  final List<String>? certificats;   // Liste des certificats
-  final String? numeroRegistration;  // numero_registration
-  final double? capitalSocial;       // capital_social
-  final double? chiffreAffaires;     // chiffre_affaires
+  final String? siegeSocial; // siege_social
+  final String? dateCreation; // date_creation (ISO string)
+  final List<String>? certificats; // Liste des certificats
+  final String? numeroRegistration; // numero_registration
+  final double? capitalSocial; // capital_social
+  final double? chiffreAffaires; // chiffre_affaires
 
   // Champs communs
-  final int? nombreEmployes;         // nombre_employes
-  final String? typeOrganisation;    // type_organisation
-  final String? modifiablePar;       // modifiable_par: 'USER' | 'SOCIETE' | 'LES_DEUX'
-  final bool? visibleSurPage;        // visible_sur_page
+  final int? nombreEmployes; // nombre_employes
+  final String? typeOrganisation; // type_organisation
+  final String?
+  modifiablePar; // modifiable_par: 'USER' | 'SOCIETE' | 'LES_DEUX'
+  final bool? visibleSurPage; // visible_sur_page
   final Map<String, dynamic>? metadata; // Métadonnées additionnelles
 
   CreateInformationPartenaireDto({
@@ -265,14 +272,17 @@ class CreateInformationPartenaireDto {
     // Champs Agriculture
     if (superficie != null) map['superficie'] = superficie;
     if (typeCulture != null) map['type_culture'] = typeCulture;
-    if (maisonEtablissement != null) map['maison_etablissement'] = maisonEtablissement;
-    if (contactControleur != null) map['contact_controleur'] = contactControleur;
+    if (maisonEtablissement != null)
+      map['maison_etablissement'] = maisonEtablissement;
+    if (contactControleur != null)
+      map['contact_controleur'] = contactControleur;
 
     // Champs Entreprise
     if (siegeSocial != null) map['siege_social'] = siegeSocial;
     if (dateCreation != null) map['date_creation'] = dateCreation;
     if (certificats != null) map['certificats'] = certificats;
-    if (numeroRegistration != null) map['numero_registration'] = numeroRegistration;
+    if (numeroRegistration != null)
+      map['numero_registration'] = numeroRegistration;
     if (capitalSocial != null) map['capital_social'] = capitalSocial;
     if (chiffreAffaires != null) map['chiffre_affaires'] = chiffreAffaires;
 
@@ -290,34 +300,35 @@ class CreateInformationPartenaireDto {
 /// DTO pour modifier une information partenaire
 /// Conforme au backend NestJS: UpdateInformationPartenaireDto
 class UpdateInformationPartenaireDto {
-  final String? nomAffichage;        // nom_affichage
-  final String? description;         // Description du partenaire
-  final String? logoUrl;             // logo_url
-  final String? localite;            // Localité
-  final String? adresseComplete;     // adresse_complete
-  final String? numeroTelephone;     // numero_telephone
-  final String? emailContact;        // email_contact
-  final String? secteurActivite;     // secteur_activite
+  final String? nomAffichage; // nom_affichage
+  final String? description; // Description du partenaire
+  final String? logoUrl; // logo_url
+  final String? localite; // Localité
+  final String? adresseComplete; // adresse_complete
+  final String? numeroTelephone; // numero_telephone
+  final String? emailContact; // email_contact
+  final String? secteurActivite; // secteur_activite
 
   // Champs spécifiques Agriculture
-  final String? superficie;          // Superficie cultivée
-  final String? typeCulture;         // type_culture
+  final String? superficie; // Superficie cultivée
+  final String? typeCulture; // type_culture
   final String? maisonEtablissement; // maison_etablissement
-  final String? contactControleur;   // contact_controleur
+  final String? contactControleur; // contact_controleur
 
   // Champs spécifiques Entreprise
-  final String? siegeSocial;         // siege_social
-  final String? dateCreation;        // date_creation (ISO string)
-  final List<String>? certificats;   // Liste des certificats
-  final String? numeroRegistration;  // numero_registration
-  final double? capitalSocial;       // capital_social
-  final double? chiffreAffaires;     // chiffre_affaires
+  final String? siegeSocial; // siege_social
+  final String? dateCreation; // date_creation (ISO string)
+  final List<String>? certificats; // Liste des certificats
+  final String? numeroRegistration; // numero_registration
+  final double? capitalSocial; // capital_social
+  final double? chiffreAffaires; // chiffre_affaires
 
   // Champs communs
-  final int? nombreEmployes;         // nombre_employes
-  final String? typeOrganisation;    // type_organisation
-  final String? modifiablePar;       // modifiable_par: 'USER' | 'SOCIETE' | 'LES_DEUX'
-  final bool? visibleSurPage;        // visible_sur_page
+  final int? nombreEmployes; // nombre_employes
+  final String? typeOrganisation; // type_organisation
+  final String?
+  modifiablePar; // modifiable_par: 'USER' | 'SOCIETE' | 'LES_DEUX'
+  final bool? visibleSurPage; // visible_sur_page
   final Map<String, dynamic>? metadata; // Métadonnées additionnelles
 
   UpdateInformationPartenaireDto({
@@ -362,14 +373,17 @@ class UpdateInformationPartenaireDto {
     // Champs Agriculture
     if (superficie != null) map['superficie'] = superficie;
     if (typeCulture != null) map['type_culture'] = typeCulture;
-    if (maisonEtablissement != null) map['maison_etablissement'] = maisonEtablissement;
-    if (contactControleur != null) map['contact_controleur'] = contactControleur;
+    if (maisonEtablissement != null)
+      map['maison_etablissement'] = maisonEtablissement;
+    if (contactControleur != null)
+      map['contact_controleur'] = contactControleur;
 
     // Champs Entreprise
     if (siegeSocial != null) map['siege_social'] = siegeSocial;
     if (dateCreation != null) map['date_creation'] = dateCreation;
     if (certificats != null) map['certificats'] = certificats;
-    if (numeroRegistration != null) map['numero_registration'] = numeroRegistration;
+    if (numeroRegistration != null)
+      map['numero_registration'] = numeroRegistration;
     if (capitalSocial != null) map['capital_social'] = capitalSocial;
     if (chiffreAffaires != null) map['chiffre_affaires'] = chiffreAffaires;
 

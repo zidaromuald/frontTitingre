@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../services/AuthUS/user_auth_service.dart';
+import '../../../services/AuthUS/unified_auth_service.dart';
 import '../../../widgets/editable_profile_avatar.dart';
+import '../../../loginScreen.dart';
 
 class ProfilDetailPage extends StatefulWidget {
   const ProfilDetailPage({super.key});
@@ -173,6 +175,79 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
     });
   }
 
+  /// Déconnexion du compte (User ou Société)
+  Future<void> _logout() async {
+    // Demander confirmation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Déconnexion'),
+        content: const Text('Êtes-vous sûr de vouloir vous déconnecter ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Déconnexion'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Afficher un indicateur de chargement
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      // Appeler le service de déconnexion unifié
+      await UnifiedAuthService.logout();
+
+      // Fermer le dialog de chargement
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+      // Naviguer vers la page de login et effacer tout l'historique
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      // Fermer le dialog de chargement
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+      // Afficher l'erreur
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la déconnexion: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -310,6 +385,70 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Card de déconnexion
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade200, width: 1.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.logout, color: Colors.red.shade700, size: 24),
+                        const SizedBox(width: 12),
+                        const Text(
+                          "Déconnexion",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Déconnectez-vous de votre compte en toute sécurité",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _logout,
+                        icon: const Icon(Icons.exit_to_app, color: Colors.white),
+                        label: const Text(
+                          "Se déconnecter",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
             ],
           ),
         ),

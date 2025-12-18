@@ -256,19 +256,19 @@ class TransactionDialogs {
     final formKey = GlobalKey<FormState>();
 
     // Extraction des valeurs actuelles
-    final produitController = TextEditingController(text: transaction.periode); // TODO: Récupérer le vrai produit
+    final produitController = TextEditingController(text: transaction.produit);
     final quantiteController = TextEditingController(
-      text: transaction.quantite.replaceAll(RegExp(r'[^0-9]'), ''),
+      text: transaction.quantite.toString(),
     );
     final prixUnitaireController = TextEditingController(
-      text: transaction.prixUnitaire.replaceAll(RegExp(r'[^0-9.]'), ''),
+      text: transaction.prixUnitaire.toString(),
     );
-    final periodeLabelController = TextEditingController(text: transaction.periode);
-    final uniteController = TextEditingController(); // TODO: Récupérer l'unité
-    final categorieController = TextEditingController(); // TODO: Récupérer la catégorie
+    final periodeLabelController = TextEditingController(text: transaction.periodeLabel ?? '');
+    final uniteController = TextEditingController(text: transaction.unite ?? '');
+    final categorieController = TextEditingController(text: transaction.categorie ?? '');
 
-    DateTime? dateDebut;
-    DateTime? dateFin;
+    DateTime? dateDebut = transaction.dateDebut;
+    DateTime? dateFin = transaction.dateFin;
 
     return showDialog<UpdateTransactionPartenaritDto>(
       context: context,

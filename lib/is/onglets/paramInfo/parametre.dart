@@ -58,19 +58,13 @@ class _ParametrePageState extends State<ParametrePage> {
     },
   ];
 
-  // Catégories spéciales (Canaux et Collaboration)
+  // Catégories spéciales (Canaux)
   final List<Map<String, dynamic>> categoriesSpeciales = [
     {
-      'nom': 'Créer Canaux',
+      'nom': 'Canaux',
       'icon': Icons.tag,
       'color': mattermostBlue,
       'description': 'Groupes de discussion thématiques',
-    },
-    {
-      'nom': 'Créer Collaboration',
-      'icon': Icons.handshake,
-      'color': mattermostGreen,
-      'description': 'Partenariats et collaborations',
     },
   ];
 

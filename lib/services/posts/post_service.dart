@@ -384,6 +384,20 @@ class PostService {
     }
   }
 
+  /// Récupérer les posts d'une société
+  /// GET /posts/societe/:societeId
+  static Future<List<PostModel>> getPostsBySociete(int societeId) async {
+    final response = await ApiService.get('/posts/societe/$societeId');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      final List<dynamic> postsData = jsonResponse['data'];
+      return postsData.map((json) => PostModel.fromJson(json)).toList();
+    } else {
+      throw Exception('Erreur de récupération des posts de la société');
+    }
+  }
+
   /// Récupérer le feed personnalisé (posts des personnes/sociétés suivies)
   /// GET /posts/feed/my-feed
   /// Nécessite authentification

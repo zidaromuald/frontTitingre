@@ -72,16 +72,10 @@ class CreateCommentDto {
   final int postId;
   final String contenu;
 
-  CreateCommentDto({
-    required this.postId,
-    required this.contenu,
-  });
+  CreateCommentDto({required this.postId, required this.contenu});
 
   Map<String, dynamic> toJson() {
-    return {
-      'post_id': postId,
-      'contenu': contenu,
-    };
+    return {'post_id': postId, 'contenu': contenu};
   }
 }
 
@@ -89,14 +83,10 @@ class CreateCommentDto {
 class UpdateCommentDto {
   final String contenu;
 
-  UpdateCommentDto({
-    required this.contenu,
-  });
+  UpdateCommentDto({required this.contenu});
 
   Map<String, dynamic> toJson() {
-    return {
-      'contenu': contenu,
-    };
+    return {'contenu': contenu};
   }
 }
 
@@ -234,10 +224,9 @@ class CommentService {
   static Future<CommentModel?> getMyLastCommentOnPost(int postId) async {
     try {
       final myComments = await getMyComments();
-      final postComments = myComments
-          .where((comment) => comment.postId == postId)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final postComments =
+          myComments.where((comment) => comment.postId == postId).toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       return postComments.isNotEmpty ? postComments.first : null;
     } catch (e) {

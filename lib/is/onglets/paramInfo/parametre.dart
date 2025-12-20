@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gestauth_clean/is/onglets/paramInfo/categorie.dart';
 import 'package:gestauth_clean/is/onglets/paramInfo/profil.dart';
 import 'package:gestauth_clean/services/suivre/demande_abonnement_service.dart';
+import 'package:gestauth_clean/services/groupe/groupe_invitation_service.dart';
+import 'package:gestauth_clean/services/groupe/groupe_service.dart';
 
 class ParametrePage extends StatefulWidget {
   const ParametrePage({super.key});
@@ -72,6 +74,10 @@ class _ParametrePageState extends State<ParametrePage> {
   List<DemandeAbonnementModel> _demandesAbonnementRecues = [];
   bool _isLoadingDemandesAbonnement = false;
 
+  // Données dynamiques des invitations de groupes reçues
+  List<GroupeInvitationModel> _invitationsGroupesRecues = [];
+  bool _isLoadingInvitationsGroupes = false;
+
   // Invitations en attente (exemple)
   final List<Map<String, dynamic>> invitations = [
     {
@@ -104,6 +110,7 @@ class _ParametrePageState extends State<ParametrePage> {
   void initState() {
     super.initState();
     _loadDemandesAbonnement();
+    _loadInvitationsGroupes();
   }
 
   /// Charger les demandes d'abonnement reçues (pending)
@@ -126,6 +133,100 @@ class _ParametrePageState extends State<ParametrePage> {
         setState(() => _isLoadingDemandesAbonnement = false);
       }
       // Gestion d'erreur silencieuse (peut afficher un message si nécessaire)
+    }
+  }
+
+  /// Charger les invitations de groupes reçues (pending)
+  Future<void> _loadInvitationsGroupes() async {
+    setState(() => _isLoadingInvitationsGroupes = true);
+
+    try {
+      final invitations = await GroupeInvitationService.getMyInvitations();
+
+      // Filtrer seulement les invitations en attente (pending)
+      final pending = GroupeInvitationService.filterPendingInvitations(invitations);
+
+      if (mounted) {
+        setState(() {
+          _invitationsGroupesRecues = pending;
+          _isLoadingInvitationsGroupes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingInvitationsGroupes = false);
+      }
+      // Gestion d'erreur silencieuse (peut afficher un message si nécessaire)
+    }
+  }
+
+  /// Accepter une invitation de groupe
+  Future<void> _accepterInvitationGroupe(GroupeInvitationModel invitation) async {
+    setState(() => _isLoadingInvitationsGroupes = true);
+
+    try {
+      await GroupeInvitationService.acceptInvitation(invitation.id);
+
+      if (mounted) {
+        setState(() {
+          _invitationsGroupesRecues.remove(invitation);
+          _isLoadingInvitationsGroupes = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invitation de groupe acceptée avec succès'),
+            backgroundColor: mattermostGreen,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingInvitationsGroupes = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Refuser une invitation de groupe
+  Future<void> _refuserInvitationGroupe(GroupeInvitationModel invitation) async {
+    setState(() => _isLoadingInvitationsGroupes = true);
+
+    try {
+      await GroupeInvitationService.declineInvitation(invitation.id);
+
+      if (mounted) {
+        setState(() {
+          _invitationsGroupesRecues.remove(invitation);
+          _isLoadingInvitationsGroupes = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invitation de groupe refusée'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingInvitationsGroupes = false);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -323,7 +424,7 @@ class _ParametrePageState extends State<ParametrePage> {
 
             const SizedBox(height: 16),
 
-            // Conteneur parent transparent pour Canaux et Collaboration
+            // Conteneur parent transparent pour Canaux
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(12),
@@ -335,20 +436,10 @@ class _ParametrePageState extends State<ParametrePage> {
                   width: 1.5,
                 ),
               ),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.0,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: categoriesSpeciales.length,
-                itemBuilder: (context, index) {
-                  final categorie = categoriesSpeciales[index];
-                  return _buildCategorieCard(categorie);
-                },
+              child: Column(
+                children: categoriesSpeciales.map((categorie) {
+                  return _buildCategorieCardFullWidth(categorie);
+                }).toList(),
               ),
             ),
 
@@ -422,8 +513,29 @@ class _ParametrePageState extends State<ParametrePage> {
               const SizedBox(height: 20),
             ],
 
-            // Section Invitations
-            if (invitations.isNotEmpty) ...[
+            // Section Invitations de Groupes
+            if (_isLoadingInvitationsGroupes)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: mattermostBlue,
+                  ),
+                ),
+              )
+            else if (_invitationsGroupesRecues.isNotEmpty) ...[
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(16),
@@ -444,13 +556,13 @@ class _ParametrePageState extends State<ParametrePage> {
                     Row(
                       children: [
                         const Icon(
-                          Icons.notifications,
+                          Icons.group_add,
                           color: mattermostBlue,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          "Invitations (${invitations.length})",
+                          "Invitations de Groupes (${_invitationsGroupesRecues.length})",
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -460,8 +572,8 @@ class _ParametrePageState extends State<ParametrePage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ...invitations.map(
-                      (invitation) => _buildInvitationItem(invitation),
+                    ..._invitationsGroupesRecues.map(
+                      (invitation) => _buildInvitationGroupeItem(invitation),
                     ),
                   ],
                 ),
@@ -527,6 +639,79 @@ class _ParametrePageState extends State<ParametrePage> {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget pour les cartes de catégories pleine largeur (Canaux)
+  Widget _buildCategorieCardFullWidth(Map<String, dynamic> categorie) {
+    return GestureDetector(
+      onTap: () => _navigateToCategorie(categorie),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          border: Border.all(
+            color: categorie['color'].withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: categorie['color'].withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                categorie['icon'],
+                color: categorie['color'],
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    categorie['nom'],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: mattermostDarkBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    categorie['description'],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: mattermostDarkGray,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: categorie['color'],
             ),
           ],
         ),
@@ -687,6 +872,172 @@ class _ParametrePageState extends State<ParametrePage> {
               const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: () => _accepterDemandeAbonnement(demande),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mattermostGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text(
+                  'Accepter',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget pour les invitations de groupes
+  Widget _buildInvitationGroupeItem(GroupeInvitationModel invitation) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: mattermostBlue.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: mattermostBlue.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: mattermostBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(
+                  Icons.group,
+                  color: mattermostBlue,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Invitation de Groupe',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: mattermostDarkBlue,
+                      ),
+                    ),
+                    Text(
+                      'Groupe ID: ${invitation.groupeId}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: mattermostDarkGray,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      "Vous êtes invité à rejoindre ce groupe",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: mattermostBlue,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: mattermostBlue.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.people, color: mattermostBlue, size: 12),
+                    SizedBox(width: 4),
+                    Text(
+                      'Groupe',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: mattermostBlue,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (invitation.message != null && invitation.message!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: mattermostDarkGray.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Message:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: mattermostDarkGray,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    invitation.message!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: mattermostDarkBlue,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _refuserInvitationGroupe(invitation),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.red, width: 1.5),
+                  foregroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                ),
+                icon: const Icon(Icons.close, size: 16),
+                label: const Text(
+                  'Refuser',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () => _accepterInvitationGroupe(invitation),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: mattermostGreen,
                   foregroundColor: Colors.white,

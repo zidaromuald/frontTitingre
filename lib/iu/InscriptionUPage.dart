@@ -19,6 +19,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _dateNaissanceController =
       TextEditingController();
+  final TextEditingController _activiteController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -35,6 +36,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
     _numeroController.dispose();
     _emailController.dispose();
     _dateNaissanceController.dispose();
+    _activiteController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -62,9 +64,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(
-        const Duration(days: 6570),
-      ), // 18 ans
+      initialDate: DateTime.now().subtract(const Duration(days: 6570)),
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
     );
@@ -88,6 +88,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
     final numero = _numeroController.text.trim();
     final email = _emailController.text.trim();
     final dateNaissance = _dateNaissanceController.text.trim();
+    final activite = _activiteController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
@@ -120,6 +121,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
         password: password,
         email: email.isNotEmpty ? email : null,
         dateNaissance: dateNaissanceObj,
+        activite: activite.isNotEmpty ? activite : null,
       );
 
       if (mounted) {
@@ -300,7 +302,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
               return null;
             },
             onChanged: (phone) {
-              // ✅ SOLUTION: Stocker le numéro complet dans le contrôleur
+              // Stocker le numéro complet dans le contrôleur
               setState(() {
                 _numeroController.text = phone.completeNumber;
               });
@@ -421,6 +423,68 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
     );
   }
 
+  // Widget pour le champ Activité (optionnel)
+  Widget _buildActiviteField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Text(
+              'Activité',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 8),
+            Text(
+              '(optionnel)',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: _activiteController,
+            keyboardType: TextInputType.text,
+            maxLength: 255,
+            style: const TextStyle(color: Colors.black87),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              prefixIcon: Icon(Icons.work_outline, color: Color(0xff5ac18e)),
+              hintText: 'Ex: Développeur, Designer, etc.',
+              hintStyle: TextStyle(color: Colors.black38),
+              errorStyle: TextStyle(color: Colors.red, fontSize: 12),
+              counterText: '',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // Widget pour le champ mot de passe
   Widget _buildPasswordField() {
     return Column(
@@ -455,7 +519,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
               if (value == null || value.trim().isEmpty) {
                 return 'Le mot de passe est requis';
               }
-              if (value.length < 6) {
+              if (value.length < 8) {
                 return 'Le mot de passe doit contenir au moins 6 caractères';
               }
               return null;
@@ -639,6 +703,8 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
                     _buildTelephoneField(),
                     const SizedBox(height: 20),
                     _buildEmailField(),
+                    const SizedBox(height: 20),
+                    _buildActiviteField(),
                     const SizedBox(height: 20),
                     _buildDateNaissanceField(),
                     const SizedBox(height: 20),

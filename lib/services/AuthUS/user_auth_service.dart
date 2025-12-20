@@ -142,6 +142,7 @@ class UserAuthService {
       'prenom': prenom,
       'numero': numero,
       'password': password,
+      'password_confirmation': password, // Requis par le backend
       if (email != null) 'email': email,
       if (dateNaissance != null)
         'date_naissance': dateNaissance.toIso8601String().split('T')[0],

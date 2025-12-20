@@ -434,8 +434,7 @@ class _HomePageState extends State<HomePage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    ParametrePage(), // Enlevé const
+                                builder: (context) => const ParametrePage(),
                               ),
                             );
                           },

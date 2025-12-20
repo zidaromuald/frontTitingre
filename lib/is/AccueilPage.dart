@@ -5,6 +5,7 @@ import '../widgets/editable_societe_avatar.dart';
 import '../iu/onglets/postInfo/post.dart';
 import '../iu/onglets/postInfo/post_details_page.dart';
 import '../iu/onglets/postInfo/post_search_page.dart';
+import 'onglets/paramInfo/parametre.dart';
 
 class AccueilPage extends StatefulWidget {
   const AccueilPage({super.key});
@@ -66,43 +67,7 @@ class _AccueilPageState extends State<AccueilPage> {
     await _loadPosts();
   }
 
-  Widget buildCerealCard(String imagePath, String title) {
-    return Container(
-      height: 180,
-      width: 190,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        image: DecorationImage(
-          image: AssetImage(imagePath),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            bottom: 2,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: const Color.fromARGB(255, 134, 128, 128).withOpacity(0.6),
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              alignment: Alignment.center,
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildSocieteContainer() {
+  Widget buildPersonalGroupsContainer() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -113,54 +78,10 @@ class _AccueilPageState extends State<AccueilPage> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment
-            .start, // Important: permet au container de s'adapter au contenu
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "Mes Sociétés",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10), // Espacement contrôlé
-          SizedBox(
-            height: 190, // Hauteur fixe pour les cartes seulement
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  buildCerealCard("images/logo.png", "Tech Corp"),
-                  const SizedBox(width: 10),
-                  buildCerealCard("images/logo.png", "Creative Studio"),
-                  const SizedBox(width: 10),
-                  buildCerealCard("images/logo.png", "Global Inc"),
-                  const SizedBox(width: 10),
-                  buildCerealCard("images/logo.png", "Innovation Lab"),
-                  const SizedBox(width: 10),
-                  buildCerealCard("images/logo.png", "Digital Agency"),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildGroupeContainer() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 195, 189, 189),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start, // Alignement à gauche
-        children: [
-          const Text(
-            "Mes Groupes",
+            "Mes Groupes Créés",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
@@ -171,15 +92,15 @@ class _AccueilPageState extends State<AccueilPage> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
-                  _buildGroupCard("Développeurs", Icons.person_2),
+                  _buildGroupCard("Équipe Vente", Icons.person_2),
                   const SizedBox(width: 15),
-                  _buildGroupCard("Designers", Icons.person_2),
+                  _buildGroupCard("Support Client", Icons.person_2),
+                  const SizedBox(width: 15),
+                  _buildGroupCard("Développement", Icons.person_2),
                   const SizedBox(width: 15),
                   _buildGroupCard("Marketing", Icons.person_2),
                   const SizedBox(width: 15),
-                  _buildGroupCard("Gaming", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Photo", Icons.person_2),
+                  _buildGroupCard("RH", Icons.person_2),
                 ],
               ),
             ),
@@ -188,6 +109,48 @@ class _AccueilPageState extends State<AccueilPage> {
       ),
     );
   }
+
+  Widget buildJoinedGroupsContainer() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 150, 147, 147),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Groupes Rejoints",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 120,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  _buildGroupCard("Tech Community", Icons.person_2),
+                  const SizedBox(width: 15),
+                  _buildGroupCard("Business Network", Icons.person_2),
+                  const SizedBox(width: 15),
+                  _buildGroupCard("Innovation Hub", Icons.person_2),
+                  const SizedBox(width: 15),
+                  _buildGroupCard("Startup Groupe", Icons.person_2),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildGroupCard(String groupName, IconData icon) {
     return Column(
@@ -312,186 +275,192 @@ class _AccueilPageState extends State<AccueilPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: cs.surface,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF3A5BA0), // Bleu foncé IS
+        elevation: 4,
+        centerTitle: true,
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 12.0),
+          child: Icon(Icons.eco, color: Colors.white, size: 35),
+        ),
+        title: const Text(
+          "Titingre",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          // Scroll vertical pour toute la page
-          child: Column(
-            children: [
-              // HEADER avec forme courbe + avatar + actions + nom
-              SizedBox(
-                height: 230,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // fond courbe
-                    Positioned.fill(
-                      child: ClipPath(
-                        clipper: _HeaderWaveClipper(),
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF3A5BA0), // bleu foncé
-                                Color(0xFF9DB4D6), // bleu clair
-                              ],
-                            ),
+        child: Column(
+          children: [
+            // HEADER FIXE (non scrollable)
+            SizedBox(
+              height: 170,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // fond courbe
+                  Positioned.fill(
+                    child: ClipPath(
+                      clipper: _HeaderWaveClipper(),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF3A5BA0), // bleu foncé
+                              Color(0xFF9DB4D6), // bleu clair
+                            ],
                           ),
                         ),
                       ),
                     ),
-                    // Avatar + Nom/Prénom en haut
-                    Positioned(
-                      top: 20,
-                      left: 16,
-                      right: 180,
-                      child: Row(
-                        children: [
-                          EditableSocieteAvatar(
-                            size: size.width * 0.18,
-                            currentLogoUrl: _currentLogoUrl,
-                            onLogoUpdated: (newUrl) {
-                              setState(() {
-                                _currentLogoUrl = newUrl;
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'ZIDA Jules',
-                                  style: TextStyle(
-                                    color: cs.onPrimary,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 18,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '@johndoe',
-                                  style: TextStyle(
-                                    color: cs.onPrimary.withOpacity(.85),
-                                    fontSize: 13,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                  ),
+                  // Avatar + Nom en haut à gauche
+                  Positioned(
+                    top: 10,
+                    left: 16,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        EditableSocieteAvatar(
+                          size: 70,
+                          currentLogoUrl: _currentLogoUrl,
+                          onLogoUpdated: (newUrl) {
+                            setState(() {
+                              _currentLogoUrl = newUrl;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'ZIDA Jules',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ),
-                    // Boutons carrés (Publication, Recherche, Paramètres)
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: Row(
-                        children: [
-                          _SquareAction(
-                            label: '1',
-                            icon: Icons.add_circle_outline,
-                            onTap: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const CreerPostPage(),
-                                ),
-                              );
-                              // Si un post a été créé, rafraîchir la liste
-                              if (result == true) {
-                                _refreshPosts();
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 10),
-                          _SquareAction(
-                            label: '2',
-                            icon: Icons.search,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const PostSearchPage(),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 10),
-                          const _SquareAction(
-                              label: '3', icon: Icons.settings_outlined),
-                        ],
-                      ),
+                  ),
+                  // Boutons carrés en haut à droite
+                  Positioned(
+                    top: 20,
+                    right: 16,
+                    child: Row(
+                      children: [
+                        _SquareAction(
+                          label: '1',
+                          icon: Icons.add_circle_outline,
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CreerPostPage(),
+                              ),
+                            );
+                            if (result == true) {
+                              _refreshPosts();
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        _SquareAction(
+                          label: '2',
+                          icon: Icons.group,
+                          onTap: () {
+                            // TODO: Navigate to groups page
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        _SquareAction(
+                          label: '3',
+                          icon: Icons.settings_outlined,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ParametrePage(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    // Bio en bas
-                    Positioned(
-                      left: 16,
-                      bottom: 18,
-                      right: 16,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Programme / Bio courte',
-                                  style: TextStyle(
-                                    color: cs.onPrimary.withOpacity(.9),
-                                    fontSize: 13,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-
-              // CONTAINERS SOCIÉTÉS ET GROUPES
-              buildSocieteContainer(),
-              const SizedBox(height: 8),
-              buildGroupeContainer(),
-
-              // BARRE d'info (4 cartes arrondies)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(12, 8, 12, 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6.0),
+              child: Divider(
+                thickness: 3,
+                color: Color(0xFFE0E0E0),
+                indent: 8,
+                endIndent: 8,
+              ),
+            ),
+            // CONTENU SCROLLABLE
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
                   children: [
-                    _InfoChip(title: 'Posts', value: '120'),
-                    _InfoChip(title: 'Abonnés', value: '2.4k'),
-                    _InfoChip(title: 'Suivis', value: '180'),
-                    _InfoChip(title: 'Groupes', value: '12'),
+                    const SizedBox(height: 10),
+
+                    // CONTAINERS GROUPES (Personnel + Rejoints)
+                    buildPersonalGroupsContainer(),
+                    const SizedBox(height: 8),
+                    buildJoinedGroupsContainer(),
+
+                    // Ligne de séparation
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Divider(
+                        thickness: 2,
+                        color: Color(0xFFE0E0E0),
+                        indent: 8,
+                        endIndent: 8,
+                      ),
+                    ),
+
+                    // BARRE d'info (4 cartes arrondies)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(12, 8, 12, 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _InfoChip(title: 'Posts', value: '120'),
+                          _InfoChip(title: 'Abonnés', value: '2.4k'),
+                          _InfoChip(title: 'Suivis', value: '180'),
+                          _InfoChip(title: 'Groupes', value: '12'),
+                        ],
+                      ),
+                    ),
+
+                    // LISTE DES POSTS
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                      child: _buildPostsList(),
+                    ),
                   ],
                 ),
               ),
-
-              // CONTENU (posts) - Plus d'Expanded ici
-              Container(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                child: _buildPostsList(),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -834,19 +803,19 @@ class _HeaderWaveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
-    path.lineTo(0, size.height * 0.62);
+    path.lineTo(0, size.height * 0.75);
 
     path.quadraticBezierTo(
       size.width * 0.22,
-      size.height * 0.50,
+      size.height * 0.65,
       size.width * 0.42,
-      size.height * 0.62,
+      size.height * 0.75,
     );
     path.quadraticBezierTo(
       size.width * 0.70,
-      size.height * 0.78,
+      size.height * 0.88,
       size.width,
-      size.height * 0.68,
+      size.height * 0.73,
     );
 
     path.lineTo(size.width, 0);

@@ -16,6 +16,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
   final TextEditingController _numeroController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _typeProduitController = TextEditingController();
+  final TextEditingController _adresseController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -40,6 +41,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
     _numeroController.dispose();
     _emailController.dispose();
     _typeProduitController.dispose();
+    _adresseController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -85,6 +87,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
     final numero = _numeroController.text.trim();
     final email = _emailController.text.trim();
     final typeProduit = _typeProduitController.text.trim();
+    final adresse = _adresseController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
@@ -104,6 +107,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
         centreInteret: _selectedCentreInteret!,
         secteurActivite: _selectedDomaine!,
         typeProduit: typeProduit,
+        adresse: adresse.isNotEmpty ? adresse : null,
         password: password,
         passwordConfirmation: confirmPassword,
       );
@@ -458,6 +462,68 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
     );
   }
 
+  // Widget pour le champ Adresse (optionnel)
+  Widget _buildAdresseField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Text(
+              'Adresse',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 8),
+            Text(
+              '(optionnel)',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: _adresseController,
+            keyboardType: TextInputType.streetAddress,
+            maxLength: 255,
+            style: const TextStyle(color: Colors.black87),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              prefixIcon: Icon(Icons.location_on, color: Color(0xff5ac18e)),
+              hintText: 'Ex: 123 Rue de la Paix, Ouagadougou',
+              hintStyle: TextStyle(color: Colors.black38),
+              errorStyle: TextStyle(color: Colors.red, fontSize: 12),
+              counterText: '',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // Widget pour le champ mot de passe
   Widget _buildPasswordField() {
     return Column(
@@ -681,6 +747,8 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
                     const SizedBox(height: 20),
                     _buildTypeProduitField(),
                     const SizedBox(height: 20),
+                    _buildAdresseField(),
+                    const SizedBox(height: 20),
                     _buildPasswordField(),
                     const SizedBox(height: 20),
                     _buildConfirmPasswordField(),
@@ -697,617 +765,3 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
     );
   }
 }
-
-/*class InscriptionSPage extends StatefulWidget {
-  const InscriptionSPage({super.key});
-
-  @override
-  // ignore: library_private_types_in_public_api
-  _InscriptionPageState createState() => _InscriptionPageState();
-}
-
-class _InscriptionPageState extends State<InscriptionSPage> {
-  //final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-  final TextEditingController _societeController = TextEditingController();
-  final TextEditingController _numeroController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  String? selectedcentreInteret;
-  String? selecteddomaine;
-  final TextEditingController _typeProduitController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmationPasswordController =
-      TextEditingController();
-
-  void despose() {
-    super.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _societeController.dispose();
-    _typeProduitController.dispose();
-    _numeroController.dispose();
-    selectedcentreInteret;
-    selecteddomaine;
-    _confirmationPasswordController.dispose();
-  }
-
-  bool isLoading = false;
-  void showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2), // Durée d'affichage du SnackBar
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    Widget buildNom() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Nom_Sociéte',
-            style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Container(
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ]),
-              height: 60,
-              child: TextField(
-                controller: _societeController,
-                keyboardType: TextInputType.name,
-                style: const TextStyle(
-                  color: Colors.black87,
-                ),
-                decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.only(top: 14),
-                    prefixIcon: Icon(Icons.home_work, color: Color(0xff5ac18e)),
-                    hintText: 'Societe',
-                    hintStyle: TextStyle(color: Colors.black38)),
-              ))
-        ],
-      );
-    }
-
-    Widget buildTelephone() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Numero',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IntlPhoneField(
-              controller: _numeroController,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding:
-                    EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                hintText: 'Telephone',
-                hintStyle: TextStyle(
-                  color: Colors.black38,
-                ),
-                prefixIcon: Icon(
-                  Icons.contact_phone,
-                  color: Color(0xff5ac18e),
-                ),
-              ),
-              initialCountryCode: 'FR', // Définir le pays par défaut
-            ),
-          ),
-        ],
-      );
-    }
-
-    Widget buildEmail() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Email',
-            style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Container(
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ]),
-              height: 60,
-              child: TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(
-                  color: Colors.black87,
-                ),
-                decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.only(top: 14),
-                    prefixIcon: Icon(Icons.email, color: Color(0xff5ac18e)),
-                    hintText: 'Email',
-                    hintStyle: TextStyle(color: Colors.black38)),
-              ))
-        ],
-      );
-    }
-
-    Widget buildCentreInteret() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Centre_intérêt',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            height: 60,
-            child: FormBuilderDropdown(
-              name: 'my_combobox',
-              decoration: const InputDecoration(
-                labelText: 'Choisissez votre option',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'Agricole', child: Text('Agricole')),
-                DropdownMenuItem(value: 'Elevage', child: Text('Elevage')),
-              ],
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedcentreInteret =
-                      newValue; // Mise à jour de la variable d'état
-                });
-              },
-            ),
-          ),
-        ],
-      );
-    }
-
-    Widget builddomaine() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Domaine',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            height: 60,
-            child: FormBuilderDropdown(
-              name: 'my_combobox', // Nom du champ
-              decoration: const InputDecoration(
-                labelText: 'Choisissez votre option',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(
-                    value: 'Societe_Negoce', child: Text('Societe_Negoce')),
-                DropdownMenuItem(
-                    value: 'Societe_Transformateur',
-                    child: Text('Societe_Transformateur')),
-                DropdownMenuItem(
-                    value: 'Societe_Exportatrice',
-                    child: Text('Societe_Exportatrice')),
-              ],
-              onChanged: (String? newValue) {
-                setState(() {
-                  selecteddomaine =
-                      newValue; // Mise à jour de la variable d'état
-                });
-              },
-            ),
-          ),
-        ],
-      );
-    }
-
-    Widget buildProduit() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Type_Produit',
-            style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ]),
-            height: 60,
-            child: TextField(
-              controller: _typeProduitController,
-              style: const TextStyle(
-                color: Colors.black87,
-              ),
-              decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.only(top: 14),
-                  prefixIcon: Icon(Icons.production_quantity_limits_rounded,
-                      color: Color(0xff5ac18e)),
-                  hintText: 'Produit',
-                  hintStyle: TextStyle(color: Colors.black38)),
-            ),
-          )
-        ],
-      );
-    }
-
-    Widget buildPassword() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Password',
-            style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ]),
-            height: 60,
-            child: TextField(
-              controller: _passwordController,
-              obscureText: true,
-              style: const TextStyle(
-                color: Colors.black87,
-              ),
-              decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.only(top: 14),
-                  prefixIcon:
-                      Icon(Icons.lock, color: Color.fromRGBO(90, 193, 142, 1)),
-                  hintText: 'Password',
-                  hintStyle: TextStyle(color: Colors.black38)),
-            ),
-          )
-        ],
-      );
-    }
-
-    // ignore: non_constant_identifier_names
-    Widget buildConfirmation_Password() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'Confirme_Password',
-            style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  ),
-                ]),
-            height: 60,
-            child: TextField(
-              controller: _confirmationPasswordController,
-              obscureText: true,
-              style: const TextStyle(
-                color: Colors.black87,
-              ),
-              decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.only(top: 14),
-                  prefixIcon:
-                      Icon(Icons.lock, color: Color.fromRGBO(90, 193, 142, 1)),
-                  hintText: 'Password',
-                  hintStyle: TextStyle(color: Colors.black38)),
-            ),
-          )
-        ],
-      );
-    }
-
-/* Widget buildConfirmer() {
-  return Container(
-    alignment: Alignment.center,
-    child: ElevatedButton(
-      onPressed: () async {
-        setState(() {
-          isLoading = true; // Indiquer que le chargement a commencé
-        });
-        // Récupérer les données des contrôleurs
-        final nom = _societeController.text;
-        final numero = _numeroController.text;
-        final email = _emailController.text;
-        final typeProduit = _typeProduitController.text;
-        final password = _passwordController.text.trim();
-        final confirmationPassword = _confirmationPasswordController.text.trim();
-        
-        final authService = AuthsService();
-        try {
-          final success = await authService.register(nom, numero, email, password, typeProduit,
-          confirmationPassword, showSnackbar, );
-
-          if (success) {
-            // Inscription réussie
-            print('Utilisateur inscrit avec succès');
-            // Optionnel : Naviguer vers une autre page ou afficher un message
-          } else {
-            // Gérer les erreurs
-            print('Inscription echoué');
-          }
-        } catch (e) {
-          // Gérer les exceptions
-          print('Exception: $e');
-        } finally {
-          setState(() {
-            isLoading = false; // Indiquer que le chargement est terminé
-          });
-        }
-      },
-      child: const Text(
-        "CONFIRMER",
-        style: TextStyle(
-          color: Color.fromRGBO(90, 193, 142, 1),
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ),
-  );
- }*/
-    Widget buildConfirmer() {
-      return Container(
-        alignment: Alignment.center,
-        child: ElevatedButton(
-          onPressed: () async {
-            setState(() {
-              isLoading = true; // Indiquer que le chargement a commencé
-            });
-
-            // Récupérer les données des contrôleurs
-            final societe = _societeController.text;
-            final numero = _numeroController.text;
-            final email = _emailController.text;
-            final centreInteret = selectedcentreInteret ??
-                ''; // Assurez-vous que cette variable est définie
-            final domaine = selecteddomaine ?? '';
-            final typeProduit = _typeProduitController.text;
-            final password = _passwordController.text.trim();
-            final confirmationPassword =
-                _confirmationPasswordController.text.trim();
-
-            if (selectedcentreInteret == null ||
-                selecteddomaine == null ||
-                societe.isEmpty ||
-                numero.isEmpty ||
-                email.isEmpty ||
-                typeProduit.isEmpty ||
-                password.isEmpty ||
-                confirmationPassword.isEmpty) {
-              showSnackbar('Veuillez remplir tous les champs requis.');
-              setState(() {
-                isLoading = false; // Réinitialiser l'état de chargement
-              });
-              return; // Sortir de la méthode
-            }
-
-            if (password != confirmationPassword) {
-              showSnackbar('Les mots de passe ne correspondent pas.');
-              setState(() {
-                isLoading = false; // Réinitialiser l'état de chargement
-              });
-              return; // Sortir de la méthode
-            }
-
-            final authService =
-                AuthsService(); // Vérifiez que AuthsService est bien importé
-            try {
-              final success = await authService.register(
-                societe,
-                numero,
-                email,
-                centreInteret,
-                domaine,
-                typeProduit,
-                password,
-                confirmationPassword,
-                showSnackbar,
-              );
-
-              if (success) {
-                showSnackbar('Société inscrite avec succès');
-                // Optionnel : Naviguer vers une autre page ou afficher un message
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => AccueilPage()),
-                );
-              } else {
-                showSnackbar('Inscription échouée');
-              }
-            } catch (e) {
-              showSnackbar('Une erreur est survenue : $e');
-            } finally {
-              setState(() {
-                isLoading = false; // Indiquer que le chargement est terminé
-              });
-            }
-          },
-          child: const Text("CONFIRMER",
-              style: TextStyle(
-                  color: Color.fromRGBO(90, 193, 142, 1),
-                  fontWeight: FontWeight.bold)),
-        ),
-      );
-    }
-
-    return Scaffold(
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: GestureDetector(
-          child: Stack(
-            children: <Widget>[
-              Container(
-                  height: double.infinity,
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          // ignore: unnecessary_const
-                          colors: const [
-                        Color(0x665ac18e),
-                        Color(0x995ac18e),
-                        Color(0xcc5ac18e),
-                        Color(0xff5ac18e),
-                      ])),
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 35,
-                      vertical: 60,
-                    ),
-                    child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          const Text('Inscriver-vous',
-                              style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold)),
-                          const SizedBox(
-                            height: 30,
-                          ),
-                          buildNom(),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          buildTelephone(),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          buildEmail(),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          buildCentreInteret(),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          builddomaine(),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          buildProduit(),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          buildPassword(),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          buildConfirmation_Password(),
-                          const SizedBox(
-                            height: 15,
-                          ),
-                          buildConfirmer(),
-                        ]),
-                  )),
-            ],
-          ),
-        ),
-      ),
-    ); //
-  }
-}*/

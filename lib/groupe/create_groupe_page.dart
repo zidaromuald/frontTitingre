@@ -268,40 +268,40 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
 
               // Nombre maximum de membres
               const Text(
-                'Nombre maximum de membres',
+                'Catégorie du groupe',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '$_maxMembres membres',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: primaryColor,
-                          ),
-                        ),
-                        Text(
-                          _getGroupeCategorie(_maxMembres),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: darkGray,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
+              const SizedBox(height: 12),
+
+              // Groupe Simple (≤ 100 membres)
+              _buildCategorieOption(
+                title: 'Groupe Simple',
+                description: 'Jusqu\'à 100 membres',
+                maxMembres: 100,
+                icon: Icons.people,
+                color: Colors.blue,
+              ),
+              const SizedBox(height: 12),
+
+              // Groupe Professionnel (≤ 9999 membres)
+              _buildCategorieOption(
+                title: 'Groupe Professionnel',
+                description: 'Jusqu\'à 9,999 membres',
+                maxMembres: 9999,
+                icon: Icons.public,
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 12),
+
+              // Supergroupe (≥ 10000 membres)
+              _buildCategorieOption(
+                title: 'Supergroupe',
+                description: '10,000 membres et plus',
+                maxMembres: 10000,
+                icon: Icons.public,
+                color: Colors.purple,
+              ),
+              /**const SizedBox(height: 8),
                     Slider(
                       value: _maxMembres.toDouble(),
                       min: 10,
@@ -337,7 +337,7 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
                     ),
                   ],
                 ),
-              ),
+              ), */
               const SizedBox(height: 32),
 
               // Bouton de création
@@ -381,13 +381,86 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
     );
   }
 
-  String _getGroupeCategorie(int maxMembres) {
-    if (maxMembres <= 100) {
-      return 'Groupe Simple';
-    } else if (maxMembres <= 9999) {
-      return 'Groupe Professionnel';
-    } else {
-      return 'Super Groupe';
-    }
+  /// Widget pour afficher une option de catégorie de groupe
+  Widget _buildCategorieOption({
+    required String title,
+    required String description,
+    required int maxMembres,
+    required IconData icon,
+    required Color color,
+  }) {
+    final bool isSelected = _maxMembres == maxMembres;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _maxMembres = maxMembres;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? color.withValues(alpha: 0.1)
+              : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Icône
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+
+            // Texte
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? color : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isSelected
+                          ? color.withValues(alpha: 0.8)
+                          : darkGray,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Checkbox
+            if (isSelected)
+              Icon(Icons.check_circle, color: color, size: 28)
+            else
+              Icon(
+                Icons.circle_outlined,
+                color: Colors.grey.shade400,
+                size: 28,
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

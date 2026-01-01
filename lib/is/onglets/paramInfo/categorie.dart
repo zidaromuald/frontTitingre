@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../groupe/create_groupe_page.dart';
+import '../../../services/groupe/groupe_service.dart';
 
 class CategoriePage extends StatefulWidget {
   final Map<String, dynamic> categorie;
@@ -71,12 +73,6 @@ class _CategoriePageState extends State<CategoriePage> {
         title: Text(widget.categorie['nom'],
             style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            onPressed: () => _handleSearchAction(),
-            icon: const Icon(Icons.search, color: Colors.white),
-          ),
-        ],
       ),
       body: _buildCategoryContent(),
     );
@@ -129,14 +125,14 @@ class _CategoriePageState extends State<CategoriePage> {
   // Contenu pour la catégorie Canaux
   Widget _buildCanauxContent() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Bouton pour créer un nouveau canal
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -152,44 +148,43 @@ class _CategoriePageState extends State<CategoriePage> {
               children: [
                 Icon(
                   Icons.add_circle_outline,
-                  size: 48,
+                  size: 40,
                   color: widget.categorie['color'],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   "Créer un nouveau canal",
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: widget.categorie['color'],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 const Text(
                   "Lancez des discussions thématiques avec vos collègues",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: mattermostDarkGray,
-                  ),
+                  style: TextStyle(fontSize: 13, color: mattermostDarkGray),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 ElevatedButton.icon(
-                  onPressed: () => _showCreateChannelDialog(),
+                  onPressed: () => _navigateToCreateGroupe(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: widget.categorie['color'],
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                   ),
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(Icons.add, size: 20),
                   label: const Text("Créer un canal"),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Mes canaux
           const Text(
@@ -212,14 +207,14 @@ class _CategoriePageState extends State<CategoriePage> {
   // Contenu pour la catégorie Collaboration
   Widget _buildCollaborationContent() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header avec statistiques
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
@@ -302,7 +297,7 @@ class _CategoriePageState extends State<CategoriePage> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -459,7 +454,7 @@ class _CategoriePageState extends State<CategoriePage> {
   Widget _buildChannelCard(Map<String, dynamic> groupe) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -570,29 +565,19 @@ class _CategoriePageState extends State<CategoriePage> {
                 color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _showSearchInCategory(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.categorie['color'],
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.search),
-              label: const Text("Rechercher des sociétés"),
-            ),
           ],
         ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       itemCount: widget.societes.length,
       itemBuilder: (context, index) {
         final societe = widget.societes[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -723,29 +708,19 @@ class _CategoriePageState extends State<CategoriePage> {
                 color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _showSearchInCategory(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.categorie['color'],
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.search),
-              label: const Text("Rechercher des groupes"),
-            ),
           ],
         ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       itemCount: widget.groupes.length,
       itemBuilder: (context, index) {
         final groupe = widget.groupes[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -844,176 +819,24 @@ class _CategoriePageState extends State<CategoriePage> {
     );
   }
 
-  // Actions selon la catégorie
-  void _handleSearchAction() {
-    String categoryName = widget.categorie['nom'];
+  // Navigation vers CreateGroupePage
+  void _navigateToCreateGroupe() async {
+    final groupe = await Navigator.push<GroupeModel>(
+      context,
+      MaterialPageRoute(builder: (context) => const CreateGroupePage()),
+    );
 
-    switch (categoryName) {
-      case 'Canaux':
-        _showChannelSearch();
-        break;
-      case 'Collaboration':
-        _showCollaborateurSearch();
-        break;
-      default:
-        _showSearchInCategory();
+    if (groupe != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Canal "${groupe.nom}" créé avec succès !'),
+          backgroundColor: mattermostGreen,
+        ),
+      );
+
+      // Recharger les groupes si possible (nécessite un callback ou setState du parent)
+      setState(() {});
     }
-  }
-
-  // Recherche pour les catégories standard
-  void _showSearchInCategory() {
-    showSearch(
-      context: context,
-      delegate: CategorySearchDelegate(
-        categorie: widget.categorie,
-        societes: widget.societes,
-        groupes: widget.groupes,
-      ),
-    );
-  }
-
-  // Recherche pour les canaux
-  void _showChannelSearch() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Rechercher un canal"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: InputDecoration(
-                  hintText: "Nom du canal...",
-                  prefixIcon:
-                      Icon(Icons.search, color: widget.categorie['color']),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                "Recherchez parmi tous les canaux publics ou créez le vôtre.",
-                style: TextStyle(fontSize: 12, color: mattermostDarkGray),
-              ),
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Logique de recherche de collaborateurs
-              },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.categorie['color']),
-              child: const Text("Rechercher",
-                  style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Dialog pour créer un canal
-  void _showCreateChannelDialog() {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController descController = TextEditingController();
-    String channelType = 'public';
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text("Créer un nouveau canal"),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: "Nom du canal",
-                        hintText: "Ex: discussion-agriculture",
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: descController,
-                      decoration: const InputDecoration(
-                        labelText: "Description",
-                        hintText: "De quoi parle ce canal ?",
-                      ),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text("Public",
-                                style: TextStyle(fontSize: 12)),
-                            value: 'public',
-                            groupValue: channelType,
-                            onChanged: (String? value) {
-                              setState(() {
-                                channelType = value!;
-                              });
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: RadioListTile<String>(
-                            title: const Text("Privé",
-                                style: TextStyle(fontSize: 12)),
-                            value: 'prive',
-                            groupValue: channelType,
-                            onChanged: (String? value) {
-                              setState(() {
-                                channelType = value!;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text("Annuler"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.isNotEmpty) {
-                      Navigator.of(context).pop();
-                      _createChannel(nameController.text, descController.text,
-                          channelType);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.categorie['color']),
-                  child: const Text("Créer",
-                      style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Actions
-  void _createChannel(String name, String description, String type) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Canal '$name' créé avec succès"),
-        backgroundColor: mattermostGreen,
-      ),
-    );
   }
 
   void _openChannel(Map<String, dynamic> groupe) {
@@ -1177,287 +1000,6 @@ class _CategoriePageState extends State<CategoriePage> {
 
   void _showGroupeDetails(Map<String, dynamic> groupe) {
     // Modale détails groupe
-  }
-
-  void _showCollaborateurSearch() {
-    final TextEditingController searchController = TextEditingController();
-    String selectedPoste = 'Tous';
-    String selectedLocalisation = 'Toutes';
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text("Rechercher un collaborateur"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      hintText: "Nom, poste, compétence...",
-                      prefixIcon:
-                          Icon(Icons.search, color: widget.categorie['color']),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          decoration: const InputDecoration(
-                            labelText: "Poste",
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                          ),
-                          value: selectedPoste,
-                          items: [
-                            'Tous',
-                            'Agronome',
-                            'Ingénieur BTP',
-                            'Vétérinaire',
-                            'Commercial'
-                          ].map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value,
-                                  style: const TextStyle(fontSize: 12)),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              selectedPoste = newValue!;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          decoration: const InputDecoration(
-                            labelText: "Localisation",
-                            contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                          ),
-                          value: selectedLocalisation,
-                          items: [
-                            'Toutes',
-                            'Ouagadougou',
-                            'Bobo-Dioulasso',
-                            'Koudougou'
-                          ].map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value,
-                                  style: const TextStyle(fontSize: 12)),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              selectedLocalisation = newValue!;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: widget.categorie['color'].withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline,
-                            color: widget.categorie['color'], size: 16),
-                        const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text(
-                            "Filtrez pour trouver les collaborateurs qui correspondent à vos besoins",
-                            style: TextStyle(fontSize: 11),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text("Annuler"),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _performCollaborateurSearch(
-                      searchController.text,
-                      selectedPoste,
-                      selectedLocalisation,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.categorie['color'],
-                  ),
-                  child: const Text(
-                    "Rechercher",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _performCollaborateurSearch(
-      String query, String poste, String localisation) {
-    List<Map<String, dynamic>> resultats =
-        collaborateurs.where((collaborateur) {
-      bool matchQuery = query.isEmpty ||
-          collaborateur['nom'].toLowerCase().contains(query.toLowerCase()) ||
-          collaborateur['poste'].toLowerCase().contains(query.toLowerCase()) ||
-          (collaborateur['competences'] as List<String>).any((competence) =>
-              competence.toLowerCase().contains(query.toLowerCase()));
-
-      bool matchPoste = poste == 'Tous' || collaborateur['poste'] == poste;
-
-      bool matchLocalisation = localisation == 'Toutes' ||
-          collaborateur['localisation'] == localisation;
-
-      return matchQuery && matchPoste && matchLocalisation;
-    }).toList();
-
-    _showSearchResults(resultats, query, poste, localisation);
-  }
-
-  void _showSearchResults(List<Map<String, dynamic>> resultats, String query,
-      String poste, String localisation) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Résultats de recherche (${resultats.length})",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                  if (query.isNotEmpty ||
-                      poste != 'Tous' ||
-                      localisation != 'Toutes')
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: mattermostGray,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Critères de recherche:",
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 12),
-                          ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              if (query.isNotEmpty)
-                                Chip(
-                                  label: Text("\"$query\"",
-                                      style: const TextStyle(fontSize: 10)),
-                                  backgroundColor: widget.categorie['color']
-                                      .withOpacity(0.1),
-                                ),
-                              if (poste != 'Tous')
-                                Chip(
-                                  label: Text(poste,
-                                      style: const TextStyle(fontSize: 10)),
-                                  backgroundColor:
-                                      mattermostBlue.withOpacity(0.1),
-                                ),
-                              if (localisation != 'Toutes')
-                                Chip(
-                                  label: Text(localisation,
-                                      style: const TextStyle(fontSize: 10)),
-                                  backgroundColor:
-                                      mattermostGreen.withOpacity(0.1),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  Expanded(
-                    child: resultats.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.search_off,
-                                    size: 64, color: Colors.grey[400]),
-                                const SizedBox(height: 16),
-                                const Text("Aucun collaborateur trouvé",
-                                    style: TextStyle(
-                                        fontSize: 16, color: Colors.grey)),
-                                const SizedBox(height: 8),
-                                const Text(
-                                    "Essayez d'ajuster vos critères de recherche",
-                                    style: TextStyle(
-                                        fontSize: 12, color: Colors.grey)),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            controller: scrollController,
-                            itemCount: resultats.length,
-                            itemBuilder: (context, index) {
-                              final collaborateur = resultats[index];
-                              return _buildCollaborateurCard(collaborateur);
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 }
 

@@ -340,8 +340,8 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
                 vertical: 14,
               ),
               prefixIcon: Icon(Icons.category, color: Color(0xff5ac18e)),
-              hintText: 'Sélectionnez votre centre d\'intérêt',
-              hintStyle: TextStyle(color: Colors.black38),
+              hintText: 'Centre d\'intérêt',
+              hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
             ),
             items: _centresInteret.map((String item) {
@@ -393,8 +393,8 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
                 vertical: 14,
               ),
               prefixIcon: Icon(Icons.domain, color: Color(0xff5ac18e)),
-              hintText: 'Sélectionnez votre domaine d\'activité',
-              hintStyle: TextStyle(color: Colors.black38),
+              hintText: 'Domaine d\'activité',
+              hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
             ),
             items: _domaines.map((String item) {
@@ -730,7 +730,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
                       'Inscription Société',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 40,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

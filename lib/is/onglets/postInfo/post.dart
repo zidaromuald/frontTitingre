@@ -254,8 +254,8 @@ class _CreerPostPageState extends State<CreerPostPage> {
           const SizedBox(height: 8), // Réduit de 12 à 8
           Row(
             children: [
-              //_buildDestinataireOption("Public", "public", Icons.public),
-              //const SizedBox(width: 12),
+              _buildDestinataireOption("Public", "public", Icons.public),
+              const SizedBox(width: 12),
               _buildDestinataireOption("Groupe", "groupe", Icons.group),
               const SizedBox(width: 12),
               _buildDestinataireOption("Société", "societe", Icons.business),

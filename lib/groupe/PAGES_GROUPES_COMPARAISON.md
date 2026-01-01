@@ -91,7 +91,7 @@ Navigator.push(
 ║  Infos | Membres | Posts           ║  ← 3 onglets
 ╠════════════════════════════════════╣
 ║  [Logo]                            ║
-║  Description complète              ║
+║  Description complète               ║
 ║  Statistiques                      ║
 ║  Tous les membres                  ║
 ╚════════════════════════════════════╝

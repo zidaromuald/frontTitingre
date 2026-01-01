@@ -315,7 +315,7 @@ class SuivreAuthService {
 
   /// Statistiques d'une société
   /// GET /suivis/societe/:id/stats
-  /*static Future<Map<String, dynamic>> getSocieteStats(int societeId) async {
+  static Future<Map<String, dynamic>> getSocieteStats(int societeId) async {
     final response = await ApiService.get('/suivis/societe/$societeId/stats');
 
     if (response.statusCode == 200) {
@@ -324,5 +324,5 @@ class SuivreAuthService {
     } else {
       throw Exception('Erreur de récupération des statistiques');
     }
-  }*/
+  }
 }

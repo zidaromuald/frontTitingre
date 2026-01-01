@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:gestauth_clean/iu/onglets/paramInfo/parametre.dart';
 import 'package:gestauth_clean/iu/onglets/postInfo/post.dart';
 import 'package:gestauth_clean/iu/onglets/postInfo/post_details_page.dart';
-import 'package:gestauth_clean/iu/onglets/postInfo/post_search_page.dart';
+//import 'package:gestauth_clean/iu/onglets/postInfo/post_search_page.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/service.dart';
 import 'package:gestauth_clean/services/posts/post_service.dart';
+import 'package:gestauth_clean/services/affichage/unread_content_service.dart';
+import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,10 +20,44 @@ class _HomePageState extends State<HomePage> {
   bool _isLoadingPosts = false;
   String? _errorMessage;
 
+  // Données dynamiques pour les groupes et sociétés avec contenus non lus
+  List<GroupeWithUnreadContent> _groupesWithUnread = [];
+  List<SocieteWithUnreadContent> _societesWithUnread = [];
+  bool _isLoadingGroupes = false;
+  bool _isLoadingSocietes = false;
+
+  // Profil utilisateur
+  UserModel? _currentUser;
+  bool _isLoadingUser = false;
+
   @override
   void initState() {
     super.initState();
+    _loadUserProfile();
     _loadPosts();
+    _loadGroupesWithUnread();
+    _loadSocietesWithUnread();
+  }
+
+  /// Charger le profil de l'utilisateur connecté
+  Future<void> _loadUserProfile() async {
+    setState(() => _isLoadingUser = true);
+
+    try {
+      final user = await UserAuthService.getMyProfile();
+
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+          _isLoadingUser = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingUser = false);
+      }
+      debugPrint('Erreur chargement profil utilisateur: $e');
+    }
   }
 
   Future<void> _loadPosts() async {
@@ -50,6 +86,360 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _refreshPosts() async {
     await _loadPosts();
+  }
+
+  /// Charger les groupes avec du contenu non lu
+  Future<void> _loadGroupesWithUnread() async {
+    setState(() => _isLoadingGroupes = true);
+
+    try {
+      final groupes =
+          await UnreadContentService.getMyGroupesWithUnreadContent();
+
+      if (mounted) {
+        setState(() {
+          _groupesWithUnread = groupes;
+          _isLoadingGroupes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingGroupes = false);
+      }
+    }
+  }
+
+  /// Charger les sociétés avec du contenu non lu
+  Future<void> _loadSocietesWithUnread() async {
+    setState(() => _isLoadingSocietes = true);
+
+    try {
+      final societes =
+          await UnreadContentService.getMySocietesWithUnreadContent();
+
+      if (mounted) {
+        setState(() {
+          _societesWithUnread = societes;
+          _isLoadingSocietes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingSocietes = false);
+      }
+    }
+  }
+
+  /// Container dynamique pour les groupes avec contenus non lus
+  Widget buildGroupesWithUnreadContainer() {
+    // Si chargement en cours
+    if (_isLoadingGroupes) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(180, 220, 220, 220),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: Color(0xFF5ac18e)),
+        ),
+      );
+    }
+
+    // Si aucun groupe avec contenu non lu
+    if (_groupesWithUnread.isEmpty) {
+      return const SizedBox.shrink(); // Ne rien afficher
+    }
+
+    // Afficher les groupes avec contenus non lus
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(180, 220, 220, 220),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Nouveaux Messages (Groupes)",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_groupesWithUnread.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 110,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _groupesWithUnread.map((groupe) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 15),
+                    child: _buildDynamicGroupCard(groupe),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Container dynamique pour les sociétés avec contenus non lus
+  Widget buildSocietesWithUnreadContainer() {
+    // Si chargement en cours
+    if (_isLoadingSocietes) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(180, 220, 220, 220),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: Color(0xFF5ac18e)),
+        ),
+      );
+    }
+
+    // Si aucune société avec contenu non lu
+    if (_societesWithUnread.isEmpty) {
+      return const SizedBox.shrink(); // Ne rien afficher
+    }
+
+    // Afficher les sociétés avec contenus non lus
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(180, 220, 220, 220),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Nouveaux Messages (Sociétés)",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_societesWithUnread.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 110,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _societesWithUnread.map((societe) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 15),
+                    child: _buildDynamicSocieteCard(societe),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget pour afficher une card de groupe dynamique avec badge de non-lus
+  Widget _buildDynamicGroupCard(GroupeWithUnreadContent groupe) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Naviguer vers la page du groupe
+        print('Navigation vers groupe: ${groupe.nom}');
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF5ac18e),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  image: groupe.logo != null
+                      ? DecorationImage(
+                          image: NetworkImage(groupe.logo!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: groupe.logo == null
+                    ? const Icon(Icons.group, color: Colors.white, size: 25)
+                    : null,
+              ),
+              // Badge de compteur de non-lus
+              if (groupe.totalUnread > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      groupe.totalUnread > 99 ? '99+' : '${groupe.totalUnread}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              groupe.nom,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget pour afficher une card de société dynamique avec badge de non-lus
+  Widget _buildDynamicSocieteCard(SocieteWithUnreadContent societe) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Naviguer vers la conversation avec la société
+        print('Navigation vers société: ${societe.nom}');
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF3A5BA0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  image: societe.logo != null
+                      ? DecorationImage(
+                          image: NetworkImage(societe.logo!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: societe.logo == null
+                    ? const Icon(Icons.business, color: Colors.white, size: 25)
+                    : null,
+              ),
+              // Badge de compteur de non-lus
+              if (societe.unreadMessagesCount > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      societe.unreadMessagesCount > 99
+                          ? '99+'
+                          : '${societe.unreadMessagesCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              societe.nom,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget buildCerealCard(String imagePath, String title) {
@@ -142,83 +532,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget buildGroupeContainer() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(180, 220, 220, 220),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start, // Alignement à gauche
-        children: [
-          const Text(
-            "Mes Groupes",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 110,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildGroupCard("Développeurs", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Designers", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Marketing", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Gaming", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Photo", Icons.person_2),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGroupCard(String groupName, IconData icon) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color.fromARGB(255, 88, 91, 94),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blue.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: 30),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: 80,
-          child: Text(
-            groupName,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildPostsList() {
     if (_isLoadingPosts) {
       return const Center(
@@ -273,10 +586,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 8),
               Text(
                 'Soyez le premier à publier !',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
             ],
           ),
@@ -288,9 +598,7 @@ class _HomePageState extends State<HomePage> {
       children: List.generate(
         _posts.length,
         (index) => Padding(
-          padding: EdgeInsets.only(
-            bottom: index < _posts.length - 1 ? 12 : 0,
-          ),
+          padding: EdgeInsets.only(bottom: index < _posts.length - 1 ? 12 : 0),
           child: _PostCard(post: _posts[index]),
         ),
       ),
@@ -320,7 +628,7 @@ class _HomePageState extends State<HomePage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
+        /* actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () {
@@ -333,7 +641,7 @@ class _HomePageState extends State<HomePage> {
             },
             tooltip: 'Rechercher des posts',
           ),
-        ],
+        ],*/
       ),
       body: SafeArea(
         child: Column(
@@ -376,14 +684,24 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'ZIDA Jules',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
+                            _isLoadingUser
+                                ? const SizedBox(
+                                    width: 100,
+                                    child: LinearProgressIndicator(
+                                      color: Colors.white,
+                                      backgroundColor: Colors.white24,
+                                    ),
+                                  )
+                                : Text(
+                                    _currentUser != null
+                                        ? '${_currentUser!.nom.toUpperCase()} ${_currentUser!.prenom}'
+                                        : 'Utilisateur',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                           ],
                         ),
                       ],
@@ -475,8 +793,11 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
 
-                    // SECTION GROUPES
-                    buildGroupeContainer(),
+                    // SECTION GROUPES DYNAMIQUES (avec contenus non lus)
+                    buildGroupesWithUnreadContainer(),
+
+                    // SECTION SOCIÉTÉS DYNAMIQUES (avec contenus non lus)
+                    buildSocietesWithUnreadContainer(),
 
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -485,20 +806,6 @@ class _HomePageState extends State<HomePage> {
                         color: Color(0xFFE0E0E0),
                         indent: 8,
                         endIndent: 8,
-                      ),
-                    ),
-
-                    // BARRE D'INFO
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(12, 8, 12, 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _InfoChip(title: 'Posts', value: '120'),
-                          _InfoChip(title: 'Abonnés', value: '2.4k'),
-                          _InfoChip(title: 'Suivis', value: '180'),
-                          _InfoChip(title: 'Groupes', value: '12'),
-                        ],
                       ),
                     ),
 
@@ -722,186 +1029,193 @@ class _PostCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            // En-tête avec avatar et nom
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: cs.primaryContainer,
-                  backgroundImage: authorPhoto != null ? NetworkImage(authorPhoto) : null,
-                  child: authorPhoto == null
-                      ? Icon(
-                          post.authorType == AuthorType.user ? Icons.person : Icons.business,
-                          color: cs.onPrimaryContainer,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        authorName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        _formatTimestamp(post.createdAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: cs.onSurface.withOpacity(.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Contenu texte
-            if (post.contenu.isNotEmpty) ...[
-              Text(
-                post.contenu,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: cs.onSurface.withOpacity(.8),
-                ),
-                maxLines: hasMedia ? 2 : null,
-                overflow: hasMedia ? TextOverflow.ellipsis : null,
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // Média (image ou vidéo)
-            if (hasMedia) ...[
-              ClipRRec(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  post.mediaUrls!.first,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: cs.secondaryContainer.withOpacity(.3),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: cs.outlineVariant.withOpacity(.3)),
-                      ),
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.broken_image_outlined,
-                            size: 40,
-                            color: cs.onSurface.withOpacity(.4),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Média indisponible',
-                            style: TextStyle(
-                              color: cs.onSurface.withOpacity(.5),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      alignment: Alignment.center,
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                            : null,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // Statistiques et actions (cliquer sur la carte pour interagir)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
+              // En-tête avec avatar et nom
+              Row(
                 children: [
-                  // Like
-                  Icon(
-                    Icons.favorite_border,
-                    size: 20,
-                    color: cs.primary.withOpacity(.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${post.likesCount}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  // Commentaires
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 20,
-                    color: cs.primary.withOpacity(.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${post.commentsCount}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const Spacer(),
-                  // Partages
-                  Icon(
-                    Icons.share_outlined,
-                    size: 20,
-                    color: cs.onSurface.withOpacity(.6),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${post.sharesCount}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurface.withOpacity(.7),
-                    ),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: cs.primaryContainer,
+                    backgroundImage: authorPhoto != null
+                        ? NetworkImage(authorPhoto)
+                        : null,
+                    child: authorPhoto == null
+                        ? Icon(
+                            post.authorType == AuthorType.user
+                                ? Icons.person
+                                : Icons.business,
+                            color: cs.onPrimaryContainer,
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 12),
-                  // Indicateur visuel pour cliquer
-                  Icon(
-                    Icons.touch_app,
-                    size: 16,
-                    color: cs.primary.withOpacity(.5),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          authorName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          _formatTimestamp(post.createdAt),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurface.withOpacity(.6),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+
+              // Contenu texte
+              if (post.contenu.isNotEmpty) ...[
+                Text(
+                  post.contenu,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.4,
+                    color: cs.onSurface.withOpacity(.8),
+                  ),
+                  maxLines: hasMedia ? 2 : null,
+                  overflow: hasMedia ? TextOverflow.ellipsis : null,
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Média (image ou vidéo)
+              if (hasMedia) ...[
+                ClipRRec(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    post.mediaUrls!.first,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: cs.secondaryContainer.withOpacity(.3),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: cs.outlineVariant.withOpacity(.3),
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.broken_image_outlined,
+                              size: 40,
+                              color: cs.onSurface.withOpacity(.4),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Média indisponible',
+                              style: TextStyle(
+                                color: cs.onSurface.withOpacity(.5),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        height: 200,
+                        alignment: Alignment.center,
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Statistiques et actions (cliquer sur la carte pour interagir)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    // Like
+                    Icon(
+                      Icons.favorite_border,
+                      size: 20,
+                      color: cs.primary.withOpacity(.8),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${post.likesCount}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    // Commentaires
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 20,
+                      color: cs.primary.withOpacity(.8),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${post.commentsCount}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Partages
+                    Icon(
+                      Icons.share_outlined,
+                      size: 20,
+                      color: cs.onSurface.withOpacity(.6),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${post.sharesCount}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface.withOpacity(.7),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Indicateur visuel pour cliquer
+                    Icon(
+                      Icons.touch_app,
+                      size: 16,
+                      color: cs.primary.withOpacity(.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }

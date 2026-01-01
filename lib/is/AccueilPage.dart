@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import '../services/AuthUS/societe_auth_service.dart';
 import '../services/posts/post_service.dart';
+import '../services/affichage/unread_content_service.dart';
+import '../services/suivre/suivre_auth_service.dart';
+import '../services/groupe/groupe_service.dart';
 import '../widgets/editable_societe_avatar.dart';
 import '../iu/onglets/postInfo/post.dart';
 import '../iu/onglets/postInfo/post_details_page.dart';
 import '../iu/onglets/postInfo/post_search_page.dart';
 import 'onglets/paramInfo/parametre.dart';
+import 'onglets/servicePlan/service.dart' as service_societe;
 
 class AccueilPage extends StatefulWidget {
   const AccueilPage({super.key});
@@ -20,22 +24,97 @@ class _AccueilPageState extends State<AccueilPage> {
   bool _isLoadingPosts = false;
   String? _errorMessage;
 
+  // Données dynamiques pour les groupes avec contenus non lus
+  List<GroupeWithUnreadContent> _groupesWithUnread = [];
+  bool _isLoadingGroupes = false;
+
+  // Statistiques dynamiques
+  int _abonnesCount = 0;
+  int _suivisCount = 0;
+  int _groupesCount = 0;
+  bool _isLoadingStats = false;
+
+  // Profil société
+  SocieteModel? _currentSociete;
+  bool _isLoadingSociete = false;
+
   @override
   void initState() {
     super.initState();
-    _loadSocieteLogo();
+    _loadSocieteProfile();
     _loadPosts();
+    _loadGroupesWithUnread();
+    _loadStatistics();
   }
 
-  Future<void> _loadSocieteLogo() async {
+  /// Charger les statistiques de la société (abonnés, suivis, groupes)
+  Future<void> _loadStatistics() async {
+    setState(() => _isLoadingStats = true);
+
+    try {
+      // Récupérer le profil de la société pour avoir son ID
+      final societe = await SocieteAuthService.getMyProfile();
+
+      // Charger en parallèle les statistiques et les groupes
+      final results = await Future.wait([
+        SuivreAuthService.getSocieteStats(societe.id),
+        GroupeAuthService.getMyGroupes(),
+      ]);
+
+      final stats = results[0] as Map<String, dynamic>;
+      final groupes = results[1] as List<GroupeModel>;
+
+      if (mounted) {
+        setState(() {
+          _abonnesCount =
+              stats['abonnes_count'] ?? stats['followers_count'] ?? 0;
+          _suivisCount = stats['suivis_count'] ?? stats['following_count'] ?? 0;
+          _groupesCount = groupes.length;
+          _isLoadingStats = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingStats = false);
+      }
+      debugPrint('Erreur chargement statistiques: $e');
+    }
+  }
+
+  /// Formater un nombre pour l'affichage (ex: 1000 → 1k, 1500000 → 1.5M)
+  String _formatNumber(int number) {
+    if (number >= 1000000) {
+      return '${(number / 1000000).toStringAsFixed(1)}M';
+    } else if (number >= 1000) {
+      final k = number / 1000;
+      // Si c'est un nombre entier de k, ne pas afficher de décimale
+      if (k == k.toInt()) {
+        return '${k.toInt()}k';
+      }
+      return '${k.toStringAsFixed(1)}k';
+    }
+    return number.toString();
+  }
+
+  /// Charger le profil complet de la société (nom, logo, etc.)
+  Future<void> _loadSocieteProfile() async {
+    setState(() => _isLoadingSociete = true);
+
     try {
       final societe = await SocieteAuthService.getMyProfile();
-      setState(() {
-        _currentLogoUrl = societe.profile?.logo;
-      });
+
+      if (mounted) {
+        setState(() {
+          _currentSociete = societe;
+          _currentLogoUrl = societe.profile?.logo;
+          _isLoadingSociete = false;
+        });
+      }
     } catch (e) {
-      // La société n'est peut-être pas connectée
-      print('Erreur de chargement du logo: $e');
+      if (mounted) {
+        setState(() => _isLoadingSociete = false);
+      }
+      debugPrint('Erreur chargement profil société: $e');
     }
   }
 
@@ -67,7 +146,51 @@ class _AccueilPageState extends State<AccueilPage> {
     await _loadPosts();
   }
 
-  Widget buildPersonalGroupsContainer() {
+  /// Charger les groupes avec du contenu non lu
+  Future<void> _loadGroupesWithUnread() async {
+    setState(() => _isLoadingGroupes = true);
+
+    try {
+      final groupes =
+          await UnreadContentService.getMyGroupesWithUnreadContent();
+
+      if (mounted) {
+        setState(() {
+          _groupesWithUnread = groupes;
+          _isLoadingGroupes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingGroupes = false);
+      }
+    }
+  }
+
+  /// Container dynamique pour les groupes avec contenus non lus
+  Widget buildGroupesWithUnreadContainer() {
+    // Si chargement en cours
+    if (_isLoadingGroupes) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 150, 147, 147),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    // Si aucun groupe avec contenu non lu
+    if (_groupesWithUnread.isEmpty) {
+      return const SizedBox.shrink(); // Ne rien afficher
+    }
+
+    // Afficher les groupes avec contenus non lus
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -80,117 +203,123 @@ class _AccueilPageState extends State<AccueilPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Mes Groupes Créés",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 120,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  _buildGroupCard("Équipe Vente", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Support Client", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Développement", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Marketing", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("RH", Icons.person_2),
-                ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Nouveaux Messages & Posts",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildJoinedGroupsContainer() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 150, 147, 147),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Groupes Rejoints",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 120,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  _buildGroupCard("Tech Community", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Business Network", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Innovation Hub", Icons.person_2),
-                  const SizedBox(width: 15),
-                  _buildGroupCard("Startup Groupe", Icons.person_2),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _buildGroupCard(String groupName, IconData icon) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 70,
-          height: 70,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color.fromARGB(255, 88, 91, 94),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blue.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_groupesWithUnread.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 30,
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: 80,
-          child: Text(
-            groupName,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 120,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: _groupesWithUnread.map((groupe) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 15),
+                    child: _buildDynamicGroupCard(groupe),
+                  );
+                }).toList(),
+              ),
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  /// Widget pour afficher une card de groupe dynamique avec badge de non-lus
+  Widget _buildDynamicGroupCard(GroupeWithUnreadContent groupe) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: Naviguer vers la page du groupe
+        print('Navigation vers groupe: ${groupe.nom}');
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF3A5BA0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  image: groupe.logo != null
+                      ? DecorationImage(
+                          image: NetworkImage(groupe.logo!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: groupe.logo == null
+                    ? const Icon(Icons.group, color: Colors.white, size: 30)
+                    : null,
+              ),
+              // Badge de compteur de non-lus
+              if (groupe.totalUnread > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      groupe.totalUnread > 99 ? '99+' : '${groupe.totalUnread}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              groupe.nom,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -248,10 +377,7 @@ class _AccueilPageState extends State<AccueilPage> {
               const SizedBox(height: 8),
               Text(
                 'Soyez le premier à publier !',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade500,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
             ],
           ),
@@ -263,9 +389,7 @@ class _AccueilPageState extends State<AccueilPage> {
       children: List.generate(
         _posts.length,
         (index) => Padding(
-          padding: EdgeInsets.only(
-            bottom: index < _posts.length - 1 ? 12 : 0,
-          ),
+          padding: EdgeInsets.only(bottom: index < _posts.length - 1 ? 12 : 0),
           child: _PostCard(post: _posts[index]),
         ),
       ),
@@ -344,14 +468,24 @@ class _AccueilPageState extends State<AccueilPage> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'ZIDA Jules',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                              ),
-                            ),
+                            _isLoadingSociete
+                                ? const SizedBox(
+                                    width: 100,
+                                    child: LinearProgressIndicator(
+                                      color: Colors.white,
+                                      backgroundColor: Colors.white24,
+                                    ),
+                                  )
+                                : Text(
+                                    _currentSociete != null
+                                        ? _currentSociete!.nom.toUpperCase()
+                                        : 'Société',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                           ],
                         ),
                       ],
@@ -381,9 +515,14 @@ class _AccueilPageState extends State<AccueilPage> {
                         const SizedBox(width: 10),
                         _SquareAction(
                           label: '2',
-                          icon: Icons.group,
+                          icon: Icons.business_center,
                           onTap: () {
-                            // TODO: Navigate to groups page
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const service_societe.ServicePage(),
+                              ),
+                            );
                           },
                         ),
                         const SizedBox(width: 10),
@@ -421,10 +560,8 @@ class _AccueilPageState extends State<AccueilPage> {
                   children: [
                     const SizedBox(height: 10),
 
-                    // CONTAINERS GROUPES (Personnel + Rejoints)
-                    buildPersonalGroupsContainer(),
-                    const SizedBox(height: 8),
-                    buildJoinedGroupsContainer(),
+                    // CONTAINER DYNAMIQUE: Groupes avec contenus non lus
+                    buildGroupesWithUnreadContainer(),
 
                     // Ligne de séparation
                     const Padding(
@@ -437,17 +574,42 @@ class _AccueilPageState extends State<AccueilPage> {
                       ),
                     ),
 
-                    // BARRE d'info (4 cartes arrondies)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+                      child: _isLoadingStats
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _InfoChip(
+                                  title: 'Abonnés',
+                                  value: _formatNumber(_abonnesCount),
+                                ),
+                                _InfoChip(
+                                  title: 'Suivis',
+                                  value: _formatNumber(_suivisCount),
+                                ),
+                                _InfoChip(
+                                  title: 'Groupes',
+                                  value: _formatNumber(_groupesCount),
+                                ),
+                              ],
+                            ),
+                    ),
+
+                    // Ligne de séparation
                     const Padding(
-                      padding: EdgeInsets.fromLTRB(12, 8, 12, 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _InfoChip(title: 'Posts', value: '120'),
-                          _InfoChip(title: 'Abonnés', value: '2.4k'),
-                          _InfoChip(title: 'Suivis', value: '180'),
-                          _InfoChip(title: 'Groupes', value: '12'),
-                        ],
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Divider(
+                        thickness: 2,
+                        color: Color(0xFFE0E0E0),
+                        indent: 8,
+                        endIndent: 8,
                       ),
                     ),
 
@@ -519,7 +681,7 @@ class _SquareAction extends StatelessWidget {
                     ),
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -631,169 +793,173 @@ class _PostCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: cs.primaryContainer,
-                  backgroundImage: post.getAuthorPhoto() != null
-                      ? NetworkImage('http://127.0.0.1:8000${post.getAuthorPhoto()}')
-                      : null,
-                  child: post.getAuthorPhoto() == null
-                      ? Icon(
-                          post.authorType == AuthorType.societe
-                              ? Icons.business
-                              : Icons.person,
-                          size: 18,
-                          color: cs.onPrimaryContainer,
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.getAuthorName(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        _formatTimestamp(post.createdAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: cs.onSurface.withOpacity(.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (post.hasMedia() && post.mediaUrls!.isNotEmpty)
-              Container(
-                height: 140,
-                decoration: BoxDecoration(
-                  color: cs.secondaryContainer.withOpacity(.3),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: cs.outlineVariant.withOpacity(.3)),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    'http://127.0.0.1:8000${post.mediaUrls!.first}',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          size: 40,
-                          color: cs.onSurface.withOpacity(.4),
-                        ),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            if (post.hasMedia() && post.mediaUrls!.isNotEmpty)
-              const SizedBox(height: 12),
-            Text(
-              post.contenu,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.4,
-                color: cs.onSurface.withOpacity(.8),
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-// Statistiques et actions (cliquer sur la carte pour interagir)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
+              Row(
                 children: [
-                  // Like
-                  Icon(
-                    Icons.favorite_border,
-                    size: 20,
-                    color: cs.primary.withOpacity(.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${post.likesCount}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  // Commentaires
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 20,
-                    color: cs.primary.withOpacity(.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${post.commentsCount}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const Spacer(),
-                  // Partages
-                  Icon(
-                    Icons.share_outlined,
-                    size: 20,
-                    color: cs.onSurface.withOpacity(.6),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${post.sharesCount}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurface.withOpacity(.7),
-                    ),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: cs.primaryContainer,
+                    backgroundImage: post.getAuthorPhoto() != null
+                        ? NetworkImage(
+                            'http://127.0.0.1:8000${post.getAuthorPhoto()}',
+                          )
+                        : null,
+                    child: post.getAuthorPhoto() == null
+                        ? Icon(
+                            post.authorType == AuthorType.societe
+                                ? Icons.business
+                                : Icons.person,
+                            size: 18,
+                            color: cs.onPrimaryContainer,
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 12),
-                  // Indicateur visuel pour cliquer
-                  Icon(
-                    Icons.touch_app,
-                    size: 16,
-                    color: cs.primary.withOpacity(.5),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post.getAuthorName(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          _formatTimestamp(post.createdAt),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurface.withOpacity(.6),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
                 ],
               ),
-            )
-          ],
+              const SizedBox(height: 12),
+              if (post.hasMedia() && post.mediaUrls!.isNotEmpty)
+                Container(
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: cs.secondaryContainer.withOpacity(.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: cs.outlineVariant.withOpacity(.3),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      'http://127.0.0.1:8000${post.mediaUrls!.first}',
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            size: 40,
+                            color: cs.onSurface.withOpacity(.4),
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              if (post.hasMedia() && post.mediaUrls!.isNotEmpty)
+                const SizedBox(height: 12),
+              Text(
+                post.contenu,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: cs.onSurface.withOpacity(.8),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              // Statistiques et actions (cliquer sur la carte pour interagir)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    // Like
+                    Icon(
+                      Icons.favorite_border,
+                      size: 20,
+                      color: cs.primary.withOpacity(.8),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${post.likesCount}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    // Commentaires
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 20,
+                      color: cs.primary.withOpacity(.8),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${post.commentsCount}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Partages
+                    Icon(
+                      Icons.share_outlined,
+                      size: 20,
+                      color: cs.onSurface.withOpacity(.6),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${post.sharesCount}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurface.withOpacity(.7),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Indicateur visuel pour cliquer
+                    Icon(
+                      Icons.touch_app,
+                      size: 16,
+                      color: cs.primary.withOpacity(.5),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }

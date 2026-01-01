@@ -838,23 +838,89 @@ class _CreerPostPageState extends State<CreerPostPage> {
     }
   }
 
+  /// Valider la taille d'un fichier selon le type de média
+  /// Retourne null si valide, ou un message d'erreur si invalide
+  String? _validateFileSize(File file, String mediaType) {
+    final int fileSize = file.lengthSync(); // Taille en octets
+    final double fileSizeMB = fileSize / (1024 * 1024); // Convertir en MB
+
+    // Contraintes backend
+    const double maxImageSizeMB = 5.0;    // Images: 5 MB max
+    const double maxVideoSizeMB = 50.0;   // Vidéos: 50 MB max
+    const double maxAudioSizeMB = 10.0;   // Audio: 10 MB max
+
+    switch (mediaType) {
+      case 'image':
+        if (fileSizeMB > maxImageSizeMB) {
+          return 'Image trop lourde (${fileSizeMB.toStringAsFixed(1)} MB). Maximum: $maxImageSizeMB MB';
+        }
+        break;
+      case 'video':
+        if (fileSizeMB > maxVideoSizeMB) {
+          return 'Vidéo trop lourde (${fileSizeMB.toStringAsFixed(1)} MB). Maximum: $maxVideoSizeMB MB';
+        }
+        break;
+      case 'vocal':
+        if (fileSizeMB > maxAudioSizeMB) {
+          return 'Audio trop lourd (${fileSizeMB.toStringAsFixed(1)} MB). Maximum: $maxAudioSizeMB MB';
+        }
+        break;
+    }
+
+    return null; // Fichier valide
+  }
+
   Future<void> _selectFromGallery() async {
     try {
       if (typePost == "image") {
         // Sélection multiple d'images
         final List<XFile> images = await _picker.pickMultiImage();
         if (images.isNotEmpty) {
+          // Valider la taille de chaque image
+          List<File> validFiles = [];
+          List<String> errors = [];
+
+          for (var xFile in images) {
+            final file = File(xFile.path);
+            final error = _validateFileSize(file, 'image');
+
+            if (error == null) {
+              validFiles.add(file);
+            } else {
+              errors.add('${xFile.name}: $error');
+            }
+          }
+
+          // Si aucun fichier valide
+          if (validFiles.isEmpty && errors.isNotEmpty) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(errors.first),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+            return;
+          }
+
           setState(() {
-            _selectedFiles = images.map((xFile) => File(xFile.path)).toList();
+            _selectedFiles = validFiles;
             _hasSelectedMedia = true;
           });
 
           if (mounted) {
+            String message = "${validFiles.length} image(s) sélectionnée(s)";
+            if (errors.isNotEmpty) {
+              message += "\n${errors.length} fichier(s) rejeté(s) (trop lourds)";
+            }
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text("${images.length} image(s) sélectionnée(s)"),
-                backgroundColor: mattermostGreen,
-                duration: const Duration(seconds: 1),
+                content: Text(message),
+                backgroundColor: errors.isEmpty ? mattermostGreen : Colors.orange,
+                duration: const Duration(seconds: 3),
               ),
             );
           }
@@ -863,8 +929,24 @@ class _CreerPostPageState extends State<CreerPostPage> {
         // Sélection d'une vidéo
         final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
         if (video != null) {
+          final file = File(video.path);
+          final error = _validateFileSize(file, 'video');
+
+          if (error != null) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(error),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+            return;
+          }
+
           setState(() {
-            _selectedFiles = [File(video.path)];
+            _selectedFiles = [file];
             _hasSelectedMedia = true;
           });
 
@@ -895,8 +977,24 @@ class _CreerPostPageState extends State<CreerPostPage> {
     try {
       final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
       if (video != null) {
+        final file = File(video.path);
+        final error = _validateFileSize(file, 'video');
+
+        if (error != null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(error),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+
         setState(() {
-          _selectedFiles = [File(video.path)];
+          _selectedFiles = [file];
           _hasSelectedMedia = true;
         });
 

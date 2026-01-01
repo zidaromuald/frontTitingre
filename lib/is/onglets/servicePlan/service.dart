@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
 import 'package:gestauth_clean/services/suivre/suivre_auth_service.dart';
 import 'package:gestauth_clean/services/suivre/abonnement_auth_service.dart' as abonnement_service;
 import 'package:gestauth_clean/services/groupe/groupe_service.dart';
@@ -7,7 +6,10 @@ import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/messagerie/conversation_service.dart';
 import 'package:gestauth_clean/iu/onglets/recherche/user_profile_page.dart';
+import 'package:gestauth_clean/iu/onglets/recherche/global_search_page.dart';
+import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
 import 'package:gestauth_clean/messagerie/conversation_detail_page.dart';
+import 'user_transaction_page.dart';
 
 class ServicePage extends StatefulWidget {
   const ServicePage({super.key});
@@ -218,7 +220,12 @@ class _ServicePageState extends State<ServicePage> {
         actions: [
           IconButton(
             onPressed: () {
-              // Action de recherche
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GlobalSearchPage(),
+                ),
+              );
             },
             icon: const Icon(Icons.search, color: Colors.white),
           ),
@@ -597,24 +604,15 @@ class _ServicePageState extends State<ServicePage> {
     );
   }
 
-  /// Naviguer vers la page Transaction/Partenariat
+  /// Naviguer vers la page de transaction avec l'utilisateur
   void _navigateToTransactionPage(UserModel user) {
-    // Préparer les données pour la page de transaction
-    final Map<String, dynamic> societeData = {
-      'nom': '${user.nom} ${user.prenom}',
-      'type': 'Utilisateur Premium',
-    };
-
-    final Map<String, dynamic> categorieData = {
-      'color': const Color(0xffFFA500), // Couleur premium
-    };
-
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SocieteDetailsPage(
-          societe: societeData,
-          categorie: categorieData,
+        builder: (context) => UserTransactionPage(
+          userId: user.id,
+          userName: '${user.prenom} ${user.nom}',
+          themeColor: mattermostBlue,
         ),
       ),
     );
@@ -681,7 +679,7 @@ class _ServicePageState extends State<ServicePage> {
       decoration: isPremium
           ? BoxDecoration(
               border: Border.all(
-                color: const Color(0xffFFA500).withOpacity(0.3),
+                color: const Color(0xffFFA500).withValues(alpha: 0.3),
                 width: 1.5,
               ),
               borderRadius: BorderRadius.circular(8),

@@ -3,6 +3,8 @@ import '../services/groupe/groupe_service.dart';
 import '../services/groupe/groupe_membre_service.dart';
 import '../services/groupe/groupe_invitation_service.dart';
 import '../services/AuthUS/user_auth_service.dart';
+import '../services/AuthUS/societe_auth_service.dart';
+import '../services/suivre/abonnement_auth_service.dart';
 import 'groupe_chat_page.dart';
 
 /// Page de détail d'un groupe
@@ -216,64 +218,209 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
   Future<void> _showInviteUserDialog() async {
     final TextEditingController searchController = TextEditingController();
     List<UserModel> searchResults = [];
+    List<UserModel> subscribers = [];
     bool isSearching = false;
+    bool isLoadingSubscribers = false;
+    bool showSubscribers = true; // Par défaut, afficher les abonnés si société
+
+    // Charger les abonnés si c'est une société
+    try {
+      isLoadingSubscribers = true;
+      final abonnements = await AbonnementAuthService.getMySubscribers(
+        statut: AbonnementStatut.actif,
+      );
+
+      // Extraire les users des abonnements
+      subscribers = abonnements
+          .where((abn) => abn.user != null)
+          .map((abn) => UserModel.fromJson(abn.user!))
+          .toList();
+
+      isLoadingSubscribers = false;
+    } catch (e) {
+      // Si erreur (probablement pas une société), continuer sans abonnés
+      isLoadingSubscribers = false;
+      showSubscribers = false;
+    }
+
+    if (!mounted) return;
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Inviter un utilisateur'),
+          title: Row(
+            children: [
+              const Expanded(child: Text('Ajouter des membres')),
+              if (subscribers.isNotEmpty)
+                IconButton(
+                  icon: Icon(
+                    showSubscribers ? Icons.search : Icons.people,
+                    color: primaryColor,
+                  ),
+                  tooltip: showSubscribers ? 'Rechercher d\'autres utilisateurs' : 'Voir mes abonnés',
+                  onPressed: () {
+                    setDialogState(() {
+                      showSubscribers = !showSubscribers;
+                      searchController.clear();
+                      searchResults = [];
+                    });
+                  },
+                ),
+            ],
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Champ de recherche
-                TextField(
-                  controller: searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher par nom ou email',
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: isSearching
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: Padding(
-                              padding: EdgeInsets.all(12),
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : null,
+                // Afficher le mode actuel
+                if (subscribers.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          showSubscribers ? Icons.people : Icons.search,
+                          size: 16,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          showSubscribers
+                              ? 'Mes abonnés (${subscribers.length})'
+                              : 'Recherche globale',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  onChanged: (value) async {
-                    if (value.length < 2) {
-                      setDialogState(() {
-                        searchResults = [];
-                      });
-                      return;
-                    }
+                const SizedBox(height: 12),
 
-                    setDialogState(() => isSearching = true);
+                // Champ de recherche (uniquement en mode recherche)
+                if (!showSubscribers)
+                  TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Rechercher par nom ou email',
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: isSearching
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) async {
+                      if (value.length < 2) {
+                        setDialogState(() {
+                          searchResults = [];
+                        });
+                        return;
+                      }
 
-                    try {
-                      final results = await UserAuthService.searchUsers(
-                        query: value,
-                        limit: 10,
-                      );
-                      setDialogState(() {
-                        searchResults = results;
-                        isSearching = false;
-                      });
-                    } catch (e) {
-                      setDialogState(() => isSearching = false);
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
+                      setDialogState(() => isSearching = true);
 
-                // Résultats de recherche
-                if (searchResults.isNotEmpty)
+                      try {
+                        final results = await UserAuthService.searchUsers(
+                          query: value,
+                          limit: 10,
+                        );
+                        setDialogState(() {
+                          searchResults = results;
+                          isSearching = false;
+                        });
+                      } catch (e) {
+                        setDialogState(() => isSearching = false);
+                      }
+                    },
+                  ),
+
+                if (!showSubscribers) const SizedBox(height: 16),
+
+                // Liste des abonnés OU résultats de recherche
+                if (showSubscribers && isLoadingSubscribers)
+                  const Center(child: CircularProgressIndicator())
+                else if (showSubscribers && subscribers.isNotEmpty)
+                  SizedBox(
+                    height: 300,
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: subscribers.length,
+                      itemBuilder: (context, index) {
+                        final user = subscribers[index];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: primaryColor,
+                            backgroundImage: user.profile?.photo != null
+                                ? NetworkImage(user.profile!.photo!)
+                                : null,
+                            child: user.profile?.photo == null
+                                ? Text(
+                                    user.nom.substring(0, 1).toUpperCase(),
+                                    style: const TextStyle(color: Colors.white),
+                                  )
+                                : null,
+                          ),
+                          title: Text('${user.prenom} ${user.nom}'),
+                          subtitle: Text(user.email ?? user.numero),
+                          trailing: ElevatedButton.icon(
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('Ajouter'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              await _sendInvitation(user);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                else if (showSubscribers && subscribers.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Icon(Icons.people_outline, size: 48, color: darkGray),
+                        SizedBox(height: 8),
+                        Text(
+                          'Aucun abonné',
+                          style: TextStyle(
+                            color: darkGray,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Utilisez la recherche pour inviter des membres',
+                          style: TextStyle(color: darkGray, fontSize: 12),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )
+                else if (!showSubscribers && searchResults.isNotEmpty)
                   SizedBox(
                     height: 300,
                     child: ListView.builder(
@@ -294,7 +441,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                                   )
                                 : null,
                           ),
-                          title: Text('${user.nom} ${user.prenom}'),
+                          title: Text('${user.prenom} ${user.nom}'),
                           subtitle: Text(user.email ?? user.numero),
                           trailing: IconButton(
                             icon: const Icon(Icons.send, color: primaryColor),
@@ -307,7 +454,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                       },
                     ),
                   )
-                else if (searchController.text.length >= 2 && !isSearching)
+                else if (!showSubscribers && searchController.text.length >= 2 && !isSearching)
                   const Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
@@ -315,7 +462,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                       style: TextStyle(color: darkGray),
                     ),
                   )
-                else if (searchController.text.isEmpty)
+                else if (!showSubscribers && searchController.text.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(16),
                     child: Text(
@@ -380,23 +527,34 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
 
     if (message == null) return; // User a annulé
 
-    // Envoyer l'invitation
+    // Envoyer l'invitation ou ajouter directement
     try {
-      await GroupeInvitationService.inviteMembre(
+      final result = await GroupeInvitationService.inviteMembre(
         groupeId: widget.groupeId,
         invitedUserId: user.id,
         message: message.isEmpty ? null : message,
       );
 
       if (mounted) {
+        // Vérifier si c'est un ajout direct ou une invitation
+        final ajoutDirect = result['ajoutDirect'] ?? false;
+        final resultMessage = result['message'] as String?;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Invitation envoyée à ${user.nom} ${user.prenom}',
+              ajoutDirect
+                  ? resultMessage ?? '${user.prenom} ${user.nom} a été ajouté(e) au groupe'
+                  : resultMessage ?? 'Invitation envoyée à ${user.prenom} ${user.nom}',
             ),
             backgroundColor: primaryColor,
           ),
         );
+
+        // Recharger les membres si ajout direct
+        if (ajoutDirect) {
+          _loadGroupeData();
+        }
       }
     } catch (e) {
       if (mounted) {

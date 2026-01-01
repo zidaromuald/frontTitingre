@@ -7,6 +7,7 @@ import 'package:gestauth_clean/iu/HomePage.dart';
 import 'package:gestauth_clean/iu/InscriptionUPage.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
+import 'package:gestauth_clean/auth/forgot_password_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -297,7 +298,7 @@ class _LoginScreenState extends State<LoginScreen> {
               if (value == null || value.trim().isEmpty) {
                 return 'Le mot de passe est requis';
               }
-              if (value.length < 6) {
+              if (value.length < 8) {
                 return 'Le mot de passe doit contenir au moins 6 caractères';
               }
               return null;
@@ -334,23 +335,23 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildForgotPasswordButton() {
     return Container(
       alignment: Alignment.centerRight,
-      // child: TextButton(
-      //   onPressed: () {
-      //     // Navigation vers la page de récupération de mot de passe
-      //     Navigator.push(
-      //       context,
-      //       MaterialPageRoute(builder: (context) =>  ForgotPasswordPage()),
-      //     );
-      //   },
-      //   child: const Text(
-      //     "Mot de passe oublié ?",
-      //     style: TextStyle(
-      //       color: Colors.white,
-      //       fontWeight: FontWeight.bold,
-      //       fontSize: 14,
-      //     ),
-      //   ),
-      // ),
+      child: TextButton(
+        onPressed: () {
+          //     // Navigation vers la page de récupération de mot de passe
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ForgotPasswordPage()),
+          );
+        },
+        child: const Text(
+          "Mot de passe oublié ?",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+      ),
     );
   }
 

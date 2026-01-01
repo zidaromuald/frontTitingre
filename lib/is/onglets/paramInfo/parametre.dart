@@ -53,7 +53,7 @@ class _ParametrePageState extends State<ParametrePage> {
       'description': 'Construction, rénovation, BTP',
     },
     {
-      'nom': 'Vente & Distribution',
+      'nom': 'Distribution',
       'icon': Icons.store,
       'color': Colors.purple,
       'description': 'Commerce, distribution, vente',
@@ -332,8 +332,8 @@ class _ParametrePageState extends State<ParametrePage> {
             const SizedBox(height: 16),
             // Section Profil
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -391,7 +391,7 @@ class _ParametrePageState extends State<ParametrePage> {
             const SizedBox(height: 20),
             // Titre Catégories
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+              padding: EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 "Catégories d'activités",
                 style: TextStyle(
@@ -404,7 +404,7 @@ class _ParametrePageState extends State<ParametrePage> {
             const SizedBox(height: 12),
             // Grille des catégories principales (2 colonnes)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -426,7 +426,7 @@ class _ParametrePageState extends State<ParametrePage> {
 
             // Conteneur parent transparent pour Canaux
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.symmetric(horizontal: 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: mattermostBlue.withValues(alpha: 0.08),
@@ -448,8 +448,8 @@ class _ParametrePageState extends State<ParametrePage> {
             // Section Demandes d'abonnement reçues
             if (_isLoadingDemandesAbonnement)
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(24),
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -469,8 +469,8 @@ class _ParametrePageState extends State<ParametrePage> {
               )
             else if (_demandesAbonnementRecues.isNotEmpty) ...[
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -516,8 +516,8 @@ class _ParametrePageState extends State<ParametrePage> {
             // Section Invitations de Groupes
             if (_isLoadingInvitationsGroupes)
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(24),
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -537,8 +537,8 @@ class _ParametrePageState extends State<ParametrePage> {
               )
             else if (_invitationsGroupesRecues.isNotEmpty) ...[
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -591,7 +591,7 @@ class _ParametrePageState extends State<ParametrePage> {
     return GestureDetector(
       onTap: () => _navigateToCategorie(categorie),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -652,7 +652,7 @@ class _ParametrePageState extends State<ParametrePage> {
       onTap: () => _navigateToCategorie(categorie),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),

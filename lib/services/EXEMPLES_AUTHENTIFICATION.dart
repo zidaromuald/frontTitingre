@@ -3,9 +3,9 @@
 /// User vs Societe
 /// ========================================
 
-import 'user_auth_service.dart';
-import 'societe_auth_service.dart';
-import 'unified_auth_service.dart';
+import 'AuthUS/user_auth_service.dart';
+import 'AuthUS/societe_auth_service.dart';
+import 'AuthUS/unified_auth_service.dart';
 import 'post_service.dart';
 
 /// ========================================
@@ -19,7 +19,7 @@ void exempleInscriptionUser() async {
       prenom: 'John',
       email: 'john.doe@example.com',
       password: 'password123',
-      telephone: '+226 70 12 34 56',
+      numero: '+226 70 12 34 56',
     );
 
     print('User inscrit: ${user.fullName}');
@@ -46,7 +46,7 @@ void exempleRecupererInfosUser() async {
     final user = await UserAuthService.getMe();
     print('User: ${user.fullName}');
     print('Email: ${user.email}');
-    print('Tel: ${user.telephone}');
+    print('Tel: ${user.numero}');
   } catch (e) {
     print('Erreur: $e');
   }
@@ -246,7 +246,7 @@ void exempleFluxCompletUser() async {
       prenom: 'Jules',
       email: 'jules.zida@example.com',
       password: 'SecurePass123!',
-      telephone: '+226 70 12 34 56',
+      numero: '+226 70 12 34 56',
     );
     print('✅ User inscrit: ${user.fullName}');
 

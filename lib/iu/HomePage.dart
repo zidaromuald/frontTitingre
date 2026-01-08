@@ -221,13 +221,13 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 110,
+            height: 85,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: _groupesWithUnread.map((groupe) {
                   return Padding(
-                    padding: const EdgeInsets.only(right: 15),
+                    padding: const EdgeInsets.only(right: 12),
                     child: _buildDynamicGroupCard(groupe),
                   );
                 }).toList(),
@@ -332,16 +332,16 @@ class _HomePageState extends State<HomePage> {
           Stack(
             children: [
               Container(
-                width: 60,
-                height: 60,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF5ac18e),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.blue.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                   image: groupe.logo != null
@@ -352,7 +352,7 @@ class _HomePageState extends State<HomePage> {
                       : null,
                 ),
                 child: groupe.logo == null
-                    ? const Icon(Icons.group, color: Colors.white, size: 25)
+                    ? const Icon(Icons.group, color: Colors.white, size: 20)
                     : null,
               ),
               // Badge de compteur de non-lus
@@ -361,7 +361,7 @@ class _HomePageState extends State<HomePage> {
                   right: 0,
                   top: 0,
                   child: Container(
-                    padding: const EdgeInsets.all(5),
+                    padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
                       color: Colors.red,
                       shape: BoxShape.circle,
@@ -370,7 +370,7 @@ class _HomePageState extends State<HomePage> {
                       groupe.totalUnread > 99 ? '99+' : '${groupe.totalUnread}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 9,
+                        fontSize: 8,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -605,7 +605,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 150,
+            height: 100,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -642,10 +642,10 @@ class _HomePageState extends State<HomePage> {
         print('Navigation vers société: $nom (ID: $societeId)');
       },
       child: Container(
-        height: 150,
-        width: 180,
+        height: 100,
+        width: 120,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           color: Colors.grey[300],
           image: logo != null
               ? DecorationImage(
@@ -661,7 +661,7 @@ class _HomePageState extends State<HomePage> {
               Center(
                 child: Icon(
                   Icons.business,
-                  size: 48,
+                  size: 32,
                   color: Colors.grey[500],
                 ),
               ),
@@ -674,18 +674,18 @@ class _HomePageState extends State<HomePage> {
                 decoration: BoxDecoration(
                   color: const Color.fromARGB(255, 134, 128, 128).withAlpha((255 * 0.7).toInt()),
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(15),
+                    bottomRight: Radius.circular(15),
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
                 alignment: Alignment.center,
                 child: Text(
                   nom,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 11,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,

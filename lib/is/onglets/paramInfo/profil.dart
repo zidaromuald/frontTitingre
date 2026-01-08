@@ -15,6 +15,7 @@ class ProfilDetailPage extends StatefulWidget {
 
 class _ProfilDetailPageState extends State<ProfilDetailPage> {
   bool _isLoading = true;
+  bool _isSaving = false;
   SocieteModel? _societe;
   String? _logoUrl;
 
@@ -92,6 +93,10 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
 
   /// Sauvegarder les modifications du profil
   Future<void> _saveProfile() async {
+    if (_isSaving) return; // Éviter les doubles clics
+
+    setState(() => _isSaving = true);
+
     try {
       // Préparer les données à envoyer
       final updates = {
@@ -110,6 +115,8 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
       await SocieteAuthService.updateMyProfile(updates);
 
       if (mounted) {
+        setState(() => _isSaving = false);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profil mis à jour avec succès'),
@@ -122,6 +129,8 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isSaving = false);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur: ${e.toString()}'),
@@ -166,11 +175,24 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
             style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          IconButton(
-            onPressed: _saveProfile,
-            icon: const Icon(Icons.save, color: Colors.white),
-            tooltip: 'Sauvegarder',
-          ),
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+            )
+          else
+            IconButton(
+              onPressed: _saveProfile,
+              icon: const Icon(Icons.save, color: Colors.white),
+              tooltip: 'Sauvegarder',
+            ),
         ],
       ),
       body: RefreshIndicator(
@@ -399,7 +421,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
                   .map(
                     (item) => Chip(
                       label: Text(item, style: const TextStyle(fontSize: 12)),
-                      backgroundColor: color.withValues(alpha: 0.1),
+                      backgroundColor: color.withAlpha((255 * 0.1).toInt()),
                       labelStyle: TextStyle(color: color),
                       deleteIcon: const Icon(Icons.close, size: 16),
                       onDeleted: () => onRemove(item),

@@ -215,10 +215,28 @@ class SocieteAuthService {
     final response = await ApiService.get('/societes/me');
 
     if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      return SocieteModel.fromJson(jsonResponse['data']);
+      try {
+        final jsonResponse = jsonDecode(response.body);
+
+        // Valider que la réponse contient les données attendues
+        if (jsonResponse['data'] == null) {
+          throw Exception('Données de profil manquantes dans la réponse API');
+        }
+
+        return SocieteModel.fromJson(jsonResponse['data']);
+      } on FormatException catch (e) {
+        throw Exception('Réponse API invalide (JSON mal formé): $e');
+      } catch (e) {
+        throw Exception('Erreur de parsing du profil: $e');
+      }
+    } else if (response.statusCode == 401) {
+      throw Exception('Session expirée. Veuillez vous reconnecter');
+    } else if (response.statusCode == 404) {
+      throw Exception('Profil société introuvable');
+    } else if (response.statusCode >= 500) {
+      throw Exception('Erreur serveur (${response.statusCode}). Réessayez plus tard');
     } else {
-      throw Exception('Profil non trouvé');
+      throw Exception('Erreur ${response.statusCode}: ${response.body}');
     }
   }
 

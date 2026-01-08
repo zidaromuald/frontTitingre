@@ -7,6 +7,7 @@ import 'package:gestauth_clean/iu/onglets/servicePlan/service.dart';
 import 'package:gestauth_clean/services/posts/post_service.dart';
 import 'package:gestauth_clean/services/affichage/unread_content_service.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
+import 'package:gestauth_clean/services/suivre/abonnement_auth_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,6 +27,10 @@ class _HomePageState extends State<HomePage> {
   bool _isLoadingGroupes = false;
   bool _isLoadingSocietes = false;
 
+  // Sociétés dont l'utilisateur est membre (abonné)
+  List<AbonnementModel> _mesSocietes = [];
+  bool _isLoadingMesSocietes = false;
+
   // Profil utilisateur
   UserModel? _currentUser;
   bool _isLoadingUser = false;
@@ -37,6 +42,7 @@ class _HomePageState extends State<HomePage> {
     _loadPosts();
     _loadGroupesWithUnread();
     _loadSocietesWithUnread();
+    _loadMesSocietes();
   }
 
   /// Charger le profil de l'utilisateur connecté
@@ -127,6 +133,29 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         setState(() => _isLoadingSocietes = false);
       }
+    }
+  }
+
+  /// Charger les sociétés dont l'utilisateur est membre (abonnements actifs)
+  Future<void> _loadMesSocietes() async {
+    setState(() => _isLoadingMesSocietes = true);
+
+    try {
+      final abonnements = await AbonnementAuthService.getMySubscriptions(
+        statut: AbonnementStatut.actif,
+      );
+
+      if (mounted) {
+        setState(() {
+          _mesSocietes = abonnements;
+          _isLoadingMesSocietes = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMesSocietes = false);
+      }
+      debugPrint('Erreur chargement mes sociétés: $e');
     }
   }
 
@@ -487,7 +516,57 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Container dynamique pour les sociétés dont l'utilisateur est membre
   Widget buildSocieteContainer() {
+    // Si chargement en cours
+    if (_isLoadingMesSocietes) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(180, 220, 220, 220),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(color: Color(0xFF5ac18e)),
+        ),
+      );
+    }
+
+    // Si aucune société
+    if (_mesSocietes.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(180, 220, 220, 220),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.business, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 12),
+            Text(
+              "Aucune société suivie",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Découvrez et abonnez-vous à des sociétés",
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Afficher les sociétés
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -498,36 +577,124 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment
-            .start, // Important: permet au container de s'adapter au contenu
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Mes Sociétés",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Mes Sociétés",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5ac18e),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_mesSocietes.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10), // Espacement contrôlé
+          const SizedBox(height: 10),
           SizedBox(
-            height: 150, // Hauteur fixe pour les cartes seulement
+            height: 150,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: [
-                  SizedBox(width: 6),
-                  buildCerealCard("images/logo.png", "Tech Corp"),
-                  const SizedBox(width: 10),
-                  buildCerealCard("images/logo.png", "Creative Studio"),
-                  const SizedBox(width: 10),
-                  buildCerealCard("images/logo.png", "Global Inc"),
-                  const SizedBox(width: 10),
-                  buildCerealCard("images/logo.png", "Innovation Lab"),
-                  const SizedBox(width: 10),
-                  buildCerealCard("images/logo.png", "Digital Agency"),
-                  SizedBox(width: 6),
-                ],
+                children: _mesSocietes.map((abonnement) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: _buildSocieteCard(abonnement),
+                  );
+                }).toList(),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Widget pour afficher une card de société membre
+  Widget _buildSocieteCard(AbonnementModel abonnement) {
+    final societeData = abonnement.societe;
+
+    // Si la société est nulle, ne rien afficher
+    if (societeData == null) return const SizedBox.shrink();
+
+    // Extraire les données de la société
+    final nom = societeData['nom'] as String? ?? 'Société';
+    final profile = societeData['profile'] as Map<String, dynamic>?;
+    final logo = profile?['logo'] as String?;
+
+    return GestureDetector(
+      onTap: () {
+        // TODO: Naviguer vers la page de la société
+        final societeId = societeData['id'] as int?;
+        print('Navigation vers société: $nom (ID: $societeId)');
+      },
+      child: Container(
+        height: 150,
+        width: 180,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.grey[300],
+          image: logo != null
+              ? DecorationImage(
+                  image: NetworkImage(logo),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        ),
+        child: Stack(
+          children: [
+            // Si pas de logo, afficher une icône par défaut
+            if (logo == null)
+              Center(
+                child: Icon(
+                  Icons.business,
+                  size: 48,
+                  color: Colors.grey[500],
+                ),
+              ),
+            // Overlay avec le nom de la société
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 134, 128, 128).withAlpha((255 * 0.7).toInt()),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                alignment: Alignment.center,
+                child: Text(
+                  nom,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

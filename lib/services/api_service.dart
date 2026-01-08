@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 
 /// Service de base pour les appels API
 class ApiService {
-  // URL de base de votre API NestJS
-  static const String baseUrl = 'http://localhost:3000'; // À modifier selon votre config
+  // URL de base de votre API NestJS - s'adapte automatiquement selon la plateforme
+  static String get baseUrl => AppConfig.apiBaseUrl;
 
   // Headers par défaut
   static Map<String, String> get _headers => {
@@ -22,10 +23,7 @@ class ApiService {
   /// Headers avec authentification
   static Future<Map<String, String>> get _authHeaders async {
     final token = await _getToken();
-    return {
-      ..._headers,
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    return {..._headers, if (token != null) 'Authorization': 'Bearer $token'};
   }
 
   /// GET Request
@@ -42,7 +40,10 @@ class ApiService {
   }
 
   /// POST Request
-  static Future<http.Response> post(String endpoint, Map<String, dynamic> data) async {
+  static Future<http.Response> post(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
     final headers = await _authHeaders;
     final uri = Uri.parse('$baseUrl$endpoint');
 
@@ -59,7 +60,10 @@ class ApiService {
   }
 
   /// PUT Request
-  static Future<http.Response> put(String endpoint, Map<String, dynamic> data) async {
+  static Future<http.Response> put(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
     final headers = await _authHeaders;
     final uri = Uri.parse('$baseUrl$endpoint');
 
@@ -107,9 +111,7 @@ class ApiService {
       }
 
       // Ajouter le fichier
-      request.files.add(
-        await http.MultipartFile.fromPath(fieldName, filePath),
-      );
+      request.files.add(await http.MultipartFile.fromPath(fieldName, filePath));
 
       // Ajouter des champs supplémentaires si fournis
       if (additionalFields != null) {

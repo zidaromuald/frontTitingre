@@ -43,3 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android signing keys - IMPORTANT: Ne jamais committer ces fichiers !
+*.jks
+*.keystore
+android/key.properties
+
+# Firebase configuration files (peuvent contenir des clés sensibles)
+# Décommentez si vous voulez les exclure
+# android/app/google-services.json
+# ios/Runner/GoogleService-Info.plist

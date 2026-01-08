@@ -515,12 +515,13 @@ class _AccueilPageState extends State<AccueilPage> {
                         const SizedBox(width: 10),
                         _SquareAction(
                           label: '2',
-                          icon: Icons.business_center,
+                          icon: Icons.person_2_outlined,
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const service_societe.ServicePage(),
+                                builder: (context) =>
+                                    const service_societe.ServicePage(),
                               ),
                             );
                           },

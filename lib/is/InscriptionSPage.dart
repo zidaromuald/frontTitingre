@@ -513,7 +513,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
                 vertical: 14,
               ),
               prefixIcon: Icon(Icons.location_on, color: Color(0xff5ac18e)),
-              hintText: 'Ex: 123 Rue de la Paix, Ouagadougou',
+              hintText: 'Ex: 123 Rue de la Paix',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
               counterText: '',

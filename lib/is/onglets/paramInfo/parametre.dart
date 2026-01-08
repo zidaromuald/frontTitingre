@@ -78,33 +78,9 @@ class _ParametrePageState extends State<ParametrePage> {
   List<GroupeInvitationModel> _invitationsGroupesRecues = [];
   bool _isLoadingInvitationsGroupes = false;
 
-  // Invitations en attente (exemple)
-  final List<Map<String, dynamic>> invitations = [
-    {
-      'type': 'groupe',
-      'nom': 'Producteurs de Riz BF',
-      'categorie': 'Agriculteur',
-      'membres': 156,
-      'description': 'Groupe des producteurs de riz du Burkina Faso',
-      'expediteur': 'Marie Ouédraogo',
-    },
-    {
-      'type': 'societe',
-      'nom': 'BTP Solutions',
-      'categorie': 'Bâtiment',
-      'projets': 12,
-      'description': 'Entreprise spécialisée dans la construction',
-      'expediteur': 'Amadou Traoré',
-    },
-    {
-      'type': 'collaboration',
-      'nom': 'Pierre Sankara',
-      'categorie': 'Élevage',
-      'poste': 'Vétérinaire',
-      'description': 'Demande de collaboration professionnelle',
-      'expediteur': 'Pierre Sankara',
-    },
-  ];
+  // Note: Les invitations sont maintenant récupérées dynamiquement via:
+  // - DemandeAbonnementService.getDemandesRecues() pour les demandes d'abonnement
+  // - GroupeInvitationService.getMyInvitations() pour les invitations de groupes
 
   @override
   void initState() {
@@ -1059,128 +1035,8 @@ class _ParametrePageState extends State<ParametrePage> {
     );
   }
 
-  // Widget pour les invitations
-  Widget _buildInvitationItem(Map<String, dynamic> invitation) {
-    IconData icon;
-    Color iconColor;
-
-    switch (invitation['type']) {
-      case 'groupe':
-        icon = Icons.group;
-        iconColor = mattermostBlue;
-        break;
-      case 'societe':
-        icon = Icons.business;
-        iconColor = Colors.purple;
-        break;
-      case 'collaboration':
-        icon = Icons.handshake;
-        iconColor = mattermostGreen;
-        break;
-      default:
-        icon = Icons.notifications;
-        iconColor = mattermostDarkGray;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: mattermostGray,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: mattermostDarkGray.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(icon, color: iconColor, size: 16),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      invitation['nom'],
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      "Invitation de ${invitation['expediteur']}",
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: mattermostDarkGray,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  invitation['categorie'],
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: iconColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            invitation['description'],
-            style: const TextStyle(fontSize: 12),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () => _refuserInvitation(invitation),
-                child: const Text(
-                  "Refuser",
-                  style: TextStyle(color: Colors.red, fontSize: 12),
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () => _accepterInvitation(invitation),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: mattermostGreen,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                ),
-                child: const Text(
-                  "Accepter",
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildInvitationItem - SUPPRIMÉ
+  // Les invitations sont maintenant gérées par _buildInvitationGroupeItem et _buildDemandeAbonnementItem
 
   // Navigation vers le profil
   void _navigateToProfile() {
@@ -1236,31 +1092,6 @@ class _ParametrePageState extends State<ParametrePage> {
     );
   }
 
-  // Accepter une invitation
-  void _accepterInvitation(Map<String, dynamic> invitation) {
-    setState(() {
-      invitations.remove(invitation);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Invitation acceptée pour ${invitation['nom']}"),
-        backgroundColor: mattermostGreen,
-      ),
-    );
-  }
-
-  // Refuser une invitation
-  void _refuserInvitation(Map<String, dynamic> invitation) {
-    setState(() {
-      invitations.remove(invitation);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Invitation refusée pour ${invitation['nom']}"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
+  // Méthodes _accepterInvitation et _refuserInvitation - SUPPRIMÉES
+  // Maintenant gérées par _accepterInvitationGroupe et _refuserInvitationGroupe
 }

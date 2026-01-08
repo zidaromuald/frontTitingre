@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart' as path;
 import 'api_service.dart';
 
 /// Types de médias supportés
@@ -41,45 +43,137 @@ class MediaUploadResponse {
 
 /// Service de gestion des médias (upload)
 class MediaService {
+  // Taille maximale des fichiers en bytes (10 MB)
+  static const int maxFileSize = 10 * 1024 * 1024;
+
+  // Extensions d'images autorisées
+  static const List<String> allowedImageExtensions = [
+    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'
+  ];
+
+  // Extensions de vidéos autorisées
+  static const List<String> allowedVideoExtensions = [
+    '.mp4', '.mov', '.avi', '.mkv', '.webm'
+  ];
+
+  // Extensions d'audio autorisées
+  static const List<String> allowedAudioExtensions = [
+    '.mp3', '.wav', '.aac', '.m4a', '.ogg'
+  ];
+
+  // Extensions de documents autorisées
+  static const List<String> allowedDocumentExtensions = [
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'
+  ];
   /// Upload une image
   /// POST /media/upload/image
-  static Future<MediaUploadResponse> uploadImage(File file) async {
-    return _uploadFile(file, MediaType.image);
+  static Future<MediaUploadResponse> uploadImage(
+    File file, {
+    Function(double progress)? onProgress,
+  }) async {
+    return _uploadFile(file, MediaType.image, onProgress: onProgress);
   }
 
   /// Upload une vidéo
   /// POST /media/upload/video
-  static Future<MediaUploadResponse> uploadVideo(File file) async {
-    return _uploadFile(file, MediaType.video);
+  static Future<MediaUploadResponse> uploadVideo(
+    File file, {
+    Function(double progress)? onProgress,
+  }) async {
+    return _uploadFile(file, MediaType.video, onProgress: onProgress);
   }
 
   /// Upload un fichier audio
   /// POST /media/upload/audio
-  static Future<MediaUploadResponse> uploadAudio(File file) async {
-    return _uploadFile(file, MediaType.audio);
+  static Future<MediaUploadResponse> uploadAudio(
+    File file, {
+    Function(double progress)? onProgress,
+  }) async {
+    return _uploadFile(file, MediaType.audio, onProgress: onProgress);
   }
 
   /// Upload un document
   /// POST /media/upload/document
-  static Future<MediaUploadResponse> uploadDocument(File file) async {
-    return _uploadFile(file, MediaType.document);
+  static Future<MediaUploadResponse> uploadDocument(
+    File file, {
+    Function(double progress)? onProgress,
+  }) async {
+    return _uploadFile(file, MediaType.document, onProgress: onProgress);
   }
 
   /// Upload automatique selon le type MIME du fichier
-  static Future<MediaUploadResponse> uploadAuto(File file) async {
+  static Future<MediaUploadResponse> uploadAuto(
+    File file, {
+    Function(double progress)? onProgress,
+  }) async {
     final mimeType = _getMimeType(file.path);
     final mediaType = _detectMediaType(mimeType);
-    return _uploadFile(file, mediaType);
+    return _uploadFile(file, mediaType, onProgress: onProgress);
   }
 
-  /// Méthode privée pour uploader un fichier
+  /// Valider le type de fichier
+  static bool _isValidFileType(File file, MediaType type) {
+    final extension = path.extension(file.path).toLowerCase();
+
+    switch (type) {
+      case MediaType.image:
+        return allowedImageExtensions.contains(extension);
+      case MediaType.video:
+        return allowedVideoExtensions.contains(extension);
+      case MediaType.audio:
+        return allowedAudioExtensions.contains(extension);
+      case MediaType.document:
+        return allowedDocumentExtensions.contains(extension);
+    }
+  }
+
+  /// Valider la taille du fichier
+  static Future<bool> _isValidFileSize(File file) async {
+    final fileSize = await file.length();
+    return fileSize <= maxFileSize;
+  }
+
+  /// Obtenir les extensions autorisées pour un type
+  static List<String> _getAllowedExtensions(MediaType type) {
+    switch (type) {
+      case MediaType.image:
+        return allowedImageExtensions;
+      case MediaType.video:
+        return allowedVideoExtensions;
+      case MediaType.audio:
+        return allowedAudioExtensions;
+      case MediaType.document:
+        return allowedDocumentExtensions;
+    }
+  }
+
+  /// Méthode privée pour uploader un fichier avec validation et progression
   static Future<MediaUploadResponse> _uploadFile(
     File file,
-    MediaType type,
-  ) async {
+    MediaType type, {
+    Function(double progress)? onProgress,
+  }) async {
     // Vérifier que le fichier existe
     if (!await file.exists()) {
       throw Exception('Le fichier n\'existe pas');
+    }
+
+    // Validation du type de fichier
+    if (!_isValidFileType(file, type)) {
+      final extension = path.extension(file.path);
+      throw Exception(
+        'Extension de fichier non autorisée: $extension. '
+        'Extensions autorisées pour ${type.name}: ${_getAllowedExtensions(type)}'
+      );
+    }
+
+    // Validation de la taille
+    if (!await _isValidFileSize(file)) {
+      final fileSize = await file.length();
+      final fileSizeMB = (fileSize / (1024 * 1024)).toStringAsFixed(2);
+      throw Exception(
+        'Fichier trop volumineux: ${fileSizeMB}MB. Taille maximale: ${maxFileSize ~/ (1024 * 1024)}MB'
+      );
     }
 
     // Construire l'endpoint selon le type
@@ -99,17 +193,54 @@ class MediaService {
     // Ajouter le header d'authentification
     request.headers['Authorization'] = 'Bearer $token';
 
-    // Ajouter le fichier
+    // Ajouter le fichier avec progression
+    final fileLength = await file.length();
+    final stream = http.ByteStream(file.openRead());
+
     request.files.add(
-      await http.MultipartFile.fromPath(
-        'file', // Nom du champ (doit correspondre au backend)
-        file.path,
+      http.MultipartFile(
+        'file',
+        stream,
+        fileLength,
+        filename: path.basename(file.path),
       ),
     );
 
     // Envoyer la requête
     final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+
+    // Gérer la progression si callback fourni
+    http.Response response;
+    if (onProgress != null) {
+      int bytesReceived = 0;
+      final contentLength = streamedResponse.contentLength ?? fileLength;
+
+      final responseStream = streamedResponse.stream.transform(
+        StreamTransformer<List<int>, List<int>>.fromHandlers(
+          handleData: (List<int> data, EventSink<List<int>> sink) {
+            bytesReceived += data.length;
+            final progress = bytesReceived / contentLength.toDouble();
+            onProgress(progress);
+            sink.add(data);
+          },
+        ),
+      );
+
+      response = await http.Response.fromStream(
+        http.StreamedResponse(
+          responseStream,
+          streamedResponse.statusCode,
+          contentLength: streamedResponse.contentLength,
+          headers: streamedResponse.headers,
+          isRedirect: streamedResponse.isRedirect,
+          persistentConnection: streamedResponse.persistentConnection,
+          reasonPhrase: streamedResponse.reasonPhrase,
+          request: streamedResponse.request,
+        ),
+      );
+    } else {
+      response = await http.Response.fromStream(streamedResponse);
+    }
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);

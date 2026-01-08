@@ -216,29 +216,19 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
                 ),
               ),
 
-              const SizedBox(height: 16),
-
-              // Nom de la société (non éditable)
-              Text(
-                _societe!.nom,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Email (non éditable)
-              Text(
-                _societe!.email,
-                style: const TextStyle(color: Colors.grey),
-              ),
-
               const SizedBox(height: 24),
 
-              // Informations de base
-              _buildSectionTitle('Informations de base'),
+              // Section Informations de la société (non modifiables)
+              _buildSectionTitle('Informations de la société'),
+              _buildReadOnlyCard("Nom de la société", _societe!.nom),
+              _buildReadOnlyCard("Email", _societe!.email),
+
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+
+              // Informations de base (modifiables)
+              _buildSectionTitle('Informations complémentaires'),
               _buildTextField(
                   "Description", _descriptionController,
                   maxLines: 4),
@@ -365,6 +355,48 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
           fontSize: 18,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  /// Widget pour les champs en lecture seule (informations non modifiables)
+  Widget _buildReadOnlyCard(String label, String value) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12, top: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value.isEmpty ? 'Non renseigné' : value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: value.isEmpty ? Colors.grey : Colors.black87,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.lock_outline, color: Colors.grey.shade400, size: 20),
+        ],
       ),
     );
   }

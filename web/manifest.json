@@ -1,11 +1,11 @@
 {
-    "name": "gestauth_clean",
-    "short_name": "gestauth_clean",
-    "start_url": ".",
+    "name": "Titingre",
+    "short_name": "Titingre",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#FF6B35",
+    "description": "Titingre - Plateforme de gestion d'événements et de networking professionnel",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

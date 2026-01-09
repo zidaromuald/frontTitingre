@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/AuthUS/societe_auth_service.dart';
 import '../../../services/AuthUS/unified_auth_service.dart';
+import '../../../services/AuthUS/auth_base_service.dart';
 import '../../../widgets/editable_societe_avatar.dart';
 import '../../../loginScreen.dart';
 
@@ -52,6 +53,13 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
   /// Charger le profil de MA société
   Future<void> _loadMyProfile() async {
     print('🔍 [DEBUG] Début _loadMyProfile()');
+
+    // Vérifier le type d'utilisateur connecté
+    final userType = await AuthBaseService.getUserType();
+    final token = await AuthBaseService.getToken();
+    print('👤 [DEBUG] Type utilisateur: $userType');
+    print('🔑 [DEBUG] Token présent: ${token != null}');
+
     setState(() => _isLoading = true);
 
     try {

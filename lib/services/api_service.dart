@@ -31,10 +31,20 @@ class ApiService {
     final headers = await _authHeaders;
     final uri = Uri.parse('$baseUrl$endpoint');
 
+    // DEBUG: Afficher les détails de la requête
+    print('🌐 [API] GET $uri');
+    print('🔑 [API] Token présent: ${headers.containsKey('Authorization')}');
+    if (headers.containsKey('Authorization')) {
+      final token = headers['Authorization']!;
+      print('🔑 [API] Token (premiers 30 chars): ${token.substring(0, token.length > 30 ? 30 : token.length)}...');
+    }
+
     try {
       final response = await http.get(uri, headers: headers);
+      print('📥 [API] Response status: ${response.statusCode}');
       return response;
     } catch (e) {
+      print('❌ [API] Erreur: $e');
       throw Exception('Erreur de connexion: $e');
     }
   }

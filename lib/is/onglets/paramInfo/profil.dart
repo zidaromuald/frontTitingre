@@ -37,23 +37,47 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
   @override
   void initState() {
     super.initState();
+    print('🚀 [PROFIL IS] Initialisation de la page profil société...');
     _descriptionController = TextEditingController();
     _siteWebController = TextEditingController();
     _nombreEmployesController = TextEditingController();
     _anneeCreationController = TextEditingController();
     _chiffreAffairesController = TextEditingController();
     _certificationsController = TextEditingController();
+    print('📞 [PROFIL IS] Appel de _loadMyProfile()...');
     _loadMyProfile();
   }
 
   /// Charger le profil de MA société
   Future<void> _loadMyProfile() async {
+    print('🔍 [PROFIL IS] Début chargement du profil société...');
     setState(() => _isLoading = true);
 
     try {
+      print('📡 [PROFIL IS] Appel API SocieteAuthService.getMyProfile()...');
       final societe = await SocieteAuthService.getMyProfile();
 
+      print('✅ [PROFIL IS] Profil reçu avec succès!');
+      print('   📋 Société ID: ${societe.id}');
+      print('   📋 Nom: ${societe.nom}');
+      print('   📋 Email: ${societe.email}');
+      print('   📋 Profile présent: ${societe.profile != null}');
+
+      if (societe.profile != null) {
+        print('   ✓ Logo: ${societe.profile!.logo ?? "null"}');
+        print('   ✓ Description: ${societe.profile!.description?.substring(0, societe.profile!.description!.length > 30 ? 30 : societe.profile!.description!.length) ?? "null"}...');
+        print('   ✓ Site web: ${societe.profile!.siteWeb ?? "null"}');
+        print('   ✓ Nb employés: ${societe.profile!.nombreEmployes ?? "null"}');
+        print('   ✓ Année création: ${societe.profile!.anneeCreation ?? "null"}');
+        print('   ✓ Produits: ${societe.profile!.produits?.length ?? 0} élément(s)');
+        print('   ✓ Services: ${societe.profile!.services?.length ?? 0} élément(s)');
+        print('   ✓ Centres intérêt: ${societe.profile!.centresInteret?.length ?? 0} élément(s)');
+      } else {
+        print('   ⚠️ ATTENTION: profile est NULL!');
+      }
+
       if (mounted) {
+        print('🎨 [PROFIL IS] Mise à jour de l\'état UI...');
         setState(() {
           _societe = societe;
           _logoUrl = societe.profile?.logo;
@@ -77,14 +101,23 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
 
           _isLoading = false;
         });
+        print('✅ [PROFIL IS] État UI mis à jour, affichage du profil!');
+      } else {
+        print('⚠️ [PROFIL IS] Widget non monté, annulation de la mise à jour');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [PROFIL IS] ERREUR lors du chargement du profil:');
+      print('   Type: ${e.runtimeType}');
+      print('   Message: $e');
+      print('   Stack trace: $stackTrace');
+
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -143,7 +176,10 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    print('🎨 [PROFIL IS] Build - _isLoading: $_isLoading, _societe: ${_societe != null ? "présent" : "NULL"}');
+
     if (_isLoading) {
+      print('⏳ [PROFIL IS] Affichage du spinner de chargement...');
       return Scaffold(
         appBar: AppBar(
           backgroundColor: primaryColor,
@@ -156,6 +192,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
     }
 
     if (_societe == null) {
+      print('❌ [PROFIL IS] Affichage "Profil non trouvé" car _societe est NULL');
       return Scaffold(
         appBar: AppBar(
           backgroundColor: primaryColor,
@@ -166,6 +203,8 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
         body: const Center(child: Text('Profil non trouvé')),
       );
     }
+
+    print('✅ [PROFIL IS] Affichage du formulaire de profil complet');
 
     return Scaffold(
       backgroundColor: Colors.grey[100],

@@ -31,8 +31,8 @@ Bienvenue dans la documentation complète du module **Transaction Partenariat**.
 | Document | Description | Audience |
 |----------|-------------|----------|
 | [DTOS_CONFORMITE_BACKEND.md](DTOS_CONFORMITE_BACKEND.md) | Conformité des DTOs Flutter ↔ NestJS | Développeurs Backend |
-| [EXEMPLE_TRANSACTION.dart](EXEMPLE_TRANSACTION.dart) | Exemples d'utilisation des services | Développeurs Flutter |
-| [EXEMPLE_UTILISATION.dart](EXEMPLE_UTILISATION.dart) | Scénarios d'utilisation complets | Développeurs Flutter |
+| [EXEMPLE_TRANSACTION.dart](../documentation/Test/EXEMPLE_TRANSACTION.dart) | Exemples d'utilisation des services | Développeurs Flutter |
+| [EXEMPLE_UTILISATION.dart](../documentation/Test/EXEMPLE_UTILISATION.dart) | Scénarios d'utilisation complets | Développeurs Flutter |
 
 ### 📱 Guides d'Utilisation
 
@@ -70,8 +70,8 @@ Bienvenue dans la documentation complète du module **Transaction Partenariat**.
 | [SCHEMA_ARCHITECTURE.md](SCHEMA_ARCHITECTURE.md) | Architecture visuelle |
 | [RESUME_CORRECTIONS.md](RESUME_CORRECTIONS.md) | Résumé des corrections |
 | [DTOS_CONFORMITE_BACKEND.md](DTOS_CONFORMITE_BACKEND.md) | Conformité DTOs |
-| [EXEMPLE_TRANSACTION.dart](EXEMPLE_TRANSACTION.dart) | Exemples de code |
-| [EXEMPLE_UTILISATION.dart](EXEMPLE_UTILISATION.dart) | Scénarios d'utilisation |
+| [EXEMPLE_TRANSACTION.dart](../documentation/Test/EXEMPLE_TRANSACTION.dart) | Exemples de code |
+| [EXEMPLE_UTILISATION.dart](../documentation/Test/EXEMPLE_UTILISATION.dart) | Scénarios d'utilisation |
 
 ---
 
@@ -125,7 +125,7 @@ if (dto != null) {
 }
 ```
 
-Voir [EXEMPLE_TRANSACTION.dart](EXEMPLE_TRANSACTION.dart) pour plus d'exemples.
+Voir [EXEMPLE_TRANSACTION.dart](../documentation/Test/EXEMPLE_TRANSACTION.dart) pour plus d'exemples.
 
 ### Scénario 2 : User valide une transaction
 
@@ -140,7 +140,7 @@ final dto = ValidateTransactionDto(
 await TransactionPartenaritService.validateTransaction(transaction.id, dto);
 ```
 
-Voir [EXEMPLE_UTILISATION.dart](EXEMPLE_UTILISATION.dart) pour plus d'exemples.
+Voir [EXEMPLE_UTILISATION.dart](../documentation/Test/EXEMPLE_UTILISATION.dart) pour plus d'exemples.
 
 ---
 

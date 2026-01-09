@@ -52,7 +52,7 @@ static Future<void> deleteInformation(int id)
 - Relations avec autres services
 
 ### 3. Exemples d'utilisation
-**Fichier:** [lib/services/partenariat/EXEMPLE_UTILISATION.dart](EXEMPLE_UTILISATION.dart)
+**Fichier:** [lib/services/partenariat/EXEMPLE_UTILISATION.dart](../documentation/Test/EXEMPLE_UTILISATION.dart)
 
 **Exemples inclus:**
 1. ✅ Créer une information partenaire
@@ -345,7 +345,7 @@ test('Récupérer les informations d\'une page', () async {
 ### Fichiers liés
 - [lib/services/partenariat/information_partenaire_service.dart](information_partenaire_service.dart)
 - [lib/services/partenariat/README_INFORMATION_PARTENAIRE.md](README_INFORMATION_PARTENAIRE.md)
-- [lib/services/partenariat/EXEMPLE_UTILISATION.dart](EXEMPLE_UTILISATION.dart)
+- [lib/services/partenariat/EXEMPLE_UTILISATION.dart](../documentation/Test/EXEMPLE_UTILISATION.dart)
 - [lib/iu/onglets/servicePlan/service.dart](../../iu/onglets/servicePlan/service.dart)
 - [lib/is/onglets/servicePlan/service.dart](../../is/onglets/servicePlan/service.dart)
 - [lib/iu/onglets/servicePlan/transaction.dart](../../iu/onglets/servicePlan/transaction.dart)

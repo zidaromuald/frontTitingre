@@ -378,8 +378,8 @@ Navigator.push(
   - [DTOS_CONFORMITE_BACKEND.md](../../../services/partenariat/DTOS_CONFORMITE_BACKEND.md)
 
 - **Exemples d'Utilisation** :
-  - [EXEMPLE_TRANSACTION.dart](../../../services/partenariat/EXEMPLE_TRANSACTION.dart)
-  - [EXEMPLE_UTILISATION.dart](../../../services/partenariat/EXEMPLE_UTILISATION.dart)
+  - [EXEMPLE_TRANSACTION.dart](../../../services/documentation/Test/EXEMPLE_TRANSACTION.dart)
+  - [EXEMPLE_UTILISATION.dart](../../../services/documentation/Test/EXEMPLE_UTILISATION.dart)
 
 ---
 

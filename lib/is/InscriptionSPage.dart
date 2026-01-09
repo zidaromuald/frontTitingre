@@ -28,7 +28,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  final List<String> _centresInteret = ['Agricole', 'Elevage'];
+  final List<String> _centresInteret = ['Agricole', 'Elevage', 'Bâtiment', 'Distribution'];
   final List<String> _domaines = [
     'Societe_Negoce',
     'Societe_Transformateur',
@@ -558,8 +558,8 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
               if (value == null || value.trim().isEmpty) {
                 return 'Le mot de passe est requis';
               }
-              if (value.length < 6) {
-                return 'Le mot de passe doit contenir au moins 6 caractères';
+              if (value.length < 8) {
+                return 'Le mot de passe doit contenir au moins 8 caractères';
               }
               return null;
             },
@@ -730,7 +730,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
                       'Inscription Société',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 28,
+                        fontSize: 30,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

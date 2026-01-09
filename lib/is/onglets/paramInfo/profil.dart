@@ -32,7 +32,10 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
   List<String> _services = [];
   List<String> _centresInteret = [];
 
-  static const Color primaryColor = Color(0xff5ac18e);
+  // Couleurs (même style que profil IU)
+  static const Color mattermostBlue = Color(0xFF1E4A8C);
+  static const Color mattermostGreen = Color(0xFF28A745);
+  static const Color mattermostGray = Color(0xFFF4F4F4);
 
   @override
   void initState() {
@@ -153,7 +156,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profil mis à jour avec succès'),
-            backgroundColor: primaryColor,
+            backgroundColor: mattermostGreen,
           ),
         );
 
@@ -181,10 +184,11 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
     if (_isLoading) {
       print('⏳ [PROFIL IS] Affichage du spinner de chargement...');
       return Scaffold(
+        backgroundColor: mattermostGray,
         appBar: AppBar(
-          backgroundColor: primaryColor,
+          backgroundColor: mattermostBlue,
           title:
-              const Text("Mon Profil", style: TextStyle(color: Colors.white)),
+              const Text("Mon Profil Société", style: TextStyle(color: Colors.white)),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: const Center(child: CircularProgressIndicator()),
@@ -194,10 +198,11 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
     if (_societe == null) {
       print('❌ [PROFIL IS] Affichage "Profil non trouvé" car _societe est NULL');
       return Scaffold(
+        backgroundColor: mattermostGray,
         appBar: AppBar(
-          backgroundColor: primaryColor,
+          backgroundColor: mattermostBlue,
           title:
-              const Text("Mon Profil", style: TextStyle(color: Colors.white)),
+              const Text("Mon Profil Société", style: TextStyle(color: Colors.white)),
           iconTheme: const IconThemeData(color: Colors.white),
         ),
         body: const Center(child: Text('Profil non trouvé')),
@@ -207,9 +212,9 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
     print('✅ [PROFIL IS] Affichage du formulaire de profil complet');
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: mattermostGray,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        backgroundColor: mattermostBlue,
         title: const Text("Mon Profil Société",
             style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -250,7 +255,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
                       _logoUrl = newUrl;
                     });
                   },
-                  borderColor: primaryColor,
+                  borderColor: mattermostBlue,
                   borderWidth: 4,
                 ),
               ),
@@ -289,7 +294,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
                 items: _produits,
                 onAdd: _addProduit,
                 onRemove: (item) => setState(() => _produits.remove(item)),
-                color: primaryColor,
+                color: mattermostBlue,
               ),
 
               const SizedBox(height: 24),
@@ -459,7 +464,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: primaryColor, width: 2),
+            borderSide: const BorderSide(color: mattermostBlue, width: 2),
           ),
         ),
       ),
@@ -655,7 +660,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
                   Navigator.pop(context);
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+              style: ElevatedButton.styleFrom(backgroundColor: mattermostBlue),
               child: const Text("Ajouter",
                   style: TextStyle(color: Colors.white)),
             ),

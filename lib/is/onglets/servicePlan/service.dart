@@ -216,20 +216,7 @@ class _ServicePageState extends State<ServicePage> {
             fontSize: 18,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const GlobalSearchPage(),
-                ),
-              );
-            },
-            icon: const Icon(Icons.search, color: Colors.white),
-          ),
-        ],
+      
       ),
       body: Column(
         children: [

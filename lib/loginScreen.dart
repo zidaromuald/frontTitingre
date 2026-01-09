@@ -70,68 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // ALTERNATIVE: Version avec sélecteur de page pour tests
+  // Logique de connexion avec authentification réelle
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulation du délai
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Afficher un dialog pour choisir la page de destination
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Mode Test - Choisir la destination'),
-            content: const Text('Vers quelle page voulez-vous naviguer ?'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => HomePage()),
-                  );
-                  _showMessage('Navigation vers HomePage (TEST)');
-                },
-                child: const Text('Page Utilisateur'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => AccueilPage()),
-                  );
-                  _showMessage('Navigation vers AccueilPage (TEST)');
-                },
-                child: const Text('Page Société'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Annuler'),
-              ),
-            ],
-          );
-        },
-      );
-    }
-  }
-
-  // Logique de connexion améliorée
-  /* Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -196,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
-  }*/
+  }
 
   // Widget pour le champ Email/Téléphone avec validation
   Widget _buildEmailOrPhoneField() {

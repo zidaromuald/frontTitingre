@@ -51,10 +51,18 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
 
   /// Charger le profil de MA société
   Future<void> _loadMyProfile() async {
+    print('🔍 [DEBUG] Début _loadMyProfile()');
     setState(() => _isLoading = true);
 
     try {
+      print('📡 [DEBUG] Appel SocieteAuthService.getMyProfile()...');
       final societe = await SocieteAuthService.getMyProfile();
+
+      print('✅ [DEBUG] Profil reçu:');
+      print('   - ID: ${societe.id}');
+      print('   - Nom: ${societe.nom}');
+      print('   - Email: ${societe.email}');
+      print('   - Profile null?: ${societe.profile == null}');
 
       if (mounted) {
         setState(() {
@@ -80,14 +88,21 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
 
           _isLoading = false;
         });
+        print('✅ [DEBUG] État mis à jour, _societe est maintenant: ${_societe != null}');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [DEBUG] ERREUR dans _loadMyProfile():');
+      print('   Type: ${e.runtimeType}');
+      print('   Message: $e');
+      print('   StackTrace: ${stackTrace.toString().split('\n').take(5).join('\n')}');
+
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur: ${e.toString()}'),
+            content: Text('Erreur chargement profil: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 10),
           ),
         );
       }
@@ -146,7 +161,10 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    print('🎨 [DEBUG] build() appelé - _isLoading: $_isLoading, _societe: ${_societe != null}');
+
     if (_isLoading) {
+      print('⏳ [DEBUG] Affichage du spinner...');
       return Scaffold(
         backgroundColor: mattermostGray,
         appBar: AppBar(
@@ -160,6 +178,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
     }
 
     if (_societe == null) {
+      print('❌ [DEBUG] _societe est NULL, affichage message erreur');
       return Scaffold(
         backgroundColor: mattermostGray,
         appBar: AppBar(
@@ -172,6 +191,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
       );
     }
 
+    print('✅ [DEBUG] Affichage du formulaire complet');
     return Scaffold(
       backgroundColor: mattermostGray,
       appBar: AppBar(

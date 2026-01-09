@@ -691,7 +691,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
                       'Inscription Utilisateur',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 40,
+                        fontSize: 30,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

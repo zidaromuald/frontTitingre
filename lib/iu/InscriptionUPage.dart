@@ -15,7 +15,6 @@ class InscriptionUPage extends StatefulWidget {
 class _InscriptionUPageState extends State<InscriptionUPage> {
   final TextEditingController _nomController = TextEditingController();
   final TextEditingController _prenomController = TextEditingController();
-  final TextEditingController _numeroController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _dateNaissanceController =
       TextEditingController();
@@ -25,6 +24,9 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
+  // Stocker le numéro de téléphone complet (avec indicatif)
+  String _numeroComplet = '';
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -33,7 +35,6 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
   void dispose() {
     _nomController.dispose();
     _prenomController.dispose();
-    _numeroController.dispose();
     _emailController.dispose();
     _dateNaissanceController.dispose();
     _activiteController.dispose();
@@ -85,7 +86,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
 
     final nom = _nomController.text.trim();
     final prenom = _prenomController.text.trim();
-    final numero = _numeroController.text.trim();
+    final numero = _numeroComplet.trim();
     final email = _emailController.text.trim();
     final dateNaissance = _dateNaissanceController.text.trim();
     final activite = _activiteController.text.trim();
@@ -282,7 +283,6 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             ],
           ),
           child: IntlPhoneField(
-            controller: _numeroController,
             decoration: const InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(
@@ -295,17 +295,22 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
             ),
             initialCountryCode: 'BF',
+            // Permettre jusqu'à 15 chiffres (standard international)
+            showCountryFlag: true,
+            dropdownIconPosition: IconPosition.trailing,
             validator: (phone) {
               if (phone == null || phone.completeNumber.isEmpty) {
                 return 'Le numéro de téléphone est requis';
               }
+              // Vérifier que le numéro a au moins 8 chiffres (minimum international)
+              if (phone.number.length < 8) {
+                return 'Numéro invalide (min 8 chiffres)';
+              }
               return null;
             },
             onChanged: (phone) {
-              // Stocker le numéro complet dans le contrôleur
-              setState(() {
-                _numeroController.text = phone.completeNumber;
-              });
+              // Stocker le numéro complet avec indicatif international
+              _numeroComplet = phone.completeNumber;
             },
           ),
         ),
@@ -474,7 +479,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
                 vertical: 14,
               ),
               prefixIcon: Icon(Icons.work_outline, color: Color(0xff5ac18e)),
-              hintText: 'Ex: Développeur, Designer, etc.',
+              hintText: 'Ex: Agriculteur, etc.',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
               counterText: '',

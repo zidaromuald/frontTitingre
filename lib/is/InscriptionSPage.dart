@@ -13,7 +13,6 @@ class InscriptionSPage extends StatefulWidget {
 
 class _InscriptionSPageState extends State<InscriptionSPage> {
   final TextEditingController _societeController = TextEditingController();
-  final TextEditingController _numeroController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _typeProduitController = TextEditingController();
   final TextEditingController _adresseController = TextEditingController();
@@ -21,6 +20,9 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
   final TextEditingController _confirmPasswordController =
       TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  // Stocker le numéro de téléphone complet (avec indicatif)
+  String _numeroComplet = '';
 
   String? _selectedCentreInteret;
   String? _selectedDomaine;
@@ -38,7 +40,6 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
   @override
   void dispose() {
     _societeController.dispose();
-    _numeroController.dispose();
     _emailController.dispose();
     _typeProduitController.dispose();
     _adresseController.dispose();
@@ -84,7 +85,7 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
     });
 
     final societe = _societeController.text.trim();
-    final numero = _numeroController.text.trim();
+    final numero = _numeroComplet.trim();
     final email = _emailController.text.trim();
     final typeProduit = _typeProduitController.text.trim();
     final adresse = _adresseController.text.trim();
@@ -214,7 +215,6 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
             ],
           ),
           child: IntlPhoneField(
-            controller: _numeroController,
             decoration: const InputDecoration(
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(
@@ -227,16 +227,22 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
             ),
             initialCountryCode: 'BF',
+            // Permettre jusqu'à 15 chiffres (standard international)
+            showCountryFlag: true,
+            dropdownIconPosition: IconPosition.trailing,
             validator: (phone) {
               if (phone == null || phone.completeNumber.isEmpty) {
                 return 'Le numéro de téléphone est requis';
               }
+              // Vérifier que le numéro a au moins 8 chiffres (minimum international)
+              if (phone.number.length < 8) {
+                return 'Numéro invalide (min 8 chiffres)';
+              }
               return null;
             },
             onChanged: (phone) {
-              setState(() {
-                _numeroController.text = phone.completeNumber;
-              });
+              // Stocker le numéro complet avec indicatif international
+              _numeroComplet = phone.completeNumber;
             },
           ),
         ),

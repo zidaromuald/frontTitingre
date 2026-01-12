@@ -57,14 +57,21 @@ class ApiService {
     final headers = await _authHeaders;
     final uri = Uri.parse('$baseUrl$endpoint');
 
+    // DEBUG: Afficher les détails de la requête
+    print('🌐 [API] POST $uri');
+    print('📤 [API] Body: ${jsonEncode(data)}');
+
     try {
       final response = await http.post(
         uri,
         headers: headers,
         body: jsonEncode(data),
       );
+      print('📥 [API] Response status: ${response.statusCode}');
+      print('📥 [API] Response body: ${response.body}');
       return response;
     } catch (e) {
+      print('❌ [API] Erreur POST: $e');
       throw Exception('Erreur de connexion: $e');
     }
   }

@@ -133,11 +133,15 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
         );
       }
     } catch (e) {
-      _showMessage(
-        'Une erreur est survenue. Veuillez réessayer.',
-        isError: true,
-      );
-      debugPrint('Erreur inscription: $e');
+      debugPrint('❌ Erreur inscription complète: $e');
+
+      // Extraire le message d'erreur du backend si disponible
+      String errorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+      if (e.toString().contains('Exception:')) {
+        errorMessage = e.toString().replaceAll('Exception: ', '');
+      }
+
+      _showMessage(errorMessage, isError: true);
     } finally {
       if (mounted) {
         setState(() {

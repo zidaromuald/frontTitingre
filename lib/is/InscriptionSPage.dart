@@ -121,11 +121,15 @@ class _InscriptionSPageState extends State<InscriptionSPage> {
         );
       }
     } catch (e) {
-      _showMessage(
-        'Une erreur est survenue. Veuillez réessayer.',
-        isError: true,
-      );
-      debugPrint('Erreur inscription société: $e');
+      debugPrint('❌ Erreur inscription société complète: $e');
+
+      // Extraire le message d'erreur du backend si disponible
+      String errorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+      if (e.toString().contains('Exception:')) {
+        errorMessage = e.toString().replaceAll('Exception: ', '');
+      }
+
+      _showMessage(errorMessage, isError: true);
     } finally {
       if (mounted) {
         setState(() {

@@ -7,8 +7,8 @@
 /// 2. Invitation classique (nécessite acceptation)
 
 import 'package:flutter/material.dart';
-import 'groupe_invitation_service.dart';
-import '../unified_auth_service.dart';
+import '../../groupe/groupe_invitation_service.dart';
+import '../../unified_auth_service.dart';
 
 // ============================================================================
 // EXEMPLE 1 : INVITER UN MEMBRE (Version simple)
@@ -48,10 +48,7 @@ Future<void> exemple1_InviterMembreSimple(
   } catch (e) {
     // Gestion d'erreur
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erreur : $e'),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red),
     );
   }
 }
@@ -70,9 +67,7 @@ Future<void> exemple2_InviterAvecDialogue(
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) => const Center(
-      child: CircularProgressIndicator(),
-    ),
+    builder: (context) => const Center(child: CircularProgressIndicator()),
   );
 
   try {
@@ -204,12 +199,9 @@ class _InviteMemberButtonState extends State<InviteMemberButton> {
 
       final color = result['ajoutDirect'] ? Colors.green : Colors.blue;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: color,
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
 
       // Callback de succès
       widget.onSuccess?.call();
@@ -219,10 +211,7 @@ class _InviteMemberButtonState extends State<InviteMemberButton> {
       setState(() => _isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur : $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -414,10 +403,7 @@ class InviteInfoWidget extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Cet utilisateur est abonné à votre société. Il sera ajouté directement sans invitation.',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.green, fontSize: 12),
                   ),
                 ),
               ],
@@ -439,10 +425,7 @@ class InviteInfoWidget extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Une invitation sera envoyée. L\'utilisateur devra l\'accepter pour rejoindre le groupe.',
-                  style: TextStyle(
-                    color: Colors.blue,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.blue, fontSize: 12),
                 ),
               ),
             ],

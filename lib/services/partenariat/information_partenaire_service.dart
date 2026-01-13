@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:gestauth_clean/services/api_service.dart';
 
 /// Service pour gérer les informations partenaires
-/// Basé sur le contrôleur backend: InformationPartenaireController
 class InformationPartenaireService {
   static const String baseUrl = '/informations-partenaires';
 
@@ -102,7 +101,7 @@ class InformationPartenaireModel {
   final String titre;
   final String? contenu;
   final String? typeInfo; // ex: 'localite', 'contact', 'superficie', etc.
-  final int? ordre; // Ordre d'affichage
+  final int? ordre;
   final DateTime createdAt;
   final DateTime updatedAt;
 

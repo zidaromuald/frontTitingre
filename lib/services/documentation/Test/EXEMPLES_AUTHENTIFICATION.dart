@@ -3,10 +3,10 @@
 /// User vs Societe
 /// ========================================
 
-import 'AuthUS/user_auth_service.dart';
-import 'AuthUS/societe_auth_service.dart';
-import 'AuthUS/unified_auth_service.dart';
-import 'post_service.dart';
+import '../../AuthUS/user_auth_service.dart';
+import '../../AuthUS/societe_auth_service.dart';
+import '../../AuthUS/unified_auth_service.dart';
+import '../../post_service.dart';
 
 /// ========================================
 /// 1. AUTHENTIFICATION USER
@@ -59,10 +59,7 @@ void exempleDeconnexionUser() async {
 
 void exempleRechercheUsers() async {
   try {
-    final users = await UserAuthService.searchUsers(
-      query: 'john',
-      limit: 10,
-    );
+    final users = await UserAuthService.searchUsers(query: 'john', limit: 10);
 
     print('${users.length} utilisateurs trouvés');
     for (var user in users) {
@@ -278,7 +275,6 @@ void exempleFluxCompletUser() async {
     print('\n=== DECONNEXION ===');
     await UserAuthService.logout();
     print('✅ Déconnecté');
-
   } catch (e) {
     print('❌ Erreur: $e');
   }
@@ -328,7 +324,6 @@ void exempleFluxCompletSociete() async {
     print('\n=== DECONNEXION ===');
     await SocieteAuthService.logout();
     print('✅ Déconnecté');
-
   } catch (e) {
     print('❌ Erreur: $e');
   }

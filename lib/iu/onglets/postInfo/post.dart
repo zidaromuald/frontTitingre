@@ -1,11 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:gestauth_clean/services/groupe/groupe_service.dart';
 import 'package:gestauth_clean/services/suivre/suivre_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/posts/post_service.dart';
-import 'package:gestauth_clean/services/media_service.dart';
+import 'package:gestauth_clean/services/media_service_platform.dart';
+import 'package:gestauth_clean/utils/file_picker_helper.dart';
 
 class CreerPostPage extends StatefulWidget {
   const CreerPostPage({super.key});
@@ -22,8 +22,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
   bool _hasSelectedMedia = false;
 
   // Fichiers sélectionnés pour upload
-  List<File> _selectedFiles = [];
-  final ImagePicker _picker = ImagePicker();
+  List<PlatformFile> _selectedFiles = [];
   bool _isPublishing = false;
 
   // Couleurs Mattermost
@@ -840,8 +839,8 @@ class _CreerPostPageState extends State<CreerPostPage> {
 
   /// Valider la taille d'un fichier selon le type de média
   /// Retourne null si valide, ou un message d'erreur si invalide
-  String? _validateFileSize(File file, String mediaType) {
-    final int fileSize = file.lengthSync(); // Taille en octets
+  String? _validateFileSize(PlatformFile file, String mediaType) {
+    final int fileSize = file.bytes.length; // Taille en octets
     final double fileSizeMB = fileSize / (1024 * 1024); // Convertir en MB
 
     // Contraintes backend
@@ -873,21 +872,20 @@ class _CreerPostPageState extends State<CreerPostPage> {
   Future<void> _selectFromGallery() async {
     try {
       if (typePost == "image") {
-        // Sélection multiple d'images
-        final List<XFile> images = await _picker.pickMultiImage();
+        // Sélection multiple d'images avec notre helper multiplateforme
+        final List<PlatformFile> images = await FilePickerHelper.pickMultipleImages();
         if (images.isNotEmpty) {
           // Valider la taille de chaque image
-          List<File> validFiles = [];
+          List<PlatformFile> validFiles = [];
           List<String> errors = [];
 
-          for (var xFile in images) {
-            final file = File(xFile.path);
+          for (var file in images) {
             final error = _validateFileSize(file, 'image');
 
             if (error == null) {
               validFiles.add(file);
             } else {
-              errors.add('${xFile.name}: $error');
+              errors.add('${file.name}: $error');
             }
           }
 
@@ -926,11 +924,10 @@ class _CreerPostPageState extends State<CreerPostPage> {
           }
         }
       } else if (typePost == "video") {
-        // Sélection d'une vidéo
-        final XFile? video = await _picker.pickVideo(source: ImageSource.gallery);
+        // Sélection d'une vidéo avec notre helper multiplateforme
+        final PlatformFile? video = await FilePickerHelper.pickVideo();
         if (video != null) {
-          final file = File(video.path);
-          final error = _validateFileSize(file, 'video');
+          final error = _validateFileSize(video, 'video');
 
           if (error != null) {
             if (mounted) {
@@ -946,7 +943,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
           }
 
           setState(() {
-            _selectedFiles = [file];
+            _selectedFiles = [video];
             _hasSelectedMedia = true;
           });
 
@@ -975,10 +972,10 @@ class _CreerPostPageState extends State<CreerPostPage> {
 
   Future<void> _takeVideo() async {
     try {
-      final XFile? video = await _picker.pickVideo(source: ImageSource.camera);
+      // Utiliser le helper qui gère automatiquement les erreurs web
+      final PlatformFile? video = await FilePickerHelper.pickVideo(source: ImageSource.camera);
       if (video != null) {
-        final file = File(video.path);
-        final error = _validateFileSize(file, 'video');
+        final error = _validateFileSize(video, 'video');
 
         if (error != null) {
           if (mounted) {
@@ -994,7 +991,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
         }
 
         setState(() {
-          _selectedFiles = [file];
+          _selectedFiles = [video];
           _hasSelectedMedia = true;
         });
 
@@ -1100,15 +1097,15 @@ class _CreerPostPageState extends State<CreerPostPage> {
       List<String> mediaUrls = [];
       if (_selectedFiles.isNotEmpty) {
         if (typePost == "image") {
-          // Upload des images
-          mediaUrls = await MediaService.uploadImages(_selectedFiles);
+          // Upload des images avec le service multiplateforme
+          mediaUrls = await MediaServicePlatform.uploadImages(_selectedFiles);
         } else if (typePost == "video") {
           // Upload de la vidéo
-          final response = await MediaService.uploadVideo(_selectedFiles.first);
+          final response = await MediaServicePlatform.uploadVideo(_selectedFiles.first);
           mediaUrls = [response.url];
         } else if (typePost == "vocal") {
           // Upload de l'audio
-          final response = await MediaService.uploadAudio(_selectedFiles.first);
+          final response = await MediaServicePlatform.uploadAudio(_selectedFiles.first);
           mediaUrls = [response.url];
         }
       }

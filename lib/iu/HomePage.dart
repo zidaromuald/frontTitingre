@@ -8,6 +8,7 @@ import 'package:gestauth_clean/services/posts/post_service.dart';
 import 'package:gestauth_clean/services/affichage/unread_content_service.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/suivre/abonnement_auth_service.dart';
+import 'package:gestauth_clean/widgets/r2_network_image.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -1260,55 +1261,11 @@ class _PostCard extends StatelessWidget {
               if (hasMedia) ...[
                 ClipRRec(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    post.mediaUrls!.first,
+                  child: R2NetworkImage(
+                    imageUrl: post.mediaUrls!.first,
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: cs.secondaryContainer.withOpacity(.3),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: cs.outlineVariant.withOpacity(.3),
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.broken_image_outlined,
-                              size: 40,
-                              color: cs.onSurface.withOpacity(.4),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Média indisponible',
-                              style: TextStyle(
-                                color: cs.onSurface.withOpacity(.5),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        height: 200,
-                        alignment: Alignment.center,
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1353,28 +1310,6 @@ class _PostCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface,
                       ),
-                    ),
-                    const Spacer(),
-                    // Partages
-                    Icon(
-                      Icons.share_outlined,
-                      size: 20,
-                      color: cs.onSurface.withOpacity(.6),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${post.sharesCount}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface.withOpacity(.7),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Indicateur visuel pour cliquer
-                    Icon(
-                      Icons.touch_app,
-                      size: 16,
-                      color: cs.primary.withOpacity(.5),
                     ),
                   ],
                 ),

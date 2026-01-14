@@ -170,19 +170,46 @@ class UserAuthService {
     required String identifiant, // numero (principal) ou email
     required String password,
   }) async {
+    print('🔑 [UserAuthService] Tentative de connexion...');
+    print('👤 [UserAuthService] Identifiant: $identifiant');
+
     final data = {'identifiant': identifiant, 'password': password};
 
+    print('📤 [UserAuthService] Envoi POST /auth/login...');
     final response = await ApiService.post('/auth/login', data);
+
+    print('📥 [UserAuthService] Status code: ${response.statusCode}');
+    print('📥 [UserAuthService] Response body: ${response.body}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
+      print('✅ [UserAuthService] Réponse parsée avec succès');
+      print('📦 [UserAuthService] jsonResponse keys: ${jsonResponse.keys.toList()}');
+      print('📦 [UserAuthService] jsonResponse: $jsonResponse');
+
+      // Vérifier la structure de la réponse
+      if (!jsonResponse.containsKey('data')) {
+        print('⚠️ [UserAuthService] ATTENTION: Pas de clé "data" dans la réponse!');
+        print('📋 [UserAuthService] Clés disponibles: ${jsonResponse.keys.toList()}');
+        // Essayer de traiter directement la réponse
+        await AuthBaseService.handleLoginResponse(jsonResponse, 'user');
+        return UserModel.fromJson(jsonResponse['user']);
+      }
+
+      print('📦 [UserAuthService] jsonResponse["data"]: ${jsonResponse['data']}');
 
       // Sauvegarder le token et les infos
+      print('💾 [UserAuthService] Appel de handleLoginResponse...');
       await AuthBaseService.handleLoginResponse(jsonResponse['data'], 'user');
 
       // Retourner l'utilisateur
-      return UserModel.fromJson(jsonResponse['data']['user']);
+      print('👤 [UserAuthService] Création du UserModel...');
+      final user = UserModel.fromJson(jsonResponse['data']['user']);
+      print('🎉 [UserAuthService] Connexion réussie pour: ${user.fullName}');
+      return user;
     } else {
+      print('❌ [UserAuthService] Erreur de connexion - Status: ${response.statusCode}');
+      print('❌ [UserAuthService] Body: ${response.body}');
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'Erreur de connexion');
     }

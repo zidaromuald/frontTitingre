@@ -6,8 +6,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 abstract class AuthBaseService {
   /// Sauvegarder le token JWT
   static Future<void> saveToken(String token) async {
+    print('💾 [AuthBaseService] saveToken appelée');
+    print('🎫 [AuthBaseService] Token à sauvegarder: ${token.substring(0, token.length > 50 ? 50 : token.length)}...');
+    print('📏 [AuthBaseService] Longueur du token: ${token.length} caractères');
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
+    final success = await prefs.setString('auth_token', token);
+
+    print('✅ [AuthBaseService] Token sauvegardé: $success');
+
+    // Vérification immédiate
+    final savedToken = prefs.getString('auth_token');
+    if (savedToken == token) {
+      print('✅ [AuthBaseService] Vérification: Token bien enregistré dans SharedPreferences');
+    } else {
+      print('❌ [AuthBaseService] ERREUR: Le token sauvegardé ne correspond pas!');
+    }
   }
 
   /// Sauvegarder le type d'utilisateur ('user' ou 'societe')
@@ -64,18 +78,49 @@ abstract class AuthBaseService {
     Map<String, dynamic> responseData,
     String userType,
   ) async {
+    print('🔐 [AuthBaseService] handleLoginResponse appelée');
+    print('📦 [AuthBaseService] responseData keys: ${responseData.keys.toList()}');
+    print('📦 [AuthBaseService] responseData: $responseData');
+    print('👤 [AuthBaseService] userType: $userType');
+
     // Sauvegarder le token
     final token = responseData['access_token'];
+    print('🎫 [AuthBaseService] Token extrait: ${token != null ? "OUI (${token.toString().length} chars)" : "NULL"}');
+
+    if (token == null) {
+      print('❌ [AuthBaseService] ERREUR: access_token est NULL dans la réponse!');
+      print('📋 [AuthBaseService] Clés disponibles: ${responseData.keys.toList()}');
+
+      // Essayer d'autres noms de clés possibles
+      final possibleTokenKeys = ['token', 'accessToken', 'jwt', 'access_token'];
+      for (final key in possibleTokenKeys) {
+        if (responseData.containsKey(key)) {
+          print('⚠️ [AuthBaseService] Token trouvé sous la clé "$key"');
+        }
+      }
+
+      throw Exception('Token non trouvé dans la réponse. Clés disponibles: ${responseData.keys.toList()}');
+    }
+
     await saveToken(token);
+    print('✅ [AuthBaseService] Token sauvegardé');
 
     // Sauvegarder le type d'utilisateur
     await saveUserType(userType);
+    print('✅ [AuthBaseService] Type utilisateur sauvegardé: $userType');
 
     // Sauvegarder les données utilisateur
     final userData = responseData['user'] ?? responseData['societe'];
+    print('👤 [AuthBaseService] userData: ${userData != null ? "OUI" : "NULL"}');
+
     if (userData != null) {
       await saveUserData(userData);
+      print('✅ [AuthBaseService] Données utilisateur sauvegardées');
+    } else {
+      print('⚠️ [AuthBaseService] Aucune donnée utilisateur à sauvegarder');
     }
+
+    print('🎉 [AuthBaseService] handleLoginResponse terminée avec succès');
   }
 
   /// Déconnexion (commune)

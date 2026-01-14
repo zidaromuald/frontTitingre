@@ -1280,23 +1280,7 @@ class _PostCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    // Like
-                    Icon(
-                      Icons.favorite_border,
-                      size: 20,
-                      color: cs.primary.withOpacity(.8),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${post.likesCount}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    // Commentaires
+                    // Commentaires (à gauche)
                     Icon(
                       Icons.chat_bubble_outline,
                       size: 20,
@@ -1305,6 +1289,22 @@ class _PostCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       '${post.commentsCount}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Like (à droite avec pouce)
+                    Icon(
+                      Icons.thumb_up_outlined,
+                      size: 20,
+                      color: cs.primary.withOpacity(.8),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${post.likesCount}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,

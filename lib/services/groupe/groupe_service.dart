@@ -7,7 +7,7 @@ import '../api_service.dart';
 
 /// Type de groupe (privé ou public)
 enum GroupeType {
-  prive('prive'),
+  prive('private'),
   public('public');
 
   final String value;
@@ -380,7 +380,7 @@ class GroupeAuthService {
       'nom': nom,
       if (description != null) 'description': description,
       'type': type.value,
-      'max_membres': maxMembres,
+      // Note: max_membres n'est plus envoyé - géré côté backend
     };
 
     final response = await ApiService.post('/groupes', data);

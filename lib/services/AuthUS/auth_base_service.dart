@@ -83,22 +83,26 @@ abstract class AuthBaseService {
     print('📦 [AuthBaseService] responseData: $responseData');
     print('👤 [AuthBaseService] userType: $userType');
 
-    // Sauvegarder le token
-    final token = responseData['access_token'];
+    // Sauvegarder le token - essayer plusieurs noms de clés
+    String? token = responseData['access_token'];
+
+    // Si access_token n'existe pas, essayer d'autres clés
+    if (token == null) {
+      final possibleTokenKeys = ['token', 'accessToken', 'jwt'];
+      for (final key in possibleTokenKeys) {
+        if (responseData.containsKey(key)) {
+          token = responseData[key];
+          print('✅ [AuthBaseService] Token trouvé sous la clé "$key"');
+          break;
+        }
+      }
+    }
+
     print('🎫 [AuthBaseService] Token extrait: ${token != null ? "OUI (${token.toString().length} chars)" : "NULL"}');
 
     if (token == null) {
-      print('❌ [AuthBaseService] ERREUR: access_token est NULL dans la réponse!');
+      print('❌ [AuthBaseService] ERREUR: Aucun token trouvé dans la réponse!');
       print('📋 [AuthBaseService] Clés disponibles: ${responseData.keys.toList()}');
-
-      // Essayer d'autres noms de clés possibles
-      final possibleTokenKeys = ['token', 'accessToken', 'jwt', 'access_token'];
-      for (final key in possibleTokenKeys) {
-        if (responseData.containsKey(key)) {
-          print('⚠️ [AuthBaseService] Token trouvé sous la clé "$key"');
-        }
-      }
-
       throw Exception('Token non trouvé dans la réponse. Clés disponibles: ${responseData.keys.toList()}');
     }
 

@@ -1020,7 +1020,7 @@ class _ProfileAvatar extends StatelessWidget {
         ],
       ),
       child: const CircleAvatar(
-        backgroundImage: AssetImage('assets/avatar_placeholder.png'),
+        backgroundImage: AssetImage('images/avatar_placeholder.png'),
       ),
     );
   }

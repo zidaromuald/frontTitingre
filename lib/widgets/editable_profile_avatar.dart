@@ -155,7 +155,7 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
             child: CircleAvatar(
               backgroundImage: _photoUrl != null
                   ? NetworkImage(_photoUrl!)
-                  : const AssetImage('assets/avatar_placeholder.png')
+                  : const AssetImage('images/avatar_placeholder.png')
                       as ImageProvider,
               child: _isUploading
                   ? Container(
@@ -254,7 +254,7 @@ class ReadOnlyProfileAvatar extends StatelessWidget {
         child: CircleAvatar(
           backgroundImage: photoUrl != null
               ? NetworkImage(photoUrl!)
-              : const AssetImage('assets/avatar_placeholder.png')
+              : const AssetImage('images/avatar_placeholder.png')
                   as ImageProvider,
         ),
       ),

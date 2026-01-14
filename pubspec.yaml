@@ -87,7 +87,7 @@ flutter:
   assets:
       - images/logo.png
       - images/icon.png
-      - assets/avatar_placeholder.png
+      - images/avatar_placeholder.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

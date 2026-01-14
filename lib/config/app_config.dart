@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 /// Configuration de l'application selon l'environnement
 class AppConfig {
   // URL de base de l'API - utilisée par web et mobile
+  // Toujours utiliser l'API de production
   static const String apiBaseUrl = 'https://api.titingre.com';
 
   // URL de l'application web

@@ -387,7 +387,12 @@ class GroupeAuthService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
-      return GroupeModel.fromJson(jsonResponse['data']);
+      // Le backend retourne 'groupe' et non 'data'
+      final groupeData = jsonResponse['groupe'] ?? jsonResponse['data'];
+      if (groupeData == null) {
+        throw Exception('Réponse invalide du serveur');
+      }
+      return GroupeModel.fromJson(groupeData);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'Erreur de création du groupe');

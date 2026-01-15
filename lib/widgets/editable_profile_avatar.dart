@@ -82,8 +82,12 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
 
       setState(() => _isUploading = true);
 
-      // Upload de la photo
-      final response = await UserAuthService.uploadProfilePhoto(image.path);
+      // Lire les bytes de l'image (compatible web et mobile)
+      final bytes = await image.readAsBytes();
+      final filename = image.name;
+
+      // Upload de la photo via bytes (compatible web)
+      final response = await UserAuthService.uploadProfilePhotoBytes(bytes, filename);
 
       // Mettre à jour l'URL de la photo
       final newPhotoUrl = response['photo'] ?? response['url'];
@@ -153,13 +157,13 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
               ],
             ),
             child: CircleAvatar(
+              backgroundColor: cs.surfaceContainerHighest,
               backgroundImage: _photoUrl != null
                   ? NetworkImage(_photoUrl!)
-                  : const AssetImage('images/avatar_placeholder.png')
-                      as ImageProvider,
+                  : null,
               child: _isUploading
                   ? Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.black54,
                         shape: BoxShape.circle,
                       ),
@@ -170,7 +174,13 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
                         ),
                       ),
                     )
-                  : null,
+                  : _photoUrl == null
+                      ? Icon(
+                          Icons.person,
+                          size: widget.size * 0.5,
+                          color: cs.onSurfaceVariant,
+                        )
+                      : null,
             ),
           ),
 
@@ -252,10 +262,17 @@ class ReadOnlyProfileAvatar extends StatelessWidget {
           ],
         ),
         child: CircleAvatar(
+          backgroundColor: cs.surfaceContainerHighest,
           backgroundImage: photoUrl != null
               ? NetworkImage(photoUrl!)
-              : const AssetImage('images/avatar_placeholder.png')
-                  as ImageProvider,
+              : null,
+          child: photoUrl == null
+              ? Icon(
+                  Icons.person,
+                  size: size * 0.5,
+                  color: cs.onSurfaceVariant,
+                )
+              : null,
         ),
       ),
     );

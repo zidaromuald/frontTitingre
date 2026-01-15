@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as path;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -227,13 +228,20 @@ class MediaServicePlatform {
     // Ajouter le header d'authentification
     request.headers['Authorization'] = 'Bearer $token';
 
+    // Déterminer le content-type
+    final mimeType = file.mimeType ?? PlatformFile._getMimeType(file.name);
+    final mimeTypeParts = mimeType.split('/');
+    final contentType = mimeTypeParts.length == 2
+        ? http_parser.MediaType(mimeTypeParts[0], mimeTypeParts[1])
+        : http_parser.MediaType('application', 'octet-stream');
+
     // Ajouter le fichier à partir des bytes (fonctionne sur web ET mobile)
     request.files.add(
       http.MultipartFile.fromBytes(
         'file',
         file.bytes,
         filename: file.name,
-        // contentType: file.mimeType != null ? MediaType.parse(file.mimeType!) : null,
+        contentType: contentType,
       ),
     );
 

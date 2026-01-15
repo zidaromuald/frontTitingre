@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
@@ -110,6 +111,8 @@ class ApiService {
   }
 
   /// Upload de fichier vers un endpoint spécifique (générique)
+  /// ATTENTION: Cette méthode utilise dart:io et ne fonctionne PAS sur le web
+  /// Pour le web, utiliser uploadBytesToEndpoint()
   static Future<http.Response> uploadFileToEndpoint(
     String filePath,
     String endpoint, {
@@ -138,6 +141,53 @@ class ApiService {
       final streamedResponse = await request.send();
       return await http.Response.fromStream(streamedResponse);
     } catch (e) {
+      throw Exception('Erreur d\'upload: $e');
+    }
+  }
+
+  /// Upload de fichier via bytes (compatible WEB et mobile)
+  /// Utilise Uint8List au lieu d'un chemin de fichier
+  static Future<http.Response> uploadBytesToEndpoint(
+    Uint8List bytes,
+    String filename,
+    String endpoint, {
+    String fieldName = 'file',
+    Map<String, String>? additionalFields,
+  }) async {
+    final token = await _getToken();
+    final uri = Uri.parse('$baseUrl$endpoint');
+
+    print('📤 [API] Upload bytes vers $uri (${bytes.length} bytes)');
+
+    try {
+      var request = http.MultipartRequest('POST', uri);
+
+      // Ajouter le token si disponible
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Ajouter le fichier à partir des bytes (compatible web)
+      request.files.add(http.MultipartFile.fromBytes(
+        fieldName,
+        bytes,
+        filename: filename,
+      ));
+
+      // Ajouter des champs supplémentaires si fournis
+      if (additionalFields != null) {
+        request.fields.addAll(additionalFields);
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📥 [API] Upload response: ${response.statusCode}');
+      print('📥 [API] Upload body: ${response.body}');
+
+      return response;
+    } catch (e) {
+      print('❌ [API] Erreur upload: $e');
       throw Exception('Erreur d\'upload: $e');
     }
   }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import '../api_service.dart';
 import 'auth_base_service.dart';
 
@@ -265,8 +266,9 @@ class UserAuthService {
     }
   }
 
-  /// Upload photo de profil
+  /// Upload photo de profil (version fichier - NON compatible web)
   /// POST /users/me/photo
+  /// @deprecated Utiliser uploadProfilePhotoBytes() pour le web
   static Future<Map<String, dynamic>> uploadProfilePhoto(
     String filePath,
   ) async {
@@ -279,6 +281,32 @@ class UserAuthService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
       return jsonResponse['data']; // Retourne { photo: '...', url: '...' }
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(
+        error['message'] ?? 'Erreur lors de l\'upload de la photo',
+      );
+    }
+  }
+
+  /// Upload photo de profil via bytes (compatible WEB et mobile)
+  /// POST /users/me/photo
+  static Future<Map<String, dynamic>> uploadProfilePhotoBytes(
+    Uint8List bytes,
+    String filename,
+  ) async {
+    final response = await ApiService.uploadBytesToEndpoint(
+      bytes,
+      filename,
+      '/users/me/photo',
+      fieldName: 'file',
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final jsonResponse = jsonDecode(response.body);
+      // Le backend peut retourner 'data' ou directement les champs
+      final data = jsonResponse['data'] ?? jsonResponse;
+      return Map<String, dynamic>.from(data);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(

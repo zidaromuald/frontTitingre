@@ -31,6 +31,9 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
   }
 
   Future<void> _createGroupe() async {
+    // Protection redondante contre double soumission
+    if (_isCreating) return;
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isCreating = true);
@@ -46,6 +49,9 @@ class _CreateGroupePageState extends State<CreateGroupePage> {
       );
 
       if (mounted) {
+        // Réinitialiser l'état AVANT de pop pour éviter double création
+        setState(() => _isCreating = false);
+
         // Retourner le groupe créé à la page précédente
         Navigator.pop(context, groupe);
 

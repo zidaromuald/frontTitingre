@@ -582,41 +582,75 @@ class _CreerPostPageState extends State<CreerPostPage> {
             ? Column(
                 children: [
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: mattermostGray,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: mattermostDarkGray),
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(8),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
                       ),
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      itemCount: _selectedFiles.length,
+                      itemBuilder: (context, index) {
+                        final file = _selectedFiles[index];
+                        return Stack(
+                          fit: StackFit.expand,
                           children: [
-                            Icon(
-                              Icons.image,
-                              size: 40,
-                              color: mattermostDarkGray,
-                            ), // Réduit
-                            SizedBox(height: 4),
-                            Text(
-                              "Image sélectionnée",
-                              style: TextStyle(
-                                color: mattermostDarkGray,
-                                fontSize: 12,
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                file.bytes,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedFiles.removeAt(index);
+                                    if (_selectedFiles.isEmpty) {
+                                      _hasSelectedMedia = false;
+                                    }
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  TextButton.icon(
-                    onPressed: () => _selectFromGallery(),
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text(
-                      "Changer",
-                      style: TextStyle(fontSize: 12),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        Text(
+                          "${_selectedFiles.length} image(s)",
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: () => _selectFromGallery(),
+                          icon: const Icon(Icons.add_photo_alternate, size: 16),
+                          label: const Text(
+                            "Ajouter",
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -703,38 +737,46 @@ class _CreerPostPageState extends State<CreerPostPage> {
         );
 
       case "video":
-        return _hasSelectedMedia
+        return _hasSelectedMedia && _selectedFiles.isNotEmpty
             ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.play_circle_outline,
-                              size: 40,
-                              color: Colors.white,
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              "Vidéo sélectionnée",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: mattermostGray,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: mattermostDarkGray),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.videocam,
+                          size: 48,
+                          color: mattermostBlue,
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _selectedFiles.first.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "${(_selectedFiles.first.bytes.length / (1024 * 1024)).toStringAsFixed(1)} MB",
+                          style: const TextStyle(
+                            color: mattermostDarkGray,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -748,9 +790,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
                       ),
                       TextButton.icon(
                         onPressed: () => _selectFromGallery(),
-                        icon: const Icon(Icons.video_library, size: 16),
+                        icon: const Icon(Icons.refresh, size: 16),
                         label: const Text(
-                          "Galerie",
+                          "Changer",
                           style: TextStyle(fontSize: 10),
                         ),
                       ),

@@ -172,7 +172,7 @@ class CreatePostDto {
       'contenu': contenu,
       'visibility': visibility.value,
       if (groupeId != null) 'groupe_id': groupeId,
-      if (mediaUrls != null && mediaUrls!.isNotEmpty) 'media_urls': mediaUrls,
+      if (mediaUrls != null && mediaUrls!.isNotEmpty) 'medias': mediaUrls,
     };
   }
 }
@@ -189,7 +189,7 @@ class UpdatePostDto {
     final data = <String, dynamic>{};
     if (contenu != null) data['contenu'] = contenu;
     if (visibility != null) data['visibility'] = visibility!.value;
-    if (mediaUrls != null) data['media_urls'] = mediaUrls;
+    if (mediaUrls != null) data['medias'] = mediaUrls;
     return data;
   }
 }

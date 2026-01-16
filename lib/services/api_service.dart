@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart' as path;
 import '../config/app_config.dart';
 
 /// Service de base pour les appels API
@@ -167,11 +169,43 @@ class ApiService {
         request.headers['Authorization'] = 'Bearer $token';
       }
 
+      // Déterminer le Content-Type à partir de l'extension du fichier
+      final ext = path.extension(filename).toLowerCase().replaceAll('.', '');
+      http_parser.MediaType? contentType;
+
+      // Images
+      if (['jpg', 'jpeg'].contains(ext)) {
+        contentType = http_parser.MediaType('image', 'jpeg');
+      } else if (ext == 'png') {
+        contentType = http_parser.MediaType('image', 'png');
+      } else if (ext == 'gif') {
+        contentType = http_parser.MediaType('image', 'gif');
+      } else if (ext == 'webp') {
+        contentType = http_parser.MediaType('image', 'webp');
+      }
+      // Vidéos
+      else if (ext == 'mp4') {
+        contentType = http_parser.MediaType('video', 'mp4');
+      } else if (ext == 'mov') {
+        contentType = http_parser.MediaType('video', 'quicktime');
+      }
+      // Audio
+      else if (ext == 'mp3') {
+        contentType = http_parser.MediaType('audio', 'mpeg');
+      } else if (ext == 'aac') {
+        contentType = http_parser.MediaType('audio', 'aac');
+      } else if (ext == 'm4a') {
+        contentType = http_parser.MediaType('audio', 'mp4');
+      }
+
+      print('📤 [API] Content-Type détecté: $contentType pour $filename');
+
       // Ajouter le fichier à partir des bytes (compatible web)
       request.files.add(http.MultipartFile.fromBytes(
         fieldName,
         bytes,
         filename: filename,
+        contentType: contentType,
       ));
 
       // Ajouter des champs supplémentaires si fournis

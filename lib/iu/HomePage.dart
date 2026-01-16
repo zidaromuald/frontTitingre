@@ -846,6 +846,7 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         _ProfileAvatar(
                           size: 70,
+                          photoUrl: _currentUser?.photoUrl,
                         ), // Taille fixe au lieu de size.width * 0.18
                         const SizedBox(height: 8),
                         Column(
@@ -916,13 +917,15 @@ class _HomePageState extends State<HomePage> {
                         _SquareAction(
                           label: '3',
                           icon: Icons.settings_outlined,
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const ParametrePage(),
                               ),
                             );
+                            // Recharger le profil pour synchroniser l'image mise à jour
+                            _loadUserProfile();
                           },
                         ),
                       ],
@@ -995,8 +998,9 @@ class _HomePageState extends State<HomePage> {
 
 // ————— Widgets —————
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.size});
+  const _ProfileAvatar({required this.size, this.photoUrl});
   final double size;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -1020,8 +1024,16 @@ class _ProfileAvatar extends StatelessWidget {
           ),
         ],
       ),
-      child: const CircleAvatar(
-        backgroundImage: AssetImage('images/avatar_placeholder.png'),
+      child: CircleAvatar(
+        backgroundColor: cs.surfaceContainerHighest,
+        backgroundImage: photoUrl != null ? NetworkImage(photoUrl!) : null,
+        child: photoUrl == null
+            ? Icon(
+                Icons.person,
+                size: size * 0.5,
+                color: cs.onSurfaceVariant,
+              )
+            : null,
       ),
     );
   }

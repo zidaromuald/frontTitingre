@@ -341,14 +341,19 @@ class SocieteAuthService {
 
   /// Autocomplétion pour la recherche de sociétés
   static Future<List<SocieteModel>> autocomplete(String term) async {
+    print('🔍 [SocieteAuth] Autocomplete sociétés pour: "$term"');
     final response = await ApiService.get('/societes/autocomplete?term=$term');
+
+    print('🔍 [SocieteAuth] Response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> societesData = jsonResponse['data'];
+      final List<dynamic> societesData = jsonResponse['data'] ?? [];
+      print('🔍 [SocieteAuth] Sociétés data count: ${societesData.length}');
       return societesData.map((json) => SocieteModel.fromJson(json)).toList();
     } else {
-      throw Exception('Erreur d\'autocomplétion');
+      print('❌ [SocieteAuth] Erreur: ${response.body}');
+      throw Exception('Erreur d\'autocomplétion: ${response.statusCode}');
     }
   }
 

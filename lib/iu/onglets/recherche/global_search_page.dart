@@ -76,6 +76,8 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
       _searchQuery = query;
     });
 
+    debugPrint('🔍 [Search] Recherche lancée pour: "$query"');
+
     try {
       // Recherche en parallèle pour optimiser les performances
       final results = await Future.wait([
@@ -83,6 +85,10 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
         GroupeAuthService.searchGroupes(query: query, limit: 20),
         SocieteAuthService.autocomplete(query),
       ]);
+
+      debugPrint('🔍 [Search] Users trouvés: ${(results[0] as List).length}');
+      debugPrint('🔍 [Search] Groupes trouvés: ${(results[1] as List).length}');
+      debugPrint('🔍 [Search] Sociétés trouvées: ${(results[2] as List).length}');
 
       if (mounted) {
         setState(() {
@@ -93,7 +99,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
         });
       }
     } catch (e) {
-      debugPrint('Erreur de recherche: $e');
+      debugPrint('❌ [Search] Erreur de recherche: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;

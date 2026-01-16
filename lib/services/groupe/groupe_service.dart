@@ -463,14 +463,21 @@ class GroupeAuthService {
     if (offset != null) params.add('offset=$offset');
 
     final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
-    final response = await ApiService.get('/groupes/search/query$queryString');
+    final endpoint = '/groupes/search/query$queryString';
+
+    print('🔍 [GroupeAuth] Search groupes: $endpoint');
+    final response = await ApiService.get(endpoint);
+
+    print('🔍 [GroupeAuth] Response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> groupesData = jsonResponse['data'];
+      final List<dynamic> groupesData = jsonResponse['data'] ?? [];
+      print('🔍 [GroupeAuth] Groupes data count: ${groupesData.length}');
       return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
     } else {
-      throw Exception('Erreur de recherche');
+      print('❌ [GroupeAuth] Erreur: ${response.body}');
+      throw Exception('Erreur de recherche: ${response.statusCode}');
     }
   }
 

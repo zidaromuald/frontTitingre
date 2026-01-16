@@ -340,14 +340,19 @@ class UserAuthService {
 
   /// Autocomplétion pour la recherche d'utilisateurs
   static Future<List<UserModel>> autocomplete(String term) async {
+    print('🔍 [UserAuth] Autocomplete users pour: "$term"');
     final response = await ApiService.get('/users/autocomplete?term=$term');
+
+    print('🔍 [UserAuth] Response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> usersData = jsonResponse['data'];
+      final List<dynamic> usersData = jsonResponse['data'] ?? [];
+      print('🔍 [UserAuth] Users data count: ${usersData.length}');
       return usersData.map((json) => UserModel.fromJson(json)).toList();
     } else {
-      throw Exception('Erreur d\'autocomplétion');
+      print('❌ [UserAuth] Erreur: ${response.body}');
+      throw Exception('Erreur d\'autocomplétion: ${response.statusCode}');
     }
   }
 

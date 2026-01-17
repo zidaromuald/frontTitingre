@@ -108,12 +108,13 @@ class _CategoriePageState extends State<CategoriePage> {
     }
   }
 
-  /// Charge MES groupes (canaux créés ou auxquels je participe)
+  /// Charge uniquement les groupes (canaux) que j'ai CRÉÉS
   Future<void> _loadMyGroupes() async {
     setState(() => _isLoadingGroupes = true);
 
     try {
-      final groupes = await GroupeAuthService.getMyGroupes();
+      // Utiliser getMyCreatedGroupes pour ne récupérer que les groupes créés par l'utilisateur
+      final groupes = await GroupeAuthService.getMyCreatedGroupes();
 
       if (mounted) {
         setState(() {

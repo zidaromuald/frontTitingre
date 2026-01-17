@@ -91,7 +91,11 @@ class UnreadContentService {
 
   /// Récupérer les groupes dont je suis membre avec du contenu non lu
   /// GET /groupes/with-unread-content
-  static Future<List<GroupeWithUnreadContent>> getMyGroupesWithUnreadContent() async {
+  /// [onlyWithUnread] : si true, ne retourne que les groupes avec du contenu non lu
+  ///                    si false, retourne tous les groupes (avec les compteurs non lus)
+  static Future<List<GroupeWithUnreadContent>> getMyGroupesWithUnreadContent({
+    bool onlyWithUnread = false,
+  }) async {
     try {
       // Récupérer tous mes groupes
       final mesGroupes = await GroupeAuthService.getMyGroupes();
@@ -106,8 +110,9 @@ class UnreadContentService {
         // Pour l'instant, on ne gère pas les posts de groupe, donc 0
         final unreadPosts = 0;
 
-        // Si le groupe a du contenu non lu, l'ajouter à la liste
-        if (unreadMessages > 0 || unreadPosts > 0) {
+        // Si onlyWithUnread est true, ne garder que les groupes avec contenu non lu
+        // Sinon, ajouter tous les groupes
+        if (!onlyWithUnread || unreadMessages > 0 || unreadPosts > 0) {
           groupesWithUnread.add(
             GroupeWithUnreadContent(
               id: groupe.id,
@@ -116,7 +121,7 @@ class UnreadContentService {
               logo: groupe.profil?.logo,
               unreadMessagesCount: unreadMessages,
               unreadPostsCount: unreadPosts,
-              lastActivityAt: DateTime.now(), // TODO: Récupérer la vraie date
+              lastActivityAt: groupe.updatedAt ?? DateTime.now(),
             ),
           );
         }
@@ -134,6 +139,12 @@ class UnreadContentService {
       print('❌ Erreur getMyGroupesWithUnreadContent: $e');
       return [];
     }
+  }
+
+  /// Récupérer TOUS les groupes dont je suis membre (avec infos de contenu non lu)
+  /// Utilisé pour afficher les canaux dans la HomePage
+  static Future<List<GroupeWithUnreadContent>> getAllMyGroupes() async {
+    return getMyGroupesWithUnreadContent(onlyWithUnread: false);
   }
 
   /// Récupérer le nombre de messages non lus pour un groupe spécifique

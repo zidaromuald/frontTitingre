@@ -524,7 +524,7 @@ class GroupeAuthService {
   // UTILITAIRES
   // ==========================================================================
 
-  /// Récupérer les groupes auxquels je participe
+  /// Récupérer les groupes auxquels je participe (créés + membre)
   static Future<List<GroupeModel>> getMyGroupes() async {
     final response = await ApiService.get('/groupes/me');
 
@@ -534,6 +534,33 @@ class GroupeAuthService {
       return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération des groupes');
+    }
+  }
+
+  /// Récupérer uniquement les groupes que j'ai CRÉÉS
+  /// Filtre les groupes où createdById == userId courant
+  static Future<List<GroupeModel>> getMyCreatedGroupes() async {
+    try {
+      // Récupérer l'utilisateur courant
+      final currentUser = await ApiService.get('/auth/me');
+      if (currentUser.statusCode != 200) {
+        throw Exception('Impossible de récupérer l\'utilisateur courant');
+      }
+      final userData = jsonDecode(currentUser.body);
+      final currentUserId = userData['data']?['id'] ?? userData['id'];
+
+      // Récupérer tous mes groupes
+      final allMyGroupes = await getMyGroupes();
+
+      // Filtrer pour ne garder que ceux que j'ai créés
+      return allMyGroupes
+          .where((groupe) =>
+              groupe.createdById == currentUserId &&
+              groupe.createdByType == 'User')
+          .toList();
+    } catch (e) {
+      print('❌ Erreur getMyCreatedGroupes: $e');
+      return [];
     }
   }
 

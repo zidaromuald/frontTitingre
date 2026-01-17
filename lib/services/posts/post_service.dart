@@ -84,6 +84,34 @@ class PostModel {
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
+    // Combiner tous les médias (images, videos, audios, documents) en une seule liste
+    List<String>? mediaUrls;
+
+    // Vérifier d'abord media_urls (ancien format)
+    if (json['media_urls'] != null) {
+      mediaUrls = List<String>.from(json['media_urls']);
+    } else {
+      // Nouveau format: combiner images, videos, audios, documents
+      final List<String> allMedia = [];
+
+      if (json['images'] != null && json['images'] is List) {
+        allMedia.addAll(List<String>.from(json['images']));
+      }
+      if (json['videos'] != null && json['videos'] is List) {
+        allMedia.addAll(List<String>.from(json['videos']));
+      }
+      if (json['audios'] != null && json['audios'] is List) {
+        allMedia.addAll(List<String>.from(json['audios']));
+      }
+      if (json['documents'] != null && json['documents'] is List) {
+        allMedia.addAll(List<String>.from(json['documents']));
+      }
+
+      if (allMedia.isNotEmpty) {
+        mediaUrls = allMedia;
+      }
+    }
+
     return PostModel(
       id: json['id'],
       contenu: json['contenu'] ?? '',
@@ -99,9 +127,7 @@ class PostModel {
       authorType: AuthorType.fromString(json['author_type']),
       author: json['author'],
       groupe: json['groupe'],
-      mediaUrls: json['media_urls'] != null
-          ? List<String>.from(json['media_urls'])
-          : null,
+      mediaUrls: mediaUrls,
     );
   }
 

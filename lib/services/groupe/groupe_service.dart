@@ -157,11 +157,15 @@ class GroupeProfilModel {
   }
 
   String? getPhotoCouvertureUrl() {
-    return photoCouverture != null ? '/storage/$photoCouverture' : null;
+    if (photoCouverture == null) return null;
+    if (photoCouverture!.startsWith('http')) return photoCouverture;
+    return 'https://api.titingre.com/storage/$photoCouverture';
   }
 
   String? getLogoUrl() {
-    return logo != null ? '/storage/$logo' : null;
+    if (logo == null) return null;
+    if (logo!.startsWith('http')) return logo;
+    return 'https://api.titingre.com/storage/$logo';
   }
 }
 
@@ -225,6 +229,11 @@ class GroupeInvitationModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  // Relations (optionnelles, chargées par le backend si include)
+  final Map<String, dynamic>? groupe;
+  final Map<String, dynamic>? invitedUser;
+  final Map<String, dynamic>? invitedByUser;
+
   GroupeInvitationModel({
     required this.id,
     required this.groupeId,
@@ -236,6 +245,9 @@ class GroupeInvitationModel {
     this.respondedAt,
     this.createdAt,
     this.updatedAt,
+    this.groupe,
+    this.invitedUser,
+    this.invitedByUser,
   });
 
   factory GroupeInvitationModel.fromJson(Map<String, dynamic> json) {
@@ -258,6 +270,9 @@ class GroupeInvitationModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
+      groupe: json['groupe'],
+      invitedUser: json['invited_user'] ?? json['invitedUser'],
+      invitedByUser: json['invited_by_user'] ?? json['invitedByUser'],
     );
   }
 
@@ -272,6 +287,23 @@ class GroupeInvitationModel {
 
   bool canBeAccepted() {
     return isPending();
+  }
+
+  // Helpers pour affichage
+  String get groupeName => groupe?['nom'] ?? 'Groupe #$groupeId';
+
+  String get invitedUserName {
+    if (invitedUser == null) return 'Utilisateur #$invitedUserId';
+    final prenom = invitedUser!['prenom'] ?? '';
+    final nom = invitedUser!['nom'] ?? '';
+    return '$prenom $nom'.trim();
+  }
+
+  String get invitedByUserName {
+    if (invitedByUser == null) return 'Utilisateur #$invitedByUserId';
+    final prenom = invitedByUser!['prenom'] ?? '';
+    final nom = invitedByUser!['nom'] ?? '';
+    return '$prenom $nom'.trim();
   }
 }
 

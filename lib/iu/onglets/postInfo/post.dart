@@ -886,7 +886,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
     final double fileSizeMB = fileSize / (1024 * 1024); // Convertir en MB
 
     // Contraintes backend
-    const double maxImageSizeMB = 5.0;    // Images: 5 MB max
+    const double maxImageSizeMB = 10.0;   // Images: 10 MB max
     const double maxVideoSizeMB = 50.0;   // Vidéos: 50 MB max
     const double maxAudioSizeMB = 10.0;   // Audio: 10 MB max
 
@@ -1160,14 +1160,16 @@ class _CreerPostPageState extends State<CreerPostPage> {
         visibility = PostVisibility.public;
       }
 
-      // 3. Créer le DTO pour le post
+      // 3. Créer le DTO pour le post avec les médias séparés par type
       final createDto = CreatePostDto(
         contenu: typePost == "texte"
             ? _textController.text.trim()
             : "Post ${typePost == 'image' ? 'image' : typePost == 'video' ? 'vidéo' : 'vocal'}",
         visibility: visibility,
         groupeId: destinataire == "groupe" ? _selectedGroupeId : null,
-        mediaUrls: mediaUrls.isNotEmpty ? mediaUrls : null,
+        images: typePost == "image" && mediaUrls.isNotEmpty ? mediaUrls : null,
+        videos: typePost == "video" && mediaUrls.isNotEmpty ? mediaUrls : null,
+        audios: typePost == "vocal" && mediaUrls.isNotEmpty ? mediaUrls : null,
       );
 
       // 4. Créer le post via l'API

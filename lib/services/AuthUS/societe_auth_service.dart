@@ -70,7 +70,11 @@ class SocieteProfilModel {
   }
 
   String? getLogoUrl() {
-    return logo != null ? '/storage/$logo' : null;
+    if (logo == null) return null;
+    // Si l'URL est déjà complète (commence par http), la retourner telle quelle
+    if (logo!.startsWith('http')) return logo;
+    // Sinon, construire l'URL complète avec l'API base URL
+    return 'https://api.titingre.com/storage/$logo';
   }
 }
 

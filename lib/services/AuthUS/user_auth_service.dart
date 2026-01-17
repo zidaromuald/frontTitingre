@@ -73,7 +73,11 @@ class UserProfilModel {
   }
 
   String? getPhotoUrl() {
-    return photo != null ? '/storage/$photo' : null;
+    if (photo == null) return null;
+    // Si l'URL est déjà complète (commence par http), la retourner telle quelle
+    if (photo!.startsWith('http')) return photo;
+    // Sinon, construire l'URL complète avec l'API base URL
+    return 'https://api.titingre.com/storage/$photo';
   }
 }
 

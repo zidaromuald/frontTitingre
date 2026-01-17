@@ -141,12 +141,16 @@ class PostModel {
     if (authorType == AuthorType.user) {
       final profile = author!['profile'];
       if (profile != null && profile['photo'] != null) {
-        return '/storage/${profile['photo']}';
+        final photo = profile['photo'] as String;
+        if (photo.startsWith('http')) return photo;
+        return 'https://api.titingre.com/storage/$photo';
       }
     } else {
       final profile = author!['profile'];
       if (profile != null && profile['logo'] != null) {
-        return '/storage/${profile['logo']}';
+        final logo = profile['logo'] as String;
+        if (logo.startsWith('http')) return logo;
+        return 'https://api.titingre.com/storage/$logo';
       }
     }
     return null;
@@ -158,13 +162,19 @@ class CreatePostDto {
   final String contenu;
   final PostVisibility visibility;
   final int? groupeId;
-  final List<String>? mediaUrls;
+  final List<String>? images;
+  final List<String>? audios;
+  final List<String>? videos;
+  final List<String>? documents;
 
   CreatePostDto({
     required this.contenu,
     this.visibility = PostVisibility.public,
     this.groupeId,
-    this.mediaUrls,
+    this.images,
+    this.audios,
+    this.videos,
+    this.documents,
   });
 
   Map<String, dynamic> toJson() {
@@ -172,7 +182,10 @@ class CreatePostDto {
       'contenu': contenu,
       'visibility': visibility.value,
       if (groupeId != null) 'groupe_id': groupeId,
-      if (mediaUrls != null && mediaUrls!.isNotEmpty) 'medias': mediaUrls,
+      if (images != null && images!.isNotEmpty) 'images': images,
+      if (audios != null && audios!.isNotEmpty) 'audios': audios,
+      if (videos != null && videos!.isNotEmpty) 'videos': videos,
+      if (documents != null && documents!.isNotEmpty) 'documents': documents,
     };
   }
 }
@@ -181,15 +194,28 @@ class CreatePostDto {
 class UpdatePostDto {
   final String? contenu;
   final PostVisibility? visibility;
-  final List<String>? mediaUrls;
+  final List<String>? images;
+  final List<String>? audios;
+  final List<String>? videos;
+  final List<String>? documents;
 
-  UpdatePostDto({this.contenu, this.visibility, this.mediaUrls});
+  UpdatePostDto({
+    this.contenu,
+    this.visibility,
+    this.images,
+    this.audios,
+    this.videos,
+    this.documents,
+  });
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
     if (contenu != null) data['contenu'] = contenu;
     if (visibility != null) data['visibility'] = visibility!.value;
-    if (mediaUrls != null) data['medias'] = mediaUrls;
+    if (images != null) data['images'] = images;
+    if (audios != null) data['audios'] = audios;
+    if (videos != null) data['videos'] = videos;
+    if (documents != null) data['documents'] = documents;
     return data;
   }
 }

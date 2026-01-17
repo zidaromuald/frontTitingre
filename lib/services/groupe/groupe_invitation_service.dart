@@ -85,6 +85,38 @@ class GroupeInvitationService {
     }
   }
 
+  /// Récupérer les invitations envoyées par l'utilisateur connecté
+  /// GET /groupes/invitations/sent
+  /// Nécessite authentification
+  static Future<List<GroupeInvitationModel>> getMySentInvitations({
+    InvitationStatus? status,
+  }) async {
+    final queryParams = status != null ? '?status=${status.value}' : '';
+    final response = await ApiService.get('/groupes/invitations/sent$queryParams');
+
+    if (response.statusCode == 200) {
+      final jsonResponse = jsonDecode(response.body);
+      final List<dynamic> invitationsData = jsonResponse['data'] ?? jsonResponse;
+      return invitationsData
+          .map((json) => GroupeInvitationModel.fromJson(json))
+          .toList();
+    } else {
+      throw Exception('Erreur de récupération des invitations envoyées');
+    }
+  }
+
+  /// Annuler une invitation envoyée
+  /// DELETE /groupes/invitations/:id
+  /// Nécessite authentification (et être l'expéditeur)
+  static Future<void> cancelInvitation(int invitationId) async {
+    final response = await ApiService.delete('/groupes/invitations/$invitationId');
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Impossible d\'annuler l\'invitation');
+    }
+  }
+
   // ==========================================================================
   // RÉPONDRE AUX INVITATIONS
   // ==========================================================================

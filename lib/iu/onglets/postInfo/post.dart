@@ -1086,6 +1086,29 @@ class _CreerPostPageState extends State<CreerPostPage> {
     );
   }
 
+  /// Extrait le chemin relatif d'une URL de média
+  /// L'API attend: uploads/{type}/{filename}
+  /// Exemples d'entrée:
+  /// - https://pub-xxx.r2.dev/uploads/images/file.jpg -> uploads/images/file.jpg
+  /// - http://localhost:3000/uploads/images/file.jpg -> uploads/images/file.jpg
+  /// - uploads/images/file.jpg -> uploads/images/file.jpg (déjà relatif)
+  String _extractRelativePath(String url) {
+    // Si c'est déjà un chemin relatif commençant par uploads/
+    if (url.startsWith('uploads/')) {
+      return url;
+    }
+
+    // Chercher 'uploads/' dans l'URL et extraire à partir de là
+    final uploadsIndex = url.indexOf('uploads/');
+    if (uploadsIndex != -1) {
+      return url.substring(uploadsIndex);
+    }
+
+    // Si pas de pattern 'uploads/', retourner l'URL telle quelle (fallback)
+    print('⚠️ [Post] URL non reconnue, utilisée telle quelle: $url');
+    return url;
+  }
+
   Future<void> _publierPost() async {
     // Validation du destinataire : si ce n'est pas public, il faut sélectionner une cible
     if (destinataire != "public") {
@@ -1151,6 +1174,11 @@ class _CreerPostPageState extends State<CreerPostPage> {
           mediaUrls = [response.url];
         }
       }
+
+      // Transformer les URLs pour extraire le chemin relatif (uploads/{type}/{filename})
+      // L'API attend des chemins relatifs, pas des URLs complètes
+      mediaUrls = mediaUrls.map((url) => _extractRelativePath(url)).toList();
+      print('📤 [Post] URLs des médias transformées: $mediaUrls');
 
       // 2. Mapper la visibilité vers l'enum PostVisibility
       PostVisibility visibility;

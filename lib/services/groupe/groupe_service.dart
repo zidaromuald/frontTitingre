@@ -251,25 +251,26 @@ class GroupeInvitationModel {
   });
 
   factory GroupeInvitationModel.fromJson(Map<String, dynamic> json) {
+    // Gérer les deux formats (snake_case et camelCase)
+    final groupeId = json['groupe_id'] ?? json['groupeId'];
+    final invitedUserId = json['invited_user_id'] ?? json['invitedUserId'];
+    final invitedByUserId = json['invited_by_user_id'] ?? json['invitedByUserId'];
+    final expiresAtStr = json['expires_at'] ?? json['expiresAt'];
+    final respondedAtStr = json['responded_at'] ?? json['respondedAt'];
+    final createdAtStr = json['created_at'] ?? json['createdAt'];
+    final updatedAtStr = json['updated_at'] ?? json['updatedAt'];
+
     return GroupeInvitationModel(
       id: json['id'],
-      groupeId: json['groupe_id'],
-      invitedUserId: json['invited_user_id'],
-      invitedByUserId: json['invited_by_user_id'],
+      groupeId: groupeId,
+      invitedUserId: invitedUserId,
+      invitedByUserId: invitedByUserId,
       status: InvitationStatus.fromString(json['status'] ?? 'pending'),
       message: json['message'],
-      expiresAt: json['expires_at'] != null
-          ? DateTime.parse(json['expires_at'])
-          : null,
-      respondedAt: json['responded_at'] != null
-          ? DateTime.parse(json['responded_at'])
-          : null,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : null,
+      expiresAt: expiresAtStr != null ? DateTime.parse(expiresAtStr) : null,
+      respondedAt: respondedAtStr != null ? DateTime.parse(respondedAtStr) : null,
+      createdAt: createdAtStr != null ? DateTime.parse(createdAtStr) : null,
+      updatedAt: updatedAtStr != null ? DateTime.parse(updatedAtStr) : null,
       groupe: json['groupe'],
       invitedUser: json['invited_user'] ?? json['invitedUser'],
       invitedByUser: json['invited_by_user'] ?? json['invitedByUser'],
@@ -340,26 +341,53 @@ class GroupeModel {
   });
 
   factory GroupeModel.fromJson(Map<String, dynamic> json) {
+    // Gérer les deux formats de createdBy:
+    // Format 1 (snake_case): created_by_id, created_by_type
+    // Format 2 (camelCase objet): createdBy: {id, type}
+    int createdById;
+    String createdByType;
+
+    if (json['created_by_id'] != null) {
+      createdById = json['created_by_id'];
+      createdByType = json['created_by_type'] ?? 'User';
+    } else if (json['createdBy'] != null && json['createdBy'] is Map) {
+      createdById = json['createdBy']['id'];
+      createdByType = json['createdBy']['type'] ?? 'User';
+    } else {
+      // Fallback: utiliser l'id de l'auteur si disponible
+      createdById = json['author_id'] ?? 0;
+      createdByType = json['author_type'] ?? 'User';
+    }
+
+    // Gérer les deux formats de maxMembres
+    final maxMembres = json['max_membres'] ?? json['maxMembres'] ?? 50;
+
+    // Gérer les deux formats de membresCount
+    final membresCount = json['membres_count'] ?? json['nombreMembres'];
+
+    // Gérer les deux formats de adminUserId
+    final adminUserId = json['admin_user_id'] ?? json['adminUserId'];
+
+    // Gérer les deux formats de dates
+    final createdAtStr = json['created_at'] ?? json['createdAt'];
+    final updatedAtStr = json['updated_at'] ?? json['updatedAt'];
+
     return GroupeModel(
       id: json['id'],
       nom: json['nom'],
       description: json['description'],
-      createdById: json['created_by_id'],
-      createdByType: json['created_by_type'],
+      createdById: createdById,
+      createdByType: createdByType,
       type: GroupeType.fromString(json['type'] ?? 'prive'),
-      maxMembres: json['max_membres'] ?? 50,
+      maxMembres: maxMembres,
       categorie: GroupeCategorie.fromString(json['categorie'] ?? 'simple'),
-      adminUserId: json['admin_user_id'],
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : null,
+      adminUserId: adminUserId,
+      createdAt: createdAtStr != null ? DateTime.parse(createdAtStr) : null,
+      updatedAt: updatedAtStr != null ? DateTime.parse(updatedAtStr) : null,
       profil: json['profil'] != null
           ? GroupeProfilModel.fromJson(json['profil'])
           : null,
-      membresCount: json['membres_count'],
+      membresCount: membresCount,
     );
   }
 
@@ -526,13 +554,18 @@ class GroupeAuthService {
 
   /// Récupérer les groupes auxquels je participe (créés + membre)
   static Future<List<GroupeModel>> getMyGroupes() async {
+    print('📤 [GroupeService] Appel GET /groupes/me');
     final response = await ApiService.get('/groupes/me');
+    print('📥 [GroupeService] Response status: ${response.statusCode}');
+    print('📥 [GroupeService] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> groupesData = jsonResponse['data'];
+      final List<dynamic> groupesData = jsonResponse['data'] ?? [];
+      print('📥 [GroupeService] Nombre de groupes: ${groupesData.length}');
       return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
     } else {
+      print('❌ [GroupeService] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des groupes');
     }
   }

@@ -76,19 +76,28 @@ class InvitationSuiviModel {
   });
 
   factory InvitationSuiviModel.fromJson(Map<String, dynamic> json) {
+    // Gérer les deux formats (snake_case et camelCase)
+    final senderId = json['sender_id'] ?? json['senderId'];
+    final senderType = json['sender_type'] ?? json['senderType'];
+    final receiverId = json['receiver_id'] ?? json['receiverId'];
+    final receiverType = json['receiver_type'] ?? json['receiverType'];
+    final respondedAtStr = json['responded_at'] ?? json['respondedAt'];
+    final createdAtStr = json['created_at'] ?? json['createdAt'];
+    final updatedAtStr = json['updated_at'] ?? json['updatedAt'];
+
     return InvitationSuiviModel(
       id: json['id'],
-      senderId: json['sender_id'],
-      senderType: json['sender_type'],
-      receiverId: json['receiver_id'],
-      receiverType: json['receiver_type'],
+      senderId: senderId,
+      senderType: senderType,
+      receiverId: receiverId,
+      receiverType: receiverType,
       status: InvitationSuiviStatus.fromString(json['status'] ?? 'pending'),
       message: json['message'],
-      respondedAt: json['responded_at'] != null
-          ? DateTime.parse(json['responded_at'])
+      respondedAt: respondedAtStr != null
+          ? DateTime.parse(respondedAtStr)
           : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: DateTime.parse(createdAtStr),
+      updatedAt: DateTime.parse(updatedAtStr),
       sender: json['sender'],
       receiver: json['receiver'],
     );
@@ -166,13 +175,19 @@ class InvitationSuiviService {
       if (message != null) 'message': message,
     };
 
+    print('📤 [InvitationSuiviService] POST /invitations-suivi avec data: $data');
     final response = await ApiService.post('/invitations-suivi', data);
+    print('📥 [InvitationSuiviService] Response status: ${response.statusCode}');
+    print('📥 [InvitationSuiviService] Response body: ${response.body}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
-      return InvitationSuiviModel.fromJson(jsonResponse['data']);
+      final invitationData = jsonResponse['data'] ?? jsonResponse['invitation'];
+      print('📥 [InvitationSuiviService] Invitation créée: $invitationData');
+      return InvitationSuiviModel.fromJson(invitationData);
     } else {
       final error = jsonDecode(response.body);
+      print('❌ [InvitationSuiviService] Erreur envoi invitation: ${error['message']}');
       throw Exception(
         error['message'] ?? 'Erreur lors de l\'envoi de l\'invitation',
       );
@@ -198,17 +213,22 @@ class InvitationSuiviService {
     InvitationSuiviStatus? status,
   }) async {
     final queryString = status != null ? '?status=${status.value}' : '';
+    print('📤 [InvitationSuiviService] Appel GET /invitations-suivi/sent$queryString');
     final response = await ApiService.get(
       '/invitations-suivi/sent$queryString',
     );
+    print('📥 [InvitationSuiviService] Response status: ${response.statusCode}');
+    print('📥 [InvitationSuiviService] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> invitationsData = jsonResponse['data'];
+      final List<dynamic> invitationsData = jsonResponse['data'] ?? jsonResponse['invitations'] ?? [];
+      print('📥 [InvitationSuiviService] Nombre d\'invitations envoyées: ${invitationsData.length}');
       return invitationsData
           .map((json) => InvitationSuiviModel.fromJson(json))
           .toList();
     } else {
+      print('❌ [InvitationSuiviService] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des invitations envoyées');
     }
   }
@@ -262,17 +282,22 @@ class InvitationSuiviService {
     InvitationSuiviStatus? status,
   }) async {
     final queryString = status != null ? '?status=${status.value}' : '';
+    print('📤 [InvitationSuiviService] Appel GET /invitations-suivi/received$queryString');
     final response = await ApiService.get(
       '/invitations-suivi/received$queryString',
     );
+    print('📥 [InvitationSuiviService] Response status: ${response.statusCode}');
+    print('📥 [InvitationSuiviService] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> invitationsData = jsonResponse['data'];
+      final List<dynamic> invitationsData = jsonResponse['data'] ?? jsonResponse['invitations'] ?? [];
+      print('📥 [InvitationSuiviService] Nombre d\'invitations reçues: ${invitationsData.length}');
       return invitationsData
           .map((json) => InvitationSuiviModel.fromJson(json))
           .toList();
     } else {
+      print('❌ [InvitationSuiviService] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des invitations reçues');
     }
   }

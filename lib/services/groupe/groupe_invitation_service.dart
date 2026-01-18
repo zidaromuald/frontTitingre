@@ -72,15 +72,20 @@ class GroupeInvitationService {
   /// GET /groupes/invitations/me
   /// Nécessite authentification
   static Future<List<GroupeInvitationModel>> getMyInvitations() async {
+    print('📤 [InvitationService] Appel GET /groupes/invitations/me');
     final response = await ApiService.get('/groupes/invitations/me');
+    print('📥 [InvitationService] Response status: ${response.statusCode}');
+    print('📥 [InvitationService] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> invitationsData = jsonResponse['data'];
+      final List<dynamic> invitationsData = jsonResponse['data'] ?? [];
+      print('📥 [InvitationService] Nombre d\'invitations reçues: ${invitationsData.length}');
       return invitationsData
           .map((json) => GroupeInvitationModel.fromJson(json))
           .toList();
     } else {
+      print('❌ [InvitationService] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des invitations');
     }
   }
@@ -92,15 +97,20 @@ class GroupeInvitationService {
     InvitationStatus? status,
   }) async {
     final queryParams = status != null ? '?status=${status.value}' : '';
+    print('📤 [InvitationService] Appel GET /groupes/invitations/sent$queryParams');
     final response = await ApiService.get('/groupes/invitations/sent$queryParams');
+    print('📥 [InvitationService] Response status: ${response.statusCode}');
+    print('📥 [InvitationService] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> invitationsData = jsonResponse['data'] ?? jsonResponse;
+      final List<dynamic> invitationsData = jsonResponse['data'] ?? jsonResponse['invitations'] ?? [];
+      print('📥 [InvitationService] Nombre d\'invitations envoyées: ${invitationsData.length}');
       return invitationsData
           .map((json) => GroupeInvitationModel.fromJson(json))
           .toList();
     } else {
+      print('❌ [InvitationService] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des invitations envoyées');
     }
   }

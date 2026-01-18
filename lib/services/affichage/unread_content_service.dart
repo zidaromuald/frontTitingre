@@ -99,13 +99,20 @@ class UnreadContentService {
     try {
       // Récupérer tous mes groupes
       final mesGroupes = await GroupeAuthService.getMyGroupes();
+      print('📊 [UnreadContentService] ${mesGroupes.length} groupes récupérés');
 
       // Pour chaque groupe, vérifier s'il y a du contenu non lu
       List<GroupeWithUnreadContent> groupesWithUnread = [];
 
       for (final groupe in mesGroupes) {
         // Récupérer le nombre de messages non lus pour ce groupe
-        final unreadMessages = await _getUnreadMessagesCountForGroupe(groupe.id);
+        // (ne pas bloquer si l'endpoint n'existe pas)
+        int unreadMessages = 0;
+        try {
+          unreadMessages = await _getUnreadMessagesCountForGroupe(groupe.id);
+        } catch (e) {
+          // Ignorer silencieusement - l'endpoint peut ne pas exister
+        }
 
         // Pour l'instant, on ne gère pas les posts de groupe, donc 0
         final unreadPosts = 0;
@@ -134,6 +141,7 @@ class UnreadContentService {
         return b.lastActivityAt!.compareTo(a.lastActivityAt!);
       });
 
+      print('📊 [UnreadContentService] ${groupesWithUnread.length} groupes retournés');
       return groupesWithUnread;
     } catch (e) {
       print('❌ Erreur getMyGroupesWithUnreadContent: $e');

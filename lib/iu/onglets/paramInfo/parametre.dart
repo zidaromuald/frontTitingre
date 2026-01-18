@@ -115,13 +115,12 @@ class _ParametrePageState extends State<ParametrePage> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingInvitationsRecues = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur de chargement des invitations reçues: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _invitationsRecues = [];
+          _isLoadingInvitationsRecues = false;
+        });
+        // Log l'erreur silencieusement - l'endpoint peut ne pas exister
+        debugPrint('⚠️ Erreur chargement invitations suivi reçues: $e');
       }
     }
   }
@@ -143,13 +142,12 @@ class _ParametrePageState extends State<ParametrePage> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingInvitationsEnvoyees = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur de chargement des invitations envoyées: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _invitationsEnvoyees = [];
+          _isLoadingInvitationsEnvoyees = false;
+        });
+        // Log l'erreur silencieusement - l'endpoint peut ne pas exister
+        debugPrint('⚠️ Erreur chargement invitations suivi envoyées: $e');
       }
     }
   }

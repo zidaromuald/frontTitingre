@@ -398,6 +398,8 @@ class _MesGroupesPageState extends State<MesGroupesPage> {
         return 'Pro';
       case GroupeCategorie.supergroupe:
         return 'Super';
+      case GroupeCategorie.active:
+        return 'Actif';
     }
   }
 }

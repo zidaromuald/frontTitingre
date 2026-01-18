@@ -1074,6 +1074,8 @@ class _GroupeProfilePageState extends State<GroupeProfilePage>
         return 'Groupe Professionnel';
       case GroupeCategorie.supergroupe:
         return 'Super Groupe';
+      case GroupeCategorie.active:
+        return 'Groupe Actif';
     }
   }
 

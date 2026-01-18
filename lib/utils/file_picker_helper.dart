@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import '../services/media_service_platform.dart';
+import 'video_duration_helper.dart';
 
 /// Helper pour sélectionner des fichiers sur toutes les plateformes
 class FilePickerHelper {
@@ -105,17 +106,41 @@ class FilePickerHelper {
   }
 
   /// Sélectionner une vidéo (web et mobile)
+  /// Valide la durée (30 secondes max) et la taille (50MB max)
   static Future<PlatformFile?> pickVideo({
     ImageSource source = ImageSource.gallery,
   }) async {
     try {
       final XFile? pickedFile = await _picker.pickVideo(
         source: source,
+        maxDuration: const Duration(seconds: MediaServicePlatform.maxVideoDurationSeconds), // Limite de durée (mobile)
       );
 
       if (pickedFile == null) return null;
 
       final Uint8List bytes = await pickedFile.readAsBytes();
+
+      // Vérifier la taille du fichier
+      if (bytes.length > MediaServicePlatform.maxFileSize) {
+        final sizeMB = (bytes.length / (1024 * 1024)).toStringAsFixed(2);
+        final maxMB = (MediaServicePlatform.maxFileSize / (1024 * 1024)).toStringAsFixed(0);
+        throw Exception('Fichier trop volumineux: ${sizeMB}MB. Taille maximale: ${maxMB}MB');
+      }
+
+      // Sur le web, vérifier la durée de la vidéo
+      if (kIsWeb) {
+        final mimeType = pickedFile.mimeType ?? 'video/mp4';
+        final duration = await VideoDurationHelper.getVideoDuration(bytes, mimeType);
+
+        if (duration != null && duration > MediaServicePlatform.maxVideoDurationSeconds) {
+          throw Exception(
+            'Vidéo trop longue: ${duration.toStringAsFixed(1)} secondes. '
+            'Durée maximale: ${MediaServicePlatform.maxVideoDurationSeconds} secondes'
+          );
+        }
+
+        print('📹 [FilePickerHelper] Durée vidéo: ${duration?.toStringAsFixed(1) ?? "inconnue"} secondes');
+      }
 
       return PlatformFile.fromBytes(
         name: pickedFile.name,
@@ -126,6 +151,18 @@ class FilePickerHelper {
       print('❌ Erreur lors de la sélection de vidéo: $e');
       rethrow;
     }
+  }
+
+  /// Vérifier si un fichier respecte les limites de taille
+  static bool isFileSizeValid(PlatformFile file) {
+    return file.bytes.length <= MediaServicePlatform.maxFileSize;
+  }
+
+  /// Obtenir un message d'erreur formaté pour la taille
+  static String getFileSizeError(PlatformFile file) {
+    final sizeMB = (file.bytes.length / (1024 * 1024)).toStringAsFixed(2);
+    final maxMB = (MediaServicePlatform.maxFileSize / (1024 * 1024)).toStringAsFixed(0);
+    return 'Fichier trop volumineux: ${sizeMB}MB. Taille maximale: ${maxMB}MB';
   }
 
   /// Afficher un dialog pour choisir entre galerie et caméra (mobile uniquement)

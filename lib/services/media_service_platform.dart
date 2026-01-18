@@ -124,8 +124,11 @@ class MediaUploadResponse {
 
 /// Service de gestion des médias multiplateforme (web + mobile)
 class MediaServicePlatform {
-  // Taille maximale des fichiers en bytes (10 MB)
-  static const int maxFileSize = 10 * 1024 * 1024;
+  // Taille maximale des fichiers en bytes (50 MB)
+  static const int maxFileSize = 50 * 1024 * 1024;
+
+  // Durée maximale des vidéos en secondes (30 secondes)
+  static const int maxVideoDurationSeconds = 30;
 
   // Extensions autorisées par type
   static const Map<MediaType, List<String>> allowedExtensions = {

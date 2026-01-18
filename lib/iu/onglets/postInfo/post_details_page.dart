@@ -828,58 +828,174 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
           _post!.mediaUrls!.length,
           (index) => Padding(
             padding: EdgeInsets.only(bottom: index < _post!.mediaUrls!.length - 1 ? 12 : 0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                'http://127.0.0.1:8000${_post!.mediaUrls![index]}',
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      color: cs.secondaryContainer.withOpacity(.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.broken_image_outlined,
-                            size: 48,
-                            color: cs.onSurface.withOpacity(.4),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Média indisponible',
-                            style: TextStyle(
-                              color: cs.onSurface.withOpacity(.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 200,
-                    alignment: Alignment.center,
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
-              ),
-            ),
+            child: _buildMediaItem(_post!.mediaUrls![index], cs),
           ),
         ),
       ],
+    );
+  }
+
+  /// Construire l'URL complète du média
+  String _getMediaUrl(String url) {
+    // Si l'URL est déjà complète (commence par http), la retourner telle quelle
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Sinon, c'est un chemin relatif - utiliser l'URL de l'API
+    return 'https://api.titingre.com/storage/$url';
+  }
+
+  /// Détecter si c'est une vidéo basé sur l'extension
+  bool _isVideo(String url) {
+    final lowercaseUrl = url.toLowerCase();
+    return lowercaseUrl.endsWith('.mp4') ||
+           lowercaseUrl.endsWith('.mov') ||
+           lowercaseUrl.endsWith('.avi') ||
+           lowercaseUrl.endsWith('.mkv') ||
+           lowercaseUrl.endsWith('.webm');
+  }
+
+  /// Construire un élément média (image ou vidéo)
+  Widget _buildMediaItem(String url, ColorScheme cs) {
+    final fullUrl = _getMediaUrl(url);
+
+    if (_isVideo(url)) {
+      // Afficher un placeholder pour les vidéos avec bouton play
+      return GestureDetector(
+        onTap: () => _openVideoPlayer(fullUrl),
+        child: Container(
+          height: 200,
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Icône play
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow,
+                  size: 48,
+                  color: Colors.black87,
+                ),
+              ),
+              // Label vidéo
+              Positioned(
+                bottom: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.videocam, color: Colors.white, size: 16),
+                      SizedBox(width: 4),
+                      Text(
+                        'Vidéo',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      // Afficher une image
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          fullUrl,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            print('❌ Erreur chargement image: $fullUrl - $error');
+            return Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: cs.secondaryContainer.withOpacity(.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.broken_image_outlined,
+                      size: 48,
+                      color: cs.onSurface.withOpacity(.4),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Média indisponible',
+                      style: TextStyle(
+                        color: cs.onSurface.withOpacity(.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              height: 200,
+              alignment: Alignment.center,
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            );
+          },
+        ),
+      );
+    }
+  }
+
+  /// Ouvrir le lecteur vidéo
+  void _openVideoPlayer(String videoUrl) {
+    // Pour l'instant, ouvrir dans un navigateur ou afficher un dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Lecture vidéo'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.videocam, size: 64, color: Colors.blue),
+            const SizedBox(height: 16),
+            const Text('La lecture vidéo intégrée sera disponible prochainement.'),
+            const SizedBox(height: 8),
+            Text(
+              videoUrl,
+              style: const TextStyle(fontSize: 10, color: Colors.grey),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
     );
   }
 

@@ -21,11 +21,12 @@ enum GroupeType {
   }
 }
 
-/// Catégorie de groupe selon le nombre de membres
+/// Catégorie de groupe (statut/type)
 enum GroupeCategorie {
-  simple('simple'), // <= 100 membres
-  professionnel('professionnel'), // 101-9999 membres
-  supergroupe('supergroupe'); // >= 10000 membres
+  simple('simple'),
+  professionnel('professionnel'),
+  supergroupe('supergroupe'),
+  active('active'); // Statut actif retourné par le backend
 
   final String value;
   const GroupeCategorie(this.value);
@@ -465,7 +466,9 @@ class GroupeAuthService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return GroupeModel.fromJson(jsonResponse['data']);
+      // Le backend peut retourner 'data' ou 'groupe'
+      final groupeData = jsonResponse['data'] ?? jsonResponse['groupe'] ?? jsonResponse;
+      return GroupeModel.fromJson(groupeData);
     } else {
       throw Exception('Groupe introuvable');
     }
@@ -480,7 +483,9 @@ class GroupeAuthService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return GroupeModel.fromJson(jsonResponse['data']);
+      // Le backend peut retourner 'data' ou 'groupe'
+      final groupeData = jsonResponse['data'] ?? jsonResponse['groupe'] ?? jsonResponse;
+      return GroupeModel.fromJson(groupeData);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'Erreur de mise à jour du groupe');
@@ -532,7 +537,8 @@ class GroupeAuthService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> groupesData = jsonResponse['data'] ?? [];
+      // Le backend peut retourner 'data' ou 'groupes'
+      final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
       print('🔍 [GroupeAuth] Groupes data count: ${groupesData.length}');
       return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
     } else {
@@ -561,7 +567,8 @@ class GroupeAuthService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> groupesData = jsonResponse['data'] ?? [];
+      // Le backend peut retourner 'data' ou 'groupes'
+      final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
       print('📥 [GroupeService] Nombre de groupes: ${groupesData.length}');
       return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
     } else {

@@ -237,11 +237,11 @@ class _PostSearchPageState extends State<PostSearchPage> {
                                 },
                               ),
                               FilterChip(
-                                label: const Text('Groupe'),
-                                selected: _selectedVisibility == PostVisibility.groupe,
+                                label: const Text('Membres'),
+                                selected: _selectedVisibility == PostVisibility.membresOnly,
                                 onSelected: (selected) {
                                   setState(() => _selectedVisibility =
-                                      selected ? PostVisibility.groupe : null);
+                                      selected ? PostVisibility.membresOnly : null);
                                 },
                               ),
                             ],
@@ -614,8 +614,10 @@ class _SearchResultCard extends StatelessWidget {
         return 'Amis';
       case PostVisibility.private:
         return 'Privé';
-      case PostVisibility.groupe:
-        return 'Groupe';
+      case PostVisibility.membresOnly:
+        return 'Membres';
+      case PostVisibility.adminsOnly:
+        return 'Admins';
     }
   }
 }

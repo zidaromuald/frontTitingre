@@ -238,6 +238,12 @@ class InvitationSuiviService {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> invitationsData = jsonResponse['data'] ?? jsonResponse['invitations'] ?? [];
       print('📥 [InvitationSuiviService] Nombre d\'invitations envoyées: ${invitationsData.length}');
+
+      // Log détaillé pour debug
+      for (var inv in invitationsData) {
+        print('📋 [InvitationSuiviService] Invitation envoyée: id=${inv['id']}, receiver=${inv['receiver']}, receiver_id=${inv['receiver_id']}');
+      }
+
       return invitationsData
           .map((json) => InvitationSuiviModel.fromJson(json))
           .toList();
@@ -307,6 +313,12 @@ class InvitationSuiviService {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> invitationsData = jsonResponse['data'] ?? jsonResponse['invitations'] ?? [];
       print('📥 [InvitationSuiviService] Nombre d\'invitations reçues: ${invitationsData.length}');
+
+      // Log détaillé pour debug
+      for (var inv in invitationsData) {
+        print('📋 [InvitationSuiviService] Invitation reçue: id=${inv['id']}, sender=${inv['sender']}, sender_id=${inv['sender_id']}');
+      }
+
       return invitationsData
           .map((json) => InvitationSuiviModel.fromJson(json))
           .toList();

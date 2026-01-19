@@ -1183,7 +1183,8 @@ class _CreerPostPageState extends State<CreerPostPage> {
       // 2. Mapper la visibilité vers l'enum PostVisibility
       PostVisibility visibility;
       if (destinataire == "groupe") {
-        visibility = PostVisibility.groupe;
+        // Pour les posts de groupe, utiliser 'membres_only' (visible par tous les membres)
+        visibility = PostVisibility.membresOnly;
       } else {
         visibility = PostVisibility.public;
       }

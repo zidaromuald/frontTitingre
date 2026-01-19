@@ -74,7 +74,7 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final posts = await PostService.getMyFeed(limit: 20, offset: 0);
+      final posts = await PostService.getPersonalizedFeed(limit: 20, offset: 0);
       if (mounted) {
         setState(() {
           _posts = posts;
@@ -1273,12 +1273,7 @@ class _PostCard extends StatelessWidget {
               if (hasMedia) ...[
                 ClipRRec(
                   borderRadius: BorderRadius.circular(12),
-                  child: R2NetworkImage(
-                    imageUrl: post.mediaUrls!.first,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  child: _buildMediaWidget(post.mediaUrls!.first, cs),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -1331,6 +1326,150 @@ class _PostCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Transformer l'URL du média en URL complète si nécessaire
+  String _getMediaUrl(String url) {
+    // Si l'URL est déjà complète (commence par http), la retourner telle quelle
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Sinon, c'est un chemin relatif - utiliser l'URL de l'API
+    return 'https://api.titingre.com/storage/$url';
+  }
+
+  /// Détecter si c'est une vidéo basé sur l'extension
+  bool _isVideo(String url) {
+    final lowercaseUrl = url.toLowerCase();
+    return lowercaseUrl.endsWith('.mp4') ||
+           lowercaseUrl.endsWith('.mov') ||
+           lowercaseUrl.endsWith('.avi') ||
+           lowercaseUrl.endsWith('.mkv') ||
+           lowercaseUrl.endsWith('.webm');
+  }
+
+  /// Détecter si c'est un audio basé sur l'extension
+  bool _isAudio(String url) {
+    final lowercaseUrl = url.toLowerCase();
+    return lowercaseUrl.endsWith('.mp3') ||
+           lowercaseUrl.endsWith('.wav') ||
+           lowercaseUrl.endsWith('.aac') ||
+           lowercaseUrl.endsWith('.m4a') ||
+           lowercaseUrl.endsWith('.ogg');
+  }
+
+  /// Construire le widget média approprié (image, vidéo ou audio)
+  Widget _buildMediaWidget(String url, ColorScheme cs) {
+    final fullUrl = _getMediaUrl(url);
+
+    if (_isVideo(url)) {
+      // Afficher un placeholder pour les vidéos avec bouton play
+      return Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Icône de vidéo en arrière-plan
+            Icon(
+              Icons.movie,
+              size: 60,
+              color: Colors.white.withOpacity(0.3),
+            ),
+            // Bouton play au centre
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(0.9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 36,
+              ),
+            ),
+            // Badge "Vidéo" en haut à gauche
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.videocam, color: Colors.white, size: 14),
+                    SizedBox(width: 4),
+                    Text(
+                      'Vidéo',
+                      style: TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (_isAudio(url)) {
+      // Afficher un placeholder pour les audios
+      return Container(
+        height: 80,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: cs.primaryContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.audio_file,
+              size: 32,
+              color: cs.primary,
+            ),
+            const SizedBox(width: 12),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Fichier audio',
+                  style: TextStyle(
+                    color: cs.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Appuyez pour écouter',
+                  style: TextStyle(
+                    color: cs.onPrimaryContainer.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Image normale
+      return R2NetworkImage(
+        imageUrl: fullUrl,
+        height: 200,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
   }
 }
 

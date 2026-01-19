@@ -715,14 +715,20 @@ class _ParametrePageState extends State<ParametrePage> {
     }
 
     // Récupérer le nom de l'expéditeur (depuis les relations)
-    String senderName = 'Utilisateur inconnu';
+    String senderName = 'Utilisateur #${invitation.senderId}';
     if (invitation.sender != null) {
       if (invitation.isSenderUser()) {
-        senderName = '${invitation.sender!['nom'] ?? ''} ${invitation.sender!['prenom'] ?? ''}'.trim();
+        final nom = invitation.sender!['nom'] ?? '';
+        final prenom = invitation.sender!['prenom'] ?? '';
+        senderName = '$nom $prenom'.trim();
+        if (senderName.isEmpty) {
+          senderName = 'Utilisateur #${invitation.senderId}';
+        }
       } else {
-        senderName = invitation.sender!['nom'] ?? 'Société inconnue';
+        senderName = invitation.sender!['nom'] ?? 'Société #${invitation.senderId}';
       }
     }
+    debugPrint('👤 [Invitation reçue] sender: ${invitation.sender}, senderName: $senderName');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -841,14 +847,20 @@ class _ParametrePageState extends State<ParametrePage> {
     }
 
     // Récupérer le nom du destinataire (depuis les relations)
-    String receiverName = 'Utilisateur inconnu';
+    String receiverName = 'Utilisateur #${invitation.receiverId}';
     if (invitation.receiver != null) {
       if (invitation.isReceiverUser()) {
-        receiverName = '${invitation.receiver!['nom'] ?? ''} ${invitation.receiver!['prenom'] ?? ''}'.trim();
+        final nom = invitation.receiver!['nom'] ?? '';
+        final prenom = invitation.receiver!['prenom'] ?? '';
+        receiverName = '$nom $prenom'.trim();
+        if (receiverName.isEmpty) {
+          receiverName = 'Utilisateur #${invitation.receiverId}';
+        }
       } else {
-        receiverName = invitation.receiver!['nom'] ?? 'Société inconnue';
+        receiverName = invitation.receiver!['nom'] ?? 'Société #${invitation.receiverId}';
       }
     }
+    debugPrint('👤 [Invitation envoyée] receiver: ${invitation.receiver}, receiverName: $receiverName');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

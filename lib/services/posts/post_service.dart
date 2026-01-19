@@ -10,12 +10,18 @@ enum PostVisibility {
   public('public'),
   friends('friends'),
   private('private'),
-  groupe('groupe');
+  // Valeurs pour les posts de groupe
+  membresOnly('membres_only'),  // Visible par tous les membres du groupe
+  adminsOnly('admins_only');    // Visible uniquement par les admins du groupe
 
   final String value;
   const PostVisibility(this.value);
 
   factory PostVisibility.fromString(String value) {
+    // Gérer l'ancien format 'groupe' pour compatibilité
+    if (value == 'groupe') {
+      return PostVisibility.membresOnly;
+    }
     return PostVisibility.values.firstWhere(
       (e) => e.value == value,
       orElse: () => PostVisibility.public,
@@ -475,6 +481,82 @@ class PostService {
       return postsData.map((json) => PostModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération du feed');
+    }
+  }
+
+  /// Récupérer le feed personnalisé (mes posts + posts des suivis)
+  /// Combine les posts personnels avec le feed des personnes suivies
+  /// pour garantir que l'utilisateur voit toujours ses propres posts
+  static Future<List<PostModel>> getPersonalizedFeed({
+    int limit = 20,
+    int offset = 0,
+    bool onlyWithMedia = false,
+  }) async {
+    try {
+      // Récupérer l'utilisateur connecté pour avoir son ID
+      final meResponse = await ApiService.get('/auth/me');
+      if (meResponse.statusCode != 200) {
+        // Fallback: utiliser getMyFeed si on ne peut pas récupérer l'utilisateur
+        return getMyFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia);
+      }
+
+      final meData = jsonDecode(meResponse.body);
+      final userId = meData['data']?['id'] ?? meData['id'];
+      final userType = meData['data']?['type'] ?? 'User';
+
+      print('📤 [PostService] getPersonalizedFeed - userId: $userId, userType: $userType');
+
+      // Charger en parallèle : mes posts + feed des suivis
+      final results = await Future.wait([
+        // Mes propres posts
+        getPostsByAuthor(
+          userId,
+          userType == 'Societe' ? AuthorType.societe : AuthorType.user,
+        ),
+        // Feed des personnes que je suis
+        getMyFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia),
+      ]);
+
+      final myPosts = results[0];
+      final followingFeed = results[1];
+
+      print('📥 [PostService] Mes posts: ${myPosts.length}, Feed suivis: ${followingFeed.length}');
+
+      // Combiner et dédupliquer par ID
+      final Map<int, PostModel> postsMap = {};
+
+      // Ajouter mes posts en premier
+      for (final post in myPosts) {
+        postsMap[post.id] = post;
+      }
+
+      // Ajouter les posts des suivis (sans écraser mes posts)
+      for (final post in followingFeed) {
+        if (!postsMap.containsKey(post.id)) {
+          postsMap[post.id] = post;
+        }
+      }
+
+      // Trier par date de création (plus récent en premier)
+      final combinedPosts = postsMap.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      // Appliquer la pagination
+      final startIndex = offset;
+      final endIndex = (offset + limit).clamp(0, combinedPosts.length);
+
+      if (startIndex >= combinedPosts.length) {
+        return [];
+      }
+
+      final paginatedPosts = combinedPosts.sublist(startIndex, endIndex);
+      print('📥 [PostService] Feed combiné: ${paginatedPosts.length} posts');
+
+      return paginatedPosts;
+    } catch (e) {
+      print('❌ [PostService] Erreur getPersonalizedFeed: $e');
+      // Fallback: utiliser getMyFeed en cas d'erreur
+      return getMyFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia);
     }
   }
 

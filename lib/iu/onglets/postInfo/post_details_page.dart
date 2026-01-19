@@ -1232,8 +1232,10 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
         return 'Amis';
       case PostVisibility.private:
         return 'Privé';
-      case PostVisibility.groupe:
-        return 'Groupe';
+      case PostVisibility.membresOnly:
+        return 'Membres';
+      case PostVisibility.adminsOnly:
+        return 'Admins';
     }
   }
 }

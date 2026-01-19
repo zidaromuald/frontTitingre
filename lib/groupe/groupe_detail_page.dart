@@ -5,6 +5,10 @@ import '../services/groupe/groupe_invitation_service.dart';
 import '../services/AuthUS/user_auth_service.dart';
 import '../services/suivre/abonnement_auth_service.dart';
 import '../services/suivre/suivre_auth_service.dart' as suivre;
+import '../services/posts/post_service.dart';
+import '../widgets/r2_network_image.dart';
+import '../iu/onglets/postInfo/post_details_page.dart';
+import '../iu/onglets/postInfo/post.dart';
 import 'groupe_chat_page.dart';
 
 /// Page de détail d'un groupe
@@ -27,6 +31,11 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
   String? _errorMessage;
 
   late TabController _tabController;
+
+  // Posts du groupe
+  List<PostModel> _groupePosts = [];
+  bool _isLoadingPosts = false;
+  String? _postsError;
 
   // Couleurs
   static const Color primaryColor = Color(0xff5ac18e);
@@ -90,6 +99,37 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Charger les posts du groupe
+  Future<void> _loadGroupePosts() async {
+    if (_isLoadingPosts) return;
+
+    setState(() {
+      _isLoadingPosts = true;
+      _postsError = null;
+    });
+
+    try {
+      print('📤 [GroupeDetailPage] Chargement des posts du groupe ${widget.groupeId}');
+      final posts = await PostService.getPostsByGroupe(widget.groupeId);
+      print('✅ [GroupeDetailPage] ${posts.length} posts chargés');
+
+      if (mounted) {
+        setState(() {
+          _groupePosts = posts;
+          _isLoadingPosts = false;
+        });
+      }
+    } catch (e) {
+      print('❌ [GroupeDetailPage] Erreur chargement posts: $e');
+      if (mounted) {
+        setState(() {
+          _postsError = e.toString();
+          _isLoadingPosts = false;
         });
       }
     }
@@ -924,22 +964,122 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
   }
 
   Widget _buildPostsTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.article, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text(
-            'Publications du groupe',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Fonctionnalité à implémenter',
-            style: TextStyle(fontSize: 14, color: darkGray),
-          ),
-        ],
+    // Charger les posts au premier affichage
+    if (_groupePosts.isEmpty && !_isLoadingPosts && _postsError == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadGroupePosts();
+      });
+    }
+
+    // Affichage du chargement
+    if (_isLoadingPosts) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Chargement des publications...'),
+          ],
+        ),
+      );
+    }
+
+    // Affichage de l'erreur
+    if (_postsError != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text(
+              'Erreur de chargement',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _postsError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: darkGray, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadGroupePosts,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
+              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Affichage si pas de posts
+    if (_groupePosts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.article_outlined, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Aucune publication',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Soyez le premier à publier dans ce groupe !',
+              style: TextStyle(fontSize: 14, color: darkGray),
+            ),
+            if (_isMember) ...[
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CreerPostPage(),
+                    ),
+                  );
+                  if (result == true) {
+                    _loadGroupePosts();
+                  }
+                },
+                icon: const Icon(Icons.add, color: Colors.white),
+                label: const Text('Créer un post', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    // Affichage des posts
+    return RefreshIndicator(
+      onRefresh: _loadGroupePosts,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _groupePosts.length,
+        itemBuilder: (context, index) {
+          final post = _groupePosts[index];
+          return _GroupePostCard(
+            post: post,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PostDetailsPage(postId: post.id),
+                ),
+              );
+              _loadGroupePosts(); // Rafraîchir après retour
+            },
+          );
+        },
       ),
     );
   }
@@ -1109,5 +1249,266 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
       'Déc',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+}
+
+/// Widget pour afficher une carte de post dans le groupe
+class _GroupePostCard extends StatelessWidget {
+  final PostModel post;
+  final VoidCallback? onTap;
+
+  const _GroupePostCard({
+    required this.post,
+    this.onTap,
+  });
+
+  // Couleurs
+  static const Color primaryColor = Color(0xff5ac18e);
+  static const Color darkGray = Color(0xFF8D8D8D);
+
+  String _formatTimestamp(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays > 7) {
+      return '${date.day}/${date.month}/${date.year}';
+    } else if (diff.inDays > 0) {
+      return 'Il y a ${diff.inDays}j';
+    } else if (diff.inHours > 0) {
+      return 'Il y a ${diff.inHours}h';
+    } else if (diff.inMinutes > 0) {
+      return 'Il y a ${diff.inMinutes}min';
+    } else {
+      return 'À l\'instant';
+    }
+  }
+
+  /// Transformer l'URL du média en URL complète si nécessaire
+  String _getMediaUrl(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return 'https://api.titingre.com/storage/$url';
+  }
+
+  /// Détecter si c'est une vidéo basé sur l'extension
+  bool _isVideo(String url) {
+    final lowercaseUrl = url.toLowerCase();
+    return lowercaseUrl.endsWith('.mp4') ||
+        lowercaseUrl.endsWith('.mov') ||
+        lowercaseUrl.endsWith('.avi') ||
+        lowercaseUrl.endsWith('.mkv') ||
+        lowercaseUrl.endsWith('.webm');
+  }
+
+  /// Détecter si c'est un audio basé sur l'extension
+  bool _isAudio(String url) {
+    final lowercaseUrl = url.toLowerCase();
+    return lowercaseUrl.endsWith('.mp3') ||
+        lowercaseUrl.endsWith('.wav') ||
+        lowercaseUrl.endsWith('.aac') ||
+        lowercaseUrl.endsWith('.m4a') ||
+        lowercaseUrl.endsWith('.ogg');
+  }
+
+  /// Construire le widget média approprié
+  Widget _buildMediaWidget(String url, ColorScheme cs) {
+    final fullUrl = _getMediaUrl(url);
+
+    if (_isVideo(url)) {
+      return Container(
+        height: 180,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(Icons.movie, size: 50, color: Colors.white.withOpacity(0.3)),
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.play_arrow, color: Colors.white, size: 36),
+            ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.videocam, color: Colors.white, size: 14),
+                    SizedBox(width: 4),
+                    Text('Vidéo', style: TextStyle(color: Colors.white, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (_isAudio(url)) {
+      return Container(
+        height: 70,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: cs.primaryContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.audio_file, size: 28, color: primaryColor),
+            const SizedBox(width: 12),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Fichier audio',
+                  style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  'Appuyez pour écouter',
+                  style: TextStyle(color: cs.onPrimaryContainer.withOpacity(0.7), fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: R2NetworkImage(
+          imageUrl: fullUrl,
+          height: 180,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final authorPhoto = post.getAuthorPhoto();
+    final hasMedia = post.hasMedia() && post.mediaUrls!.isNotEmpty;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header avec auteur
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: primaryColor.withOpacity(0.2),
+                    backgroundImage: authorPhoto != null ? NetworkImage(authorPhoto) : null,
+                    child: authorPhoto == null
+                        ? Icon(
+                            post.authorType == AuthorType.societe ? Icons.business : Icons.person,
+                            size: 20,
+                            color: primaryColor,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post.getAuthorName(),
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        Text(
+                          _formatTimestamp(post.createdAt),
+                          style: TextStyle(fontSize: 12, color: darkGray),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Badge de visibilité
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      post.visibility == PostVisibility.adminsOnly ? 'Admins' : 'Membres',
+                      style: TextStyle(fontSize: 10, color: primaryColor, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Contenu du post
+              if (post.contenu.isNotEmpty) ...[
+                Text(
+                  post.contenu,
+                  style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.85), height: 1.4),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Média
+              if (hasMedia) ...[
+                _buildMediaWidget(post.mediaUrls!.first, cs),
+                if (post.mediaUrls!.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '+${post.mediaUrls!.length - 1} autre(s) média(s)',
+                      style: TextStyle(fontSize: 12, color: darkGray),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+              ],
+
+              // Statistiques
+              Row(
+                children: [
+                  Icon(Icons.favorite_border, size: 18, color: darkGray),
+                  const SizedBox(width: 4),
+                  Text('${post.likesCount}', style: TextStyle(fontSize: 12, color: darkGray)),
+                  const SizedBox(width: 16),
+                  Icon(Icons.chat_bubble_outline, size: 18, color: darkGray),
+                  const SizedBox(width: 4),
+                  Text('${post.commentsCount}', style: TextStyle(fontSize: 12, color: darkGray)),
+                  const Spacer(),
+                  Icon(Icons.share_outlined, size: 18, color: darkGray),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -8,7 +8,7 @@ import '../widgets/editable_societe_avatar.dart';
 import '../widgets/r2_network_image.dart';
 import '../iu/onglets/postInfo/post.dart';
 import '../iu/onglets/postInfo/post_details_page.dart';
-import '../iu/onglets/postInfo/post_search_page.dart';
+//import '../iu/onglets/postInfo/post_search_page.dart';
 import 'onglets/paramInfo/parametre.dart';
 import 'onglets/servicePlan/service.dart' as service_societe;
 
@@ -778,20 +778,20 @@ class _PostCard extends StatelessWidget {
   bool _isVideo(String url) {
     final lowercaseUrl = url.toLowerCase();
     return lowercaseUrl.endsWith('.mp4') ||
-           lowercaseUrl.endsWith('.mov') ||
-           lowercaseUrl.endsWith('.avi') ||
-           lowercaseUrl.endsWith('.mkv') ||
-           lowercaseUrl.endsWith('.webm');
+        lowercaseUrl.endsWith('.mov') ||
+        lowercaseUrl.endsWith('.avi') ||
+        lowercaseUrl.endsWith('.mkv') ||
+        lowercaseUrl.endsWith('.webm');
   }
 
   /// Détecter si c'est un audio basé sur l'extension
   bool _isAudio(String url) {
     final lowercaseUrl = url.toLowerCase();
     return lowercaseUrl.endsWith('.mp3') ||
-           lowercaseUrl.endsWith('.wav') ||
-           lowercaseUrl.endsWith('.aac') ||
-           lowercaseUrl.endsWith('.m4a') ||
-           lowercaseUrl.endsWith('.ogg');
+        lowercaseUrl.endsWith('.wav') ||
+        lowercaseUrl.endsWith('.aac') ||
+        lowercaseUrl.endsWith('.m4a') ||
+        lowercaseUrl.endsWith('.ogg');
   }
 
   /// Construire le widget média approprié (image, vidéo ou audio)
@@ -811,11 +811,7 @@ class _PostCard extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             // Icône de vidéo en arrière-plan
-            Icon(
-              Icons.movie,
-              size: 50,
-              color: Colors.white.withOpacity(0.3),
-            ),
+            Icon(Icons.movie, size: 50, color: Colors.white.withOpacity(0.3)),
             // Bouton play au centre
             Container(
               width: 50,
@@ -868,11 +864,7 @@ class _PostCard extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.audio_file,
-              size: 28,
-              color: cs.primary,
-            ),
+            Icon(Icons.audio_file, size: 28, color: cs.primary),
             const SizedBox(width: 12),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,

@@ -403,6 +403,15 @@ class PostService {
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> postsData = jsonResponse['data'];
+      // Debug: afficher les données des posts avec médias
+      for (var post in postsData) {
+        if (post['videos'] != null && (post['videos'] as List).isNotEmpty) {
+          print('🎬 [PostService] Post ${post['id']} avec vidéos: ${post['videos']}');
+        }
+        if (post['images'] != null && (post['images'] as List).isNotEmpty) {
+          print('🖼️ [PostService] Post ${post['id']} avec images: ${post['images']}');
+        }
+      }
       return postsData.map((json) => PostModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération du feed public');

@@ -462,15 +462,21 @@ class GroupeAuthService {
 
   /// Récupérer un groupe par ID
   static Future<GroupeModel> getGroupe(int groupeId) async {
+    print('📤 [GroupeService] GET /groupes/$groupeId');
     final response = await ApiService.get('/groupes/$groupeId');
+    print('📥 [GroupeService] Response status: ${response.statusCode}');
+    print('📥 [GroupeService] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      // Le backend peut retourner 'data' ou 'groupe'
+      // Le backend peut retourner 'data' ou 'groupe' ou directement les données
       final groupeData = jsonResponse['data'] ?? jsonResponse['groupe'] ?? jsonResponse;
+      print('📥 [GroupeService] Groupe data: $groupeData');
       return GroupeModel.fromJson(groupeData);
     } else {
-      throw Exception('Groupe introuvable');
+      final error = jsonDecode(response.body);
+      print('❌ [GroupeService] Erreur getGroupe: ${error['message']}');
+      throw Exception(error['message'] ?? 'Groupe introuvable');
     }
   }
 

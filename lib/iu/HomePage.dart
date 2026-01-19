@@ -74,7 +74,7 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final posts = await PostService.getPublicFeed(limit: 20, offset: 0);
+      final posts = await PostService.getMyFeed(limit: 20, offset: 0);
       if (mounted) {
         setState(() {
           _posts = posts;

@@ -3,8 +3,8 @@ import '../services/groupe/groupe_service.dart';
 import '../services/groupe/groupe_membre_service.dart';
 import '../services/groupe/groupe_invitation_service.dart';
 import '../services/AuthUS/user_auth_service.dart';
-import '../services/AuthUS/societe_auth_service.dart';
 import '../services/suivre/abonnement_auth_service.dart';
+import '../services/suivre/suivre_auth_service.dart' as suivre;
 import 'groupe_chat_page.dart';
 
 /// Page de détail d'un groupe
@@ -52,21 +52,38 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
     });
 
     try {
-      final results = await Future.wait([
-        GroupeAuthService.getGroupe(widget.groupeId),
-        GroupeAuthService.isMember(widget.groupeId),
-        GroupeAuthService.getMyRole(widget.groupeId),
-      ]);
+      // Charger le groupe d'abord (obligatoire)
+      print('🔄 [GroupeDetailPage] Chargement du groupe ${widget.groupeId}...');
+      final groupe = await GroupeAuthService.getGroupe(widget.groupeId);
+      print('✅ [GroupeDetailPage] Groupe chargé: ${groupe.nom}');
+
+      // Charger les infos de membre en parallèle (optionnels)
+      bool isMember = false;
+      MembreRole? myRole;
+
+      try {
+        final memberResults = await Future.wait([
+          GroupeAuthService.isMember(widget.groupeId),
+          GroupeAuthService.getMyRole(widget.groupeId),
+        ]);
+        isMember = memberResults[0] as bool;
+        myRole = memberResults[1] as MembreRole?;
+        print('✅ [GroupeDetailPage] isMember: $isMember, myRole: ${myRole?.value}');
+      } catch (e) {
+        print('⚠️ [GroupeDetailPage] Erreur chargement statut membre: $e');
+        // Continuer sans ces infos
+      }
 
       if (mounted) {
         setState(() {
-          _groupe = results[0] as GroupeModel;
-          _isMember = results[1] as bool;
-          _myRole = results[2] as MembreRole?;
+          _groupe = groupe;
+          _isMember = isMember;
+          _myRole = myRole;
           _isLoading = false;
         });
       }
     } catch (e) {
+      print('❌ [GroupeDetailPage] Erreur chargement groupe: $e');
       if (mounted) {
         setState(() {
           _errorMessage = e.toString();
@@ -219,28 +236,48 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
     final TextEditingController searchController = TextEditingController();
     List<UserModel> searchResults = [];
     List<UserModel> subscribers = [];
+    List<UserModel> followingUsers = []; // Utilisateurs que je suis
     bool isSearching = false;
-    bool isLoadingSubscribers = false;
-    bool showSubscribers = true; // Par défaut, afficher les abonnés si société
+    bool isLoading = true;
+    int currentTab = 0; // 0 = Mes suivis, 1 = Abonnés (si société), 2 = Recherche
 
-    // Charger les abonnés si c'est une société
+    // Charger les données initiales
     try {
-      isLoadingSubscribers = true;
-      final abonnements = await AbonnementAuthService.getMySubscribers(
-        statut: AbonnementStatut.actif,
+      // Charger les utilisateurs que je suis
+      final myFollowing = await suivre.SuivreAuthService.getMyFollowing(
+        type: suivre.EntityType.user,
       );
 
-      // Extraire les users des abonnements
-      subscribers = abonnements
-          .where((abn) => abn.user != null)
-          .map((abn) => UserModel.fromJson(abn.user!))
-          .toList();
+      // Convertir en liste d'IDs pour récupérer les profils complets
+      for (final follow in myFollowing) {
+        try {
+          final user = await UserAuthService.getUserProfile(follow.followedId);
+          followingUsers.add(user);
+        } catch (e) {
+          print('⚠️ Erreur récupération user ${follow.followedId}: $e');
+        }
+      }
+      print('✅ ${followingUsers.length} utilisateurs suivis chargés');
 
-      isLoadingSubscribers = false;
+      // Charger les abonnés si c'est une société
+      try {
+        final abonnements = await AbonnementAuthService.getMySubscribers(
+          statut: AbonnementStatut.actif,
+        );
+        subscribers = abonnements
+            .where((abn) => abn.user != null)
+            .map((abn) => UserModel.fromJson(abn.user!))
+            .toList();
+        print('✅ ${subscribers.length} abonnés chargés');
+      } catch (e) {
+        // Pas une société, continuer sans abonnés
+        print('ℹ️ Pas d\'abonnés (probablement pas une société)');
+      }
+
+      isLoading = false;
     } catch (e) {
-      // Si erreur (probablement pas une société), continuer sans abonnés
-      isLoadingSubscribers = false;
-      showSubscribers = false;
+      print('❌ Erreur chargement données invitation: $e');
+      isLoading = false;
     }
 
     if (!mounted) return;
@@ -249,225 +286,134 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Row(
-            children: [
-              const Expanded(child: Text('Ajouter des membres')),
-              if (subscribers.isNotEmpty)
-                IconButton(
-                  icon: Icon(
-                    showSubscribers ? Icons.search : Icons.people,
-                    color: primaryColor,
-                  ),
-                  tooltip: showSubscribers ? 'Rechercher d\'autres utilisateurs' : 'Voir mes abonnés',
-                  onPressed: () {
-                    setDialogState(() {
-                      showSubscribers = !showSubscribers;
-                      searchController.clear();
-                      searchResults = [];
-                    });
-                  },
-                ),
-            ],
-          ),
+          title: const Text('Inviter des membres'),
           content: SizedBox(
             width: double.maxFinite,
+            height: 450,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Afficher le mode actuel
-                if (subscribers.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          showSubscribers ? Icons.people : Icons.search,
-                          size: 16,
-                          color: primaryColor,
+                // Onglets de sélection
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildTabButton(
+                        label: 'Mes suivis',
+                        icon: Icons.person_add,
+                        count: followingUsers.length,
+                        isSelected: currentTab == 0,
+                        onTap: () => setDialogState(() => currentTab = 0),
+                      ),
+                      const SizedBox(width: 8),
+                      if (subscribers.isNotEmpty)
+                        _buildTabButton(
+                          label: 'Abonnés',
+                          icon: Icons.people,
+                          count: subscribers.length,
+                          isSelected: currentTab == 1,
+                          onTap: () => setDialogState(() => currentTab = 1),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          showSubscribers
-                              ? 'Mes abonnés (${subscribers.length})'
-                              : 'Recherche globale',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+                      const SizedBox(width: 8),
+                      _buildTabButton(
+                        label: 'Recherche',
+                        icon: Icons.search,
+                        count: null,
+                        isSelected: currentTab == 2,
+                        onTap: () => setDialogState(() => currentTab = 2),
+                      ),
+                    ],
                   ),
-                const SizedBox(height: 12),
+                ),
+                const SizedBox(height: 16),
 
-                // Champ de recherche (uniquement en mode recherche)
-                if (!showSubscribers)
-                  TextField(
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Rechercher par nom ou email',
-                      prefixIcon: const Icon(Icons.search),
-                      border: const OutlineInputBorder(),
-                      suffixIcon: isSearching
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            )
-                          : null,
-                    ),
-                    onChanged: (value) async {
-                      if (value.length < 2) {
-                        setDialogState(() {
-                          searchResults = [];
-                        });
-                        return;
-                      }
-
-                      setDialogState(() => isSearching = true);
-
-                      try {
-                        final results = await UserAuthService.searchUsers(
-                          query: value,
-                          limit: 10,
-                        );
-                        setDialogState(() {
-                          searchResults = results;
-                          isSearching = false;
-                        });
-                      } catch (e) {
-                        setDialogState(() => isSearching = false);
-                      }
-                    },
-                  ),
-
-                if (!showSubscribers) const SizedBox(height: 16),
-
-                // Liste des abonnés OU résultats de recherche
-                if (showSubscribers && isLoadingSubscribers)
-                  const Center(child: CircularProgressIndicator())
-                else if (showSubscribers && subscribers.isNotEmpty)
-                  SizedBox(
-                    height: 300,
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: subscribers.length,
-                      itemBuilder: (context, index) {
-                        final user = subscribers[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: primaryColor,
-                            backgroundImage: user.profile?.photo != null
-                                ? NetworkImage(user.profile!.photo!)
-                                : null,
-                            child: user.profile?.photo == null
-                                ? Text(
-                                    user.nom.substring(0, 1).toUpperCase(),
-                                    style: const TextStyle(color: Colors.white),
-                                  )
-                                : null,
-                          ),
-                          title: Text('${user.prenom} ${user.nom}'),
-                          subtitle: Text(user.email ?? user.numero),
-                          trailing: ElevatedButton.icon(
-                            icon: const Icon(Icons.add, size: 16),
-                            label: const Text('Ajouter'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              await _sendInvitation(user);
-                            },
-                          ),
-                        );
-                      },
-                    ),
+                // Contenu selon l'onglet sélectionné
+                if (isLoading)
+                  const Expanded(
+                    child: Center(child: CircularProgressIndicator()),
                   )
-                else if (showSubscribers && subscribers.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
+                else if (currentTab == 0)
+                  // Onglet "Mes suivis"
+                  _buildUserList(
+                    users: followingUsers,
+                    emptyIcon: Icons.person_add_disabled,
+                    emptyTitle: 'Aucun suivi',
+                    emptySubtitle: 'Vous ne suivez aucun utilisateur pour le moment',
+                    setDialogState: setDialogState,
+                  )
+                else if (currentTab == 1)
+                  // Onglet "Abonnés"
+                  _buildUserList(
+                    users: subscribers,
+                    emptyIcon: Icons.people_outline,
+                    emptyTitle: 'Aucun abonné',
+                    emptySubtitle: 'Vous n\'avez pas encore d\'abonnés',
+                    setDialogState: setDialogState,
+                  )
+                else if (currentTab == 2)
+                  // Onglet "Recherche"
+                  Expanded(
                     child: Column(
                       children: [
-                        Icon(Icons.people_outline, size: 48, color: darkGray),
-                        SizedBox(height: 8),
-                        Text(
-                          'Aucun abonné',
-                          style: TextStyle(
-                            color: darkGray,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Utilisez la recherche pour inviter des membres',
-                          style: TextStyle(color: darkGray, fontSize: 12),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  )
-                else if (!showSubscribers && searchResults.isNotEmpty)
-                  SizedBox(
-                    height: 300,
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: searchResults.length,
-                      itemBuilder: (context, index) {
-                        final user = searchResults[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: primaryColor,
-                            backgroundImage: user.profile?.photo != null
-                                ? NetworkImage(user.profile!.photo!)
-                                : null,
-                            child: user.profile?.photo == null
-                                ? Text(
-                                    user.nom.substring(0, 1).toUpperCase(),
-                                    style: const TextStyle(color: Colors.white),
+                        TextField(
+                          controller: searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Rechercher par nom ou email',
+                            prefixIcon: const Icon(Icons.search),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: isSearching
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
                                   )
                                 : null,
                           ),
-                          title: Text('${user.prenom} ${user.nom}'),
-                          subtitle: Text(user.email ?? user.numero),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.send, color: primaryColor),
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              await _sendInvitation(user);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  )
-                else if (!showSubscribers && searchController.text.length >= 2 && !isSearching)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Aucun utilisateur trouvé',
-                      style: TextStyle(color: darkGray),
-                    ),
-                  )
-                else if (!showSubscribers && searchController.text.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Entrez un nom ou email pour rechercher',
-                      style: TextStyle(color: darkGray),
+                          onChanged: (value) async {
+                            if (value.length < 2) {
+                              setDialogState(() => searchResults = []);
+                              return;
+                            }
+
+                            setDialogState(() => isSearching = true);
+
+                            try {
+                              final results = await UserAuthService.searchUsers(
+                                query: value,
+                                limit: 10,
+                              );
+                              setDialogState(() {
+                                searchResults = results;
+                                isSearching = false;
+                              });
+                            } catch (e) {
+                              setDialogState(() => isSearching = false);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: searchResults.isNotEmpty
+                              ? ListView.builder(
+                                  itemCount: searchResults.length,
+                                  itemBuilder: (context, index) {
+                                    final user = searchResults[index];
+                                    return _buildUserTile(user);
+                                  },
+                                )
+                              : Center(
+                                  child: Text(
+                                    searchController.text.length >= 2
+                                        ? 'Aucun utilisateur trouvé'
+                                        : 'Entrez un nom ou email pour rechercher',
+                                    style: const TextStyle(color: darkGray),
+                                  ),
+                                ),
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -480,6 +426,125 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Construire un bouton d'onglet
+  Widget _buildTabButton({
+    required String label,
+    required IconData icon,
+    required int? count,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : darkGray,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              count != null ? '$label ($count)' : label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : darkGray,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Construire la liste des utilisateurs
+  Widget _buildUserList({
+    required List<UserModel> users,
+    required IconData emptyIcon,
+    required String emptyTitle,
+    required String emptySubtitle,
+    required StateSetter setDialogState,
+  }) {
+    if (users.isEmpty) {
+      return Expanded(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(emptyIcon, size: 48, color: darkGray),
+              const SizedBox(height: 8),
+              Text(
+                emptyTitle,
+                style: const TextStyle(
+                  color: darkGray,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                emptySubtitle,
+                style: const TextStyle(color: darkGray, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Expanded(
+      child: ListView.builder(
+        itemCount: users.length,
+        itemBuilder: (context, index) {
+          final user = users[index];
+          return _buildUserTile(user);
+        },
+      ),
+    );
+  }
+
+  /// Construire une tuile d'utilisateur
+  Widget _buildUserTile(UserModel user) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: primaryColor,
+        backgroundImage: user.profile?.photo != null
+            ? NetworkImage(user.profile!.photo!)
+            : null,
+        child: user.profile?.photo == null
+            ? Text(
+                user.nom.isNotEmpty ? user.nom.substring(0, 1).toUpperCase() : '?',
+                style: const TextStyle(color: Colors.white),
+              )
+            : null,
+      ),
+      title: Text('${user.prenom} ${user.nom}'),
+      subtitle: Text(user.email ?? user.numero),
+      trailing: ElevatedButton.icon(
+        icon: const Icon(Icons.person_add, size: 16),
+        label: const Text('Inviter'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+        onPressed: () async {
+          Navigator.pop(context);
+          await _sendInvitation(user);
+        },
       ),
     );
   }

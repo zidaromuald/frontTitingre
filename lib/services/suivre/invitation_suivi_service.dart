@@ -52,9 +52,10 @@ class InvitationSuiviModel {
   final String receiverType; // 'User' ou 'Societe'
   final InvitationSuiviStatus status;
   final String? message;
+  final DateTime? expiresAt;
   final DateTime? respondedAt;
   final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
 
   // Relations optionnelles (peuvent être incluses selon l'endpoint)
   final Map<String, dynamic>? sender;
@@ -68,9 +69,10 @@ class InvitationSuiviModel {
     required this.receiverType,
     required this.status,
     this.message,
+    this.expiresAt,
     this.respondedAt,
     required this.createdAt,
-    required this.updatedAt,
+    this.updatedAt,
     this.sender,
     this.receiver,
   });
@@ -81,6 +83,7 @@ class InvitationSuiviModel {
     final senderType = json['sender_type'] ?? json['senderType'];
     final receiverId = json['receiver_id'] ?? json['receiverId'];
     final receiverType = json['receiver_type'] ?? json['receiverType'];
+    final expiresAtStr = json['expires_at'] ?? json['expiresAt'];
     final respondedAtStr = json['responded_at'] ?? json['respondedAt'];
     final createdAtStr = json['created_at'] ?? json['createdAt'];
     final updatedAtStr = json['updated_at'] ?? json['updatedAt'];
@@ -93,11 +96,10 @@ class InvitationSuiviModel {
       receiverType: receiverType,
       status: InvitationSuiviStatus.fromString(json['status'] ?? 'pending'),
       message: json['message'],
-      respondedAt: respondedAtStr != null
-          ? DateTime.parse(respondedAtStr)
-          : null,
+      expiresAt: expiresAtStr != null ? DateTime.parse(expiresAtStr) : null,
+      respondedAt: respondedAtStr != null ? DateTime.parse(respondedAtStr) : null,
       createdAt: DateTime.parse(createdAtStr),
-      updatedAt: DateTime.parse(updatedAtStr),
+      updatedAt: updatedAtStr != null ? DateTime.parse(updatedAtStr) : null,
       sender: json['sender'],
       receiver: json['receiver'],
     );
@@ -112,10 +114,22 @@ class InvitationSuiviModel {
       'receiver_type': receiverType,
       'status': status.value,
       if (message != null) 'message': message,
+      if (expiresAt != null) 'expires_at': expiresAt!.toIso8601String(),
       if (respondedAt != null) 'responded_at': respondedAt!.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
     };
+  }
+
+  /// Vérifier si l'invitation est expirée
+  bool isExpired() {
+    if (expiresAt == null) return false;
+    return DateTime.now().isAfter(expiresAt!);
+  }
+
+  /// Vérifier si l'invitation peut être acceptée
+  bool canBeAccepted() {
+    return isPending() && !isExpired();
   }
 
   // Méthodes helper

@@ -312,6 +312,20 @@ class PostService {
   /// POST /posts
   /// Nécessite authentification
   static Future<PostModel> createPost(CreatePostDto dto) async {
+    // Debug: afficher les données envoyées
+    print('📤 [PostService] createPost - DTO: ${dto.toJson()}');
+
+    // Debug: vérifier l'utilisateur connecté
+    try {
+      final meResponse = await ApiService.get('/auth/me');
+      if (meResponse.statusCode == 200) {
+        final meData = jsonDecode(meResponse.body);
+        print('👤 [PostService] Utilisateur connecté: ${meData['data'] ?? meData}');
+      }
+    } catch (e) {
+      print('⚠️ [PostService] Impossible de récupérer l\'utilisateur: $e');
+    }
+
     final response = await ApiService.post('/posts', dto.toJson());
 
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -319,6 +333,7 @@ class PostService {
       return PostModel.fromJson(jsonResponse['data']);
     } else {
       final error = jsonDecode(response.body);
+      print('❌ [PostService] Erreur création post: ${response.statusCode} - ${response.body}');
       throw Exception(error['message'] ?? 'Erreur de création du post');
     }
   }

@@ -4,6 +4,7 @@ import 'package:gestauth_clean/services/posts/like_service.dart';
 import 'package:gestauth_clean/services/posts/comment_service.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
+import 'package:gestauth_clean/widgets/video_player_widget.dart';
 import 'post_edit_page.dart';
 
 /// Page de détails d'un post avec options de modification/suppression
@@ -967,34 +968,15 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
     }
   }
 
-  /// Ouvrir le lecteur vidéo
+  /// Ouvrir le lecteur vidéo en plein écran
   void _openVideoPlayer(String videoUrl) {
-    // Pour l'instant, ouvrir dans un navigateur ou afficher un dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Lecture vidéo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.videocam, size: 64, color: Colors.blue),
-            const SizedBox(height: 16),
-            const Text('La lecture vidéo intégrée sera disponible prochainement.'),
-            const SizedBox(height: 8),
-            Text(
-              videoUrl,
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VideoPlayerFullScreen(
+          videoUrl: videoUrl,
+          title: 'Vidéo',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
       ),
     );
   }

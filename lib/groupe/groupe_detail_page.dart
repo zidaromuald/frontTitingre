@@ -68,7 +68,9 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
         ]);
         isMember = memberResults[0] as bool;
         myRole = memberResults[1] as MembreRole?;
-        print('✅ [GroupeDetailPage] isMember: $isMember, myRole: ${myRole?.value}');
+        print(
+          '✅ [GroupeDetailPage] isMember: $isMember, myRole: ${myRole?.value}',
+        );
       } catch (e) {
         print('⚠️ [GroupeDetailPage] Erreur chargement statut membre: $e');
         // Continuer sans ces infos
@@ -239,7 +241,8 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
     List<UserModel> followingUsers = []; // Utilisateurs que je suis
     bool isSearching = false;
     bool isLoading = true;
-    int currentTab = 0; // 0 = Mes suivis, 1 = Abonnés (si société), 2 = Recherche
+    int currentTab =
+        0; // 0 = Mes suivis, 1 = Abonnés (si société), 2 = Recherche
 
     // Charger les données initiales
     try {
@@ -247,16 +250,6 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
       final myFollowing = await suivre.SuivreAuthService.getMyFollowing(
         type: suivre.EntityType.user,
       );
-
-      // Convertir en liste d'IDs pour récupérer les profils complets
-      for (final follow in myFollowing) {
-        try {
-          final user = await UserAuthService.getUserProfile(follow.followedId);
-          followingUsers.add(user);
-        } catch (e) {
-          print('⚠️ Erreur récupération user ${follow.followedId}: $e');
-        }
-      }
       print('✅ ${followingUsers.length} utilisateurs suivis chargés');
 
       // Charger les abonnés si c'est une société
@@ -338,7 +331,8 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                     users: followingUsers,
                     emptyIcon: Icons.person_add_disabled,
                     emptyTitle: 'Aucun suivi',
-                    emptySubtitle: 'Vous ne suivez aucun utilisateur pour le moment',
+                    emptySubtitle:
+                        'Vous ne suivez aucun utilisateur pour le moment',
                     setDialogState: setDialogState,
                   )
                 else if (currentTab == 1)
@@ -367,7 +361,9 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                                     height: 20,
                                     child: Padding(
                                       padding: EdgeInsets.all(12),
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     ),
                                   )
                                 : null,
@@ -450,11 +446,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected ? Colors.white : darkGray,
-            ),
+            Icon(icon, size: 16, color: isSelected ? Colors.white : darkGray),
             const SizedBox(width: 6),
             Text(
               count != null ? '$label ($count)' : label,
@@ -526,7 +518,9 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
             : null,
         child: user.profile?.photo == null
             ? Text(
-                user.nom.isNotEmpty ? user.nom.substring(0, 1).toUpperCase() : '?',
+                user.nom.isNotEmpty
+                    ? user.nom.substring(0, 1).toUpperCase()
+                    : '?',
                 style: const TextStyle(color: Colors.white),
               )
             : null,
@@ -609,8 +603,10 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
           SnackBar(
             content: Text(
               ajoutDirect
-                  ? resultMessage ?? '${user.prenom} ${user.nom} a été ajouté(e) au groupe'
-                  : resultMessage ?? 'Invitation envoyée à ${user.prenom} ${user.nom}',
+                  ? resultMessage ??
+                        '${user.prenom} ${user.nom} a été ajouté(e) au groupe'
+                  : resultMessage ??
+                        'Invitation envoyée à ${user.prenom} ${user.nom}',
             ),
             backgroundColor: primaryColor,
           ),

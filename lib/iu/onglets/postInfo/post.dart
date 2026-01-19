@@ -1189,6 +1189,14 @@ class _CreerPostPageState extends State<CreerPostPage> {
         visibility = PostVisibility.public;
       }
 
+      // Debug: vérifier si on est membre du groupe avant de poster
+      if (destinataire == "groupe" && _selectedGroupeId != null) {
+        print('📤 [Post] Publication dans groupe ID: $_selectedGroupeId');
+        final isMember = await GroupeAuthService.isMember(_selectedGroupeId!);
+        final myRole = await GroupeAuthService.getMyRole(_selectedGroupeId!);
+        print('👤 [Post] Est membre du groupe $_selectedGroupeId: $isMember, rôle: ${myRole?.value}');
+      }
+
       // 3. Créer le DTO pour le post avec les médias séparés par type
       final createDto = CreatePostDto(
         contenu: typePost == "texte"

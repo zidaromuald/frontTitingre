@@ -613,14 +613,20 @@ class GroupeAuthService {
   /// Vérifier si je suis membre d'un groupe
   static Future<bool> isMember(int groupeId) async {
     try {
+      print('📤 [GroupeService] Vérification membership: GET /groupes/$groupeId/is-member');
       final response = await ApiService.get('/groupes/$groupeId/is-member');
+      print('📥 [GroupeService] is-member response status: ${response.statusCode}');
+      print('📥 [GroupeService] is-member response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
-        return jsonResponse['data']['is_member'] ?? false;
+        final isMember = jsonResponse['data']?['is_member'] ?? jsonResponse['is_member'] ?? false;
+        print('📥 [GroupeService] is_member parsed: $isMember');
+        return isMember;
       }
       return false;
     } catch (e) {
+      print('❌ [GroupeService] Erreur isMember: $e');
       return false;
     }
   }
@@ -628,15 +634,20 @@ class GroupeAuthService {
   /// Récupérer mon rôle dans un groupe
   static Future<MembreRole?> getMyRole(int groupeId) async {
     try {
+      print('📤 [GroupeService] Récupération rôle: GET /groupes/$groupeId/my-role');
       final response = await ApiService.get('/groupes/$groupeId/my-role');
+      print('📥 [GroupeService] my-role response status: ${response.statusCode}');
+      print('📥 [GroupeService] my-role response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
-        final roleStr = jsonResponse['data']['role'];
+        final roleStr = jsonResponse['data']?['role'] ?? jsonResponse['role'];
+        print('📥 [GroupeService] role parsed: $roleStr');
         return roleStr != null ? MembreRole.fromString(roleStr) : null;
       }
       return null;
     } catch (e) {
+      print('❌ [GroupeService] Erreur getMyRole: $e');
       return null;
     }
   }

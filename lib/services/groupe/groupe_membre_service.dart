@@ -26,13 +26,17 @@ class GroupeMembreService {
     if (offset != null) params.add('offset=$offset');
 
     final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
+    print('📤 [GroupeMembreService] GET /groupes/$groupeId/membres$queryString');
     final response = await ApiService.get(
       '/groupes/$groupeId/membres$queryString',
     );
+    print('📥 [GroupeMembreService] Response status: ${response.statusCode}');
+    print('📥 [GroupeMembreService] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return List<Map<String, dynamic>>.from(jsonResponse['data']);
+      final data = jsonResponse['data'] ?? jsonResponse['membres'] ?? [];
+      return List<Map<String, dynamic>>.from(data);
     } else {
       throw Exception('Erreur de récupération des membres');
     }

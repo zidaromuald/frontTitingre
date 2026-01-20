@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:gestauth_clean/services/groupe/groupe_service.dart';
+import 'package:gestauth_clean/services/groupe/groupe_membre_service.dart';
 import 'package:gestauth_clean/services/suivre/suivre_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/posts/post_service.dart';
@@ -1189,12 +1190,44 @@ class _CreerPostPageState extends State<CreerPostPage> {
         visibility = PostVisibility.public;
       }
 
-      // Debug: vérifier si on est membre du groupe avant de poster
+      // Vérifier et corriger le membership si nécessaire pour les posts de groupe
       if (destinataire == "groupe" && _selectedGroupeId != null) {
         print('📤 [Post] Publication dans groupe ID: $_selectedGroupeId');
+
+        // Récupérer les informations du groupe pour debug
+        try {
+          final groupe = await GroupeAuthService.getGroupe(_selectedGroupeId!);
+          print('📋 [Post] Groupe info: id=${groupe.id}, nom=${groupe.nom}, createdById=${groupe.createdById}, createdByType=${groupe.createdByType}');
+        } catch (e) {
+          print('⚠️ [Post] Impossible de récupérer les infos du groupe: $e');
+        }
+
         final isMember = await GroupeAuthService.isMember(_selectedGroupeId!);
         final myRole = await GroupeAuthService.getMyRole(_selectedGroupeId!);
         print('👤 [Post] Est membre du groupe $_selectedGroupeId: $isMember, rôle: ${myRole?.value}');
+
+        // Récupérer la liste des membres pour debug
+        try {
+          final membres = await GroupeMembreService.getMembres(_selectedGroupeId!);
+          print('👥 [Post] Membres du groupe (${membres.length}):');
+          for (var m in membres) {
+            print('   - user_id: ${m['user_id']}, member_id: ${m['member_id']}, member_type: ${m['member_type']}, role: ${m['role']}');
+          }
+        } catch (e) {
+          print('⚠️ [Post] Impossible de récupérer les membres: $e');
+        }
+
+        // Si pas membre, essayer de rejoindre le groupe (peut fonctionner si groupe public ou si créateur)
+        if (!isMember) {
+          print('⚠️ [Post] Utilisateur non reconnu comme membre, tentative de rejoindre...');
+          try {
+            await GroupeMembreService.joinGroupe(_selectedGroupeId!);
+            print('✅ [Post] Rejoint le groupe avec succès');
+          } catch (e) {
+            print('❌ [Post] Impossible de rejoindre: $e');
+            // Continuer quand même, le backend vérifiera
+          }
+        }
       }
 
       // 3. Créer le DTO pour le post avec les médias séparés par type

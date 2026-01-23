@@ -142,6 +142,44 @@ class InvitationSuiviModel {
   bool isSenderSociete() => senderType == 'Societe';
   bool isReceiverUser() => receiverType == 'User';
   bool isReceiverSociete() => receiverType == 'Societe';
+
+  /// Obtenir le nom de l'expéditeur (User ou Societe)
+  String get senderName {
+    if (sender == null) {
+      return isSenderSociete() ? 'Société #$senderId' : 'Utilisateur #$senderId';
+    }
+
+    if (isSenderUser()) {
+      // Pour User: prenom + nom
+      final prenom = sender!['prenom'] ?? '';
+      final nom = sender!['nom'] ?? '';
+      final fullName = '$prenom $nom'.trim();
+      return fullName.isNotEmpty ? fullName : 'Utilisateur #$senderId';
+    } else {
+      // Pour Societe: nom_societe
+      final nomSociete = sender!['nom_societe'] ?? sender!['nom'] ?? '';
+      return nomSociete.isNotEmpty ? nomSociete : 'Société #$senderId';
+    }
+  }
+
+  /// Obtenir le nom du destinataire (User ou Societe)
+  String get receiverName {
+    if (receiver == null) {
+      return isReceiverSociete() ? 'Société #$receiverId' : 'Utilisateur #$receiverId';
+    }
+
+    if (isReceiverUser()) {
+      // Pour User: prenom + nom
+      final prenom = receiver!['prenom'] ?? '';
+      final nom = receiver!['nom'] ?? '';
+      final fullName = '$prenom $nom'.trim();
+      return fullName.isNotEmpty ? fullName : 'Utilisateur #$receiverId';
+    } else {
+      // Pour Societe: nom_societe
+      final nomSociete = receiver!['nom_societe'] ?? receiver!['nom'] ?? '';
+      return nomSociete.isNotEmpty ? nomSociete : 'Société #$receiverId';
+    }
+  }
 }
 
 /// Réponse lors de l'acceptation d'une invitation
@@ -226,7 +264,12 @@ class InvitationSuiviService {
   static Future<List<InvitationSuiviModel>> getMesInvitationsEnvoyees({
     InvitationSuiviStatus? status,
   }) async {
-    final queryString = status != null ? '?status=${status.value}' : '';
+    // Ajouter le paramètre include pour récupérer les informations du receiver
+    final params = <String>[];
+    if (status != null) params.add('status=${status.value}');
+    params.add('include=receiver'); // Inclure les infos du destinataire
+
+    final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
     print('📤 [InvitationSuiviService] Appel GET /invitations-suivi/sent$queryString');
     final response = await ApiService.get(
       '/invitations-suivi/sent$queryString',
@@ -301,7 +344,12 @@ class InvitationSuiviService {
   static Future<List<InvitationSuiviModel>> getMesInvitationsRecues({
     InvitationSuiviStatus? status,
   }) async {
-    final queryString = status != null ? '?status=${status.value}' : '';
+    // Ajouter le paramètre include pour récupérer les informations du sender
+    final params = <String>[];
+    if (status != null) params.add('status=${status.value}');
+    params.add('include=sender'); // Inclure les infos de l'expéditeur
+
+    final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
     print('📤 [InvitationSuiviService] Appel GET /invitations-suivi/received$queryString');
     final response = await ApiService.get(
       '/invitations-suivi/received$queryString',

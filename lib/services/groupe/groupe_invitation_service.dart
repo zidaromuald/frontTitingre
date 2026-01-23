@@ -72,8 +72,9 @@ class GroupeInvitationService {
   /// GET /groupes/invitations/me
   /// Nécessite authentification
   static Future<List<GroupeInvitationModel>> getMyInvitations() async {
-    print('📤 [InvitationService] Appel GET /groupes/invitations/me');
-    final response = await ApiService.get('/groupes/invitations/me');
+    // Ajouter le paramètre include pour récupérer les informations de l'inviteur
+    print('📤 [InvitationService] Appel GET /groupes/invitations/me?include=invitedByUser,groupe');
+    final response = await ApiService.get('/groupes/invitations/me?include=invitedByUser,groupe');
     print('📥 [InvitationService] Response status: ${response.statusCode}');
     print('📥 [InvitationService] Response body: ${response.body}');
 
@@ -81,6 +82,12 @@ class GroupeInvitationService {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> invitationsData = jsonResponse['data'] ?? [];
       print('📥 [InvitationService] Nombre d\'invitations reçues: ${invitationsData.length}');
+
+      // Debug: afficher les données d'invitation pour vérifier la présence de invitedByUser
+      if (invitationsData.isNotEmpty) {
+        print('📥 [InvitationService] Exemple d\'invitation: ${invitationsData.first}');
+      }
+
       return invitationsData
           .map((json) => GroupeInvitationModel.fromJson(json))
           .toList();
@@ -96,7 +103,12 @@ class GroupeInvitationService {
   static Future<List<GroupeInvitationModel>> getMySentInvitations({
     InvitationStatus? status,
   }) async {
-    final queryParams = status != null ? '?status=${status.value}' : '';
+    // Construire les paramètres de requête en incluant les relations
+    final params = <String>[];
+    if (status != null) params.add('status=${status.value}');
+    params.add('include=invitedUser,groupe'); // Inclure l'utilisateur invité et le groupe
+
+    final queryParams = '?${params.join('&')}';
     print('📤 [InvitationService] Appel GET /groupes/invitations/sent$queryParams');
     final response = await ApiService.get('/groupes/invitations/sent$queryParams');
     print('📥 [InvitationService] Response status: ${response.statusCode}');
@@ -106,6 +118,12 @@ class GroupeInvitationService {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> invitationsData = jsonResponse['data'] ?? jsonResponse['invitations'] ?? [];
       print('📥 [InvitationService] Nombre d\'invitations envoyées: ${invitationsData.length}');
+
+      // Debug: afficher un exemple pour vérifier les données
+      if (invitationsData.isNotEmpty) {
+        print('📥 [InvitationService] Exemple d\'invitation envoyée: ${invitationsData.first}');
+      }
+
       return invitationsData
           .map((json) => GroupeInvitationModel.fromJson(json))
           .toList();

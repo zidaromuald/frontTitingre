@@ -714,20 +714,8 @@ class _ParametrePageState extends State<ParametrePage> {
       iconColor = Colors.purple;
     }
 
-    // Récupérer le nom de l'expéditeur (depuis les relations)
-    String senderName = 'Utilisateur #${invitation.senderId}';
-    if (invitation.sender != null) {
-      if (invitation.isSenderUser()) {
-        final nom = invitation.sender!['nom'] ?? '';
-        final prenom = invitation.sender!['prenom'] ?? '';
-        senderName = '$nom $prenom'.trim();
-        if (senderName.isEmpty) {
-          senderName = 'Utilisateur #${invitation.senderId}';
-        }
-      } else {
-        senderName = invitation.sender!['nom'] ?? 'Société #${invitation.senderId}';
-      }
-    }
+    // Utiliser le helper senderName du modèle
+    final senderName = invitation.senderName;
     debugPrint('👤 [Invitation reçue] sender: ${invitation.sender}, senderName: $senderName');
 
     return Container(
@@ -846,20 +834,8 @@ class _ParametrePageState extends State<ParametrePage> {
       iconColor = Colors.purple;
     }
 
-    // Récupérer le nom du destinataire (depuis les relations)
-    String receiverName = 'Utilisateur #${invitation.receiverId}';
-    if (invitation.receiver != null) {
-      if (invitation.isReceiverUser()) {
-        final nom = invitation.receiver!['nom'] ?? '';
-        final prenom = invitation.receiver!['prenom'] ?? '';
-        receiverName = '$nom $prenom'.trim();
-        if (receiverName.isEmpty) {
-          receiverName = 'Utilisateur #${invitation.receiverId}';
-        }
-      } else {
-        receiverName = invitation.receiver!['nom'] ?? 'Société #${invitation.receiverId}';
-      }
-    }
+    // Utiliser le helper receiverName du modèle
+    final receiverName = invitation.receiverName;
     debugPrint('👤 [Invitation envoyée] receiver: ${invitation.receiver}, receiverName: $receiverName');
 
     return Container(

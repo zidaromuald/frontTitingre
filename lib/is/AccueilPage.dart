@@ -1164,90 +1164,58 @@ class _PostCardState extends State<_PostCard> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            // Média (image, vidéo ou audio)
+            if (hasMedia) ...[
+              _buildMediaWidget(widget.post.mediaUrls!.first, cs),
               const SizedBox(height: 12),
-              // Média (image, vidéo ou audio)
-              if (hasMedia) ...[
-                _buildMediaWidget(widget.post.mediaUrls!.first, cs),
-                const SizedBox(height: 12),
-              ],
-              Text(
-                widget.post.contenu,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: cs.onSurface.withOpacity(.8),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-              // Statistiques et actions (cliquer sur la carte pour interagir)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    // Like
-                    Icon(
-                      Icons.favorite_border,
-                      size: 20,
-                      color: cs.primary.withOpacity(.8),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${widget.post.likesCount}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    // Commentaires
-                    Icon(
-                      Icons.chat_bubble_outline,
-                      size: 20,
-                      color: cs.primary.withOpacity(.8),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${widget.post.commentsCount}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                    const Spacer(),
-                    // Partages
-                    Icon(
-                      Icons.share_outlined,
-                      size: 20,
-                      color: cs.onSurface.withOpacity(.6),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${widget.post.sharesCount}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface.withOpacity(.7),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Indicateur visuel pour cliquer
-                    Icon(
-                      Icons.touch_app,
-                      size: 16,
-                      color: cs.primary.withOpacity(.5),
-                    ),
-                  ],
-                ),
-              ),
             ],
-          ),
+            Text(
+              widget.post.contenu,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: cs.onSurface.withOpacity(.8),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            // Statistiques et actions
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.favorite_border, size: 20, color: cs.primary.withOpacity(.8)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${widget.post.likesCount}',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface),
+                  ),
+                  const SizedBox(width: 20),
+                  Icon(Icons.chat_bubble_outline, size: 20, color: cs.primary.withOpacity(.8)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${widget.post.commentsCount}',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.share_outlined, size: 20, color: cs.onSurface.withOpacity(.6)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${widget.post.sharesCount}',
+                    style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(.7)),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.touch_app, size: 16, color: cs.primary.withOpacity(.5)),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -261,6 +261,27 @@ class GroupeInvitationModel {
     final createdAtStr = json['created_at'] ?? json['createdAt'];
     final updatedAtStr = json['updated_at'] ?? json['updatedAt'];
 
+    // Gérer plusieurs formats possibles pour les utilisateurs
+    final invitedUserData = json['invited_user'] ??
+                            json['invitedUser'] ??
+                            json['user'] ??
+                            json['invited'];
+    final invitedByUserData = json['invited_by_user'] ??
+                              json['invitedByUser'] ??
+                              json['inviter'] ??
+                              json['sender'];
+
+    // Debug pour identifier le format de réponse
+    print('🔍 [GroupeInvitationModel] Parsing invitation id=${json['id']}');
+    print('   - invitedUser présent: ${invitedUserData != null}');
+    print('   - invitedByUser présent: ${invitedByUserData != null}');
+    if (invitedUserData != null) {
+      print('   - invitedUser keys: ${invitedUserData.keys.toList()}');
+    }
+    if (invitedByUserData != null) {
+      print('   - invitedByUser keys: ${invitedByUserData.keys.toList()}');
+    }
+
     return GroupeInvitationModel(
       id: json['id'],
       groupeId: groupeId,
@@ -273,8 +294,8 @@ class GroupeInvitationModel {
       createdAt: createdAtStr != null ? DateTime.parse(createdAtStr) : null,
       updatedAt: updatedAtStr != null ? DateTime.parse(updatedAtStr) : null,
       groupe: json['groupe'],
-      invitedUser: json['invited_user'] ?? json['invitedUser'],
-      invitedByUser: json['invited_by_user'] ?? json['invitedByUser'],
+      invitedUser: invitedUserData,
+      invitedByUser: invitedByUserData,
     );
   }
 

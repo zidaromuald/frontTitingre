@@ -1072,43 +1072,44 @@ class _PostCardState extends State<_PostCard> {
     }
   }
 
+  void _navigateToPostDetails() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PostDetailsPage(postId: widget.post.id),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final authorPhoto = widget.post.getAuthorPhoto();
     final hasMedia = widget.post.hasMedia() && widget.post.mediaUrls!.isNotEmpty;
 
-    return InkWell(
-      onTap: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PostDetailsPage(postId: widget.post.id),
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.06),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
-        );
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(.06),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: _navigateToPostDetails,
+                  child: CircleAvatar(
                     radius: 18,
                     backgroundColor: cs.primaryContainer,
                     backgroundImage: authorPhoto != null
@@ -1124,8 +1125,11 @@ class _PostCardState extends State<_PostCard> {
                           )
                         : null,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: _navigateToPostDetails,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1146,16 +1150,21 @@ class _PostCardState extends State<_PostCard> {
                       ],
                     ),
                   ),
-                  GestureDetector(
+                ),
+                // Bouton trois points - SÉPARÉ de la zone de navigation
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     onTap: () => _showPostOptions(context),
-                    behavior: HitTestBehavior.opaque,
+                    borderRadius: BorderRadius.circular(20),
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
               const SizedBox(height: 12),
               // Média (image, vidéo ou audio)
               if (hasMedia) ...[

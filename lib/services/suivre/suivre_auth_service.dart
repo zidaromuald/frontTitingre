@@ -53,6 +53,7 @@ class SuivreModel {
   final int scoreEngagement;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final Map<String, dynamic>? followedUser; // Données de l'utilisateur suivi
 
   SuivreModel({
     required this.userId,
@@ -64,6 +65,7 @@ class SuivreModel {
     this.scoreEngagement = 0,
     this.createdAt,
     this.updatedAt,
+    this.followedUser,
   });
 
   factory SuivreModel.fromJson(Map<String, dynamic> json) {
@@ -81,6 +83,7 @@ class SuivreModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
+      followedUser: json['followed'] ?? json['followedUser'] ?? json['followed_user'],
     );
   }
 
@@ -249,9 +252,15 @@ class SuivreAuthService {
   }
 
   /// Récupérer mes suivis (les entités que je suis)
-  /// GET /suivis/my-following?type=User|Societe
-  static Future<List<SuivreModel>> getMyFollowing({EntityType? type}) async {
-    final queryParams = type != null ? '?type=${type.value}' : '';
+  /// GET /suivis/my-following?type=User|Societe&include=followed
+  static Future<List<SuivreModel>> getMyFollowing({
+    EntityType? type,
+    bool includeDetails = false,
+  }) async {
+    final params = <String>[];
+    if (type != null) params.add('type=${type.value}');
+    if (includeDetails) params.add('include=followed');
+    final queryParams = params.isNotEmpty ? '?${params.join('&')}' : '';
     final response = await ApiService.get('/suivis/my-following$queryParams');
 
     if (response.statusCode == 200) {

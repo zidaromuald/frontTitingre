@@ -8,6 +8,7 @@ import '../widgets/editable_societe_avatar.dart';
 import '../widgets/r2_network_image.dart';
 import '../iu/onglets/postInfo/post.dart';
 import '../iu/onglets/postInfo/post_details_page.dart';
+import '../iu/onglets/postInfo/post_edit_page.dart';
 //import '../iu/onglets/postInfo/post_search_page.dart';
 import 'onglets/paramInfo/parametre.dart';
 import 'onglets/servicePlan/service.dart' as service_societe;
@@ -391,7 +392,10 @@ class _AccueilPageState extends State<AccueilPage> {
         _posts.length,
         (index) => Padding(
           padding: EdgeInsets.only(bottom: index < _posts.length - 1 ? 12 : 0),
-          child: _PostCard(post: _posts[index]),
+          child: _PostCard(
+            post: _posts[index],
+            onPostDeleted: _refreshPosts,
+          ),
         ),
       ),
     );
@@ -743,9 +747,18 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post});
+class _PostCard extends StatefulWidget {
+  const _PostCard({required this.post, required this.onPostDeleted});
   final PostModel post;
+  final VoidCallback onPostDeleted;
+
+  @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  int? _currentUserId;
+  AuthorType? _currentUserType;
 
   String _formatTimestamp(DateTime dateTime) {
     final now = DateTime.now();
@@ -904,17 +917,173 @@ class _PostCard extends StatelessWidget {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final societe = await SocieteAuthService.getMyProfile();
+      if (mounted) {
+        setState(() {
+          _currentUserId = societe.id;
+          _currentUserType = AuthorType.societe;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erreur chargement utilisateur: $e');
+    }
+  }
+
+  Future<void> _showPostOptions(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+
+    // Vérifier si l'utilisateur est le propriétaire
+    final isOwner = _currentUserId != null &&
+                    _currentUserType != null &&
+                    widget.post.isOwner(_currentUserId!, _currentUserType!);
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Barre de titre
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.onSurface.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Option: Voir le post
+            ListTile(
+              leading: Icon(Icons.visibility, color: cs.primary),
+              title: const Text('Voir le post'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PostDetailsPage(postId: widget.post.id),
+                  ),
+                );
+              },
+            ),
+
+            // Options pour le propriétaire uniquement
+            if (isOwner) ...[
+              const Divider(),
+
+              // Option: Modifier
+              ListTile(
+                leading: Icon(Icons.edit, color: cs.primary),
+                title: const Text('Modifier'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PostEditPage(post: widget.post),
+                    ),
+                  );
+                  if (result == true && mounted) {
+                    widget.onPostDeleted();
+                  }
+                },
+              ),
+
+              // Option: Supprimer
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeletePost(context);
+                },
+              ),
+            ],
+
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDeletePost(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le post'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer ce post ? Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _deletePost();
+    }
+  }
+
+  Future<void> _deletePost() async {
+    try {
+      await PostService.deletePost(widget.post.id);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Post supprimé avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        widget.onPostDeleted();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final authorPhoto = post.getAuthorPhoto();
-    final hasMedia = post.hasMedia() && post.mediaUrls!.isNotEmpty;
+    final authorPhoto = widget.post.getAuthorPhoto();
+    final hasMedia = widget.post.hasMedia() && widget.post.mediaUrls!.isNotEmpty;
 
     return InkWell(
       onTap: () async {
         await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PostDetailsPage(postId: post.id),
+            builder: (context) => PostDetailsPage(postId: widget.post.id),
           ),
         );
       },
@@ -947,7 +1116,7 @@ class _PostCard extends StatelessWidget {
                         : null,
                     child: authorPhoto == null
                         ? Icon(
-                            post.authorType == AuthorType.societe
+                            widget.post.authorType == AuthorType.societe
                                 ? Icons.business
                                 : Icons.person,
                             size: 18,
@@ -961,14 +1130,14 @@ class _PostCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          post.getAuthorName(),
+                          widget.post.getAuthorName(),
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
                         ),
                         Text(
-                          _formatTimestamp(post.createdAt),
+                          _formatTimestamp(widget.post.createdAt),
                           style: TextStyle(
                             fontSize: 11,
                             color: cs.onSurface.withOpacity(.6),
@@ -977,17 +1146,24 @@ class _PostCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
+                  GestureDetector(
+                    onTap: () => _showPostOptions(context),
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
               // Média (image, vidéo ou audio)
               if (hasMedia) ...[
-                _buildMediaWidget(post.mediaUrls!.first, cs),
+                _buildMediaWidget(widget.post.mediaUrls!.first, cs),
                 const SizedBox(height: 12),
               ],
               Text(
-                post.contenu,
+                widget.post.contenu,
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.4,
@@ -1014,7 +1190,7 @@ class _PostCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '${post.likesCount}',
+                      '${widget.post.likesCount}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -1030,7 +1206,7 @@ class _PostCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '${post.commentsCount}',
+                      '${widget.post.commentsCount}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -1046,7 +1222,7 @@ class _PostCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '${post.sharesCount}',
+                      '${widget.post.sharesCount}',
                       style: TextStyle(
                         fontSize: 13,
                         color: cs.onSurface.withOpacity(.7),

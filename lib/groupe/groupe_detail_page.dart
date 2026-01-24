@@ -286,10 +286,16 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
 
     // Charger les données initiales
     try {
-      // Charger les utilisateurs que je suis
+      // Charger les utilisateurs que je suis (avec détails)
       final myFollowing = await suivre.SuivreAuthService.getMyFollowing(
         type: suivre.EntityType.user,
+        includeDetails: true,
       );
+      // Convertir SuivreModel en UserModel
+      followingUsers = myFollowing
+          .where((s) => s.followedUser != null)
+          .map((s) => UserModel.fromJson(s.followedUser!))
+          .toList();
       print('✅ ${followingUsers.length} utilisateurs suivis chargés');
 
       // Charger les abonnés si c'est une société

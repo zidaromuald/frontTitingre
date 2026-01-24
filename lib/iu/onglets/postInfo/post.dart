@@ -59,7 +59,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
       // Charger en parallèle
       final results = await Future.wait([
         GroupeAuthService.getMyGroupes(), // Mes groupes
-        SuivreAuthService.getMyFollowing(type: EntityType.societe), // Sociétés que je suis
+        SuivreAuthService.getMyFollowing(
+          type: EntityType.societe,
+        ), // Sociétés que je suis
       ]);
 
       // Charger les détails des sociétés
@@ -67,7 +69,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
       List<SocieteModel> societes = [];
       for (var suivi in suivisSocietes) {
         try {
-          final societe = await SocieteAuthService.getSocieteProfile(suivi.followedId);
+          final societe = await SocieteAuthService.getSocieteProfile(
+            suivi.followedId,
+          );
           societes.add(societe);
         } catch (e) {
           debugPrint('Erreur chargement société ${suivi.followedId}: $e');
@@ -177,9 +181,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
 
             // Zone de contenu - HAUTEUR FIXE
             Container(
-              height: 200, // Hauteur fixe au lieu d'Expanded
+              height: 200,
               margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(12), // Réduit de 16 à 12
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -228,7 +232,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Icon(Icons.send, size: 18), // Réduit de 20 à 18
@@ -367,14 +373,14 @@ class _CreerPostPageState extends State<CreerPostPage> {
               Icon(
                 icon,
                 color: isSelected ? Colors.white : mattermostDarkBlue,
-                size: 20, // Réduit de 24 à 20
+                size: 20,
               ),
-              const SizedBox(height: 2), // Réduit de 4 à 2
+              const SizedBox(height: 2),
               Text(
                 label,
                 style: TextStyle(
                   color: isSelected ? Colors.white : mattermostDarkBlue,
-                  fontSize: 10, // Réduit de 12 à 10
+                  fontSize: 10,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -385,7 +391,6 @@ class _CreerPostPageState extends State<CreerPostPage> {
     );
   }
 
-  // Sélecteur de groupe/société RÉDUIT
   Widget _buildTargetSelector() {
     final isGroupe = destinataire == "groupe";
     final isLoading = isGroupe ? _isLoadingGroupes : _isLoadingSocietes;
@@ -433,8 +438,8 @@ class _CreerPostPageState extends State<CreerPostPage> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : isGroupe
-                    ? _buildGroupesList()
-                    : _buildSocietesList(),
+                ? _buildGroupesList()
+                : _buildSocietesList(),
           ),
         ],
       ),
@@ -571,7 +576,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
           controller: _textController,
           maxLines: null,
           decoration: const InputDecoration(
-            hintText: "Qu'avez-vous en tête ?",
+            hintText: "Qu'avez-vous à dire ?",
             hintStyle: TextStyle(color: mattermostDarkGray),
             border: InputBorder.none,
           ),
@@ -585,11 +590,12 @@ class _CreerPostPageState extends State<CreerPostPage> {
                   Expanded(
                     child: GridView.builder(
                       padding: const EdgeInsets.all(8),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                          ),
                       itemCount: _selectedFiles.length,
                       itemBuilder: (context, index) {
                         final file = _selectedFiles[index];
@@ -887,9 +893,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
     final double fileSizeMB = fileSize / (1024 * 1024); // Convertir en MB
 
     // Contraintes backend
-    const double maxImageSizeMB = 10.0;   // Images: 10 MB max
-    const double maxVideoSizeMB = 50.0;   // Vidéos: 50 MB max
-    const double maxAudioSizeMB = 10.0;   // Audio: 10 MB max
+    const double maxImageSizeMB = 10.0; // Images: 10 MB max
+    const double maxVideoSizeMB = 50.0; // Vidéos: 50 MB max
+    const double maxAudioSizeMB = 10.0; // Audio: 10 MB max
 
     switch (mediaType) {
       case 'image':
@@ -916,7 +922,8 @@ class _CreerPostPageState extends State<CreerPostPage> {
     try {
       if (typePost == "image") {
         // Sélection multiple d'images avec notre helper multiplateforme
-        final List<PlatformFile> images = await FilePickerHelper.pickMultipleImages();
+        final List<PlatformFile> images =
+            await FilePickerHelper.pickMultipleImages();
         if (images.isNotEmpty) {
           // Valider la taille de chaque image
           List<PlatformFile> validFiles = [];
@@ -954,13 +961,16 @@ class _CreerPostPageState extends State<CreerPostPage> {
           if (mounted) {
             String message = "${validFiles.length} image(s) sélectionnée(s)";
             if (errors.isNotEmpty) {
-              message += "\n${errors.length} fichier(s) rejeté(s) (trop lourds)";
+              message +=
+                  "\n${errors.length} fichier(s) rejeté(s) (trop lourds)";
             }
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(message),
-                backgroundColor: errors.isEmpty ? mattermostGreen : Colors.orange,
+                backgroundColor: errors.isEmpty
+                    ? mattermostGreen
+                    : Colors.orange,
                 duration: const Duration(seconds: 3),
               ),
             );
@@ -1004,10 +1014,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Erreur: $e"),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text("Erreur: $e"), backgroundColor: Colors.red),
         );
       }
     }
@@ -1016,7 +1023,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
   Future<void> _takeVideo() async {
     try {
       // Utiliser le helper qui gère automatiquement les erreurs web
-      final PlatformFile? video = await FilePickerHelper.pickVideo(source: ImageSource.camera);
+      final PlatformFile? video = await FilePickerHelper.pickVideo(
+        source: ImageSource.camera,
+      );
       if (video != null) {
         final error = _validateFileSize(video, 'video');
 
@@ -1051,10 +1060,7 @@ class _CreerPostPageState extends State<CreerPostPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Erreur: $e"),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text("Erreur: $e"), backgroundColor: Colors.red),
         );
       }
     }
@@ -1167,11 +1173,15 @@ class _CreerPostPageState extends State<CreerPostPage> {
           mediaUrls = await MediaServicePlatform.uploadImages(_selectedFiles);
         } else if (typePost == "video") {
           // Upload de la vidéo
-          final response = await MediaServicePlatform.uploadVideo(_selectedFiles.first);
+          final response = await MediaServicePlatform.uploadVideo(
+            _selectedFiles.first,
+          );
           mediaUrls = [response.url];
         } else if (typePost == "vocal") {
           // Upload de l'audio
-          final response = await MediaServicePlatform.uploadAudio(_selectedFiles.first);
+          final response = await MediaServicePlatform.uploadAudio(
+            _selectedFiles.first,
+          );
           mediaUrls = [response.url];
         }
       }
@@ -1197,21 +1207,29 @@ class _CreerPostPageState extends State<CreerPostPage> {
         // Récupérer les informations du groupe pour debug
         try {
           final groupe = await GroupeAuthService.getGroupe(_selectedGroupeId!);
-          print('📋 [Post] Groupe info: id=${groupe.id}, nom=${groupe.nom}, createdById=${groupe.createdById}, createdByType=${groupe.createdByType}');
+          print(
+            '📋 [Post] Groupe info: id=${groupe.id}, nom=${groupe.nom}, createdById=${groupe.createdById}, createdByType=${groupe.createdByType}',
+          );
         } catch (e) {
           print('⚠️ [Post] Impossible de récupérer les infos du groupe: $e');
         }
 
         final isMember = await GroupeAuthService.isMember(_selectedGroupeId!);
         final myRole = await GroupeAuthService.getMyRole(_selectedGroupeId!);
-        print('👤 [Post] Est membre du groupe $_selectedGroupeId: $isMember, rôle: ${myRole?.value}');
+        print(
+          '👤 [Post] Est membre du groupe $_selectedGroupeId: $isMember, rôle: ${myRole?.value}',
+        );
 
         // Récupérer la liste des membres pour debug
         try {
-          final membres = await GroupeMembreService.getMembres(_selectedGroupeId!);
+          final membres = await GroupeMembreService.getMembres(
+            _selectedGroupeId!,
+          );
           print('👥 [Post] Membres du groupe (${membres.length}):');
           for (var m in membres) {
-            print('   - user_id: ${m['user_id']}, member_id: ${m['member_id']}, member_type: ${m['member_type']}, role: ${m['role']}');
+            print(
+              '   - user_id: ${m['user_id']}, member_id: ${m['member_id']}, member_type: ${m['member_type']}, role: ${m['role']}',
+            );
           }
         } catch (e) {
           print('⚠️ [Post] Impossible de récupérer les membres: $e');
@@ -1219,7 +1237,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
 
         // Si pas membre, essayer de rejoindre le groupe (peut fonctionner si groupe public ou si créateur)
         if (!isMember) {
-          print('⚠️ [Post] Utilisateur non reconnu comme membre, tentative de rejoindre...');
+          print(
+            '⚠️ [Post] Utilisateur non reconnu comme membre, tentative de rejoindre...',
+          );
           try {
             await GroupeMembreService.joinGroupe(_selectedGroupeId!);
             print('✅ [Post] Rejoint le groupe avec succès');
@@ -1234,7 +1254,11 @@ class _CreerPostPageState extends State<CreerPostPage> {
       final createDto = CreatePostDto(
         contenu: typePost == "texte"
             ? _textController.text.trim()
-            : "Post ${typePost == 'image' ? 'image' : typePost == 'video' ? 'vidéo' : 'vocal'}",
+            : "Post ${typePost == 'image'
+                  ? 'image'
+                  : typePost == 'video'
+                  ? 'vidéo'
+                  : 'vocal'}",
         visibility: visibility,
         groupeId: destinataire == "groupe" ? _selectedGroupeId : null,
         images: typePost == "image" && mediaUrls.isNotEmpty ? mediaUrls : null,

@@ -159,6 +159,11 @@ class PostModel {
   bool isFromGroupe() => groupeId != null;
   bool isPublic() => visibility == PostVisibility.public;
 
+  /// Vérifier si l'utilisateur connecté est le propriétaire du post
+  bool isOwner(int userId, AuthorType userType) {
+    return authorId == userId && authorType == userType;
+  }
+
   String getAuthorName() {
     if (author == null) return 'Auteur inconnu';
     if (authorType == AuthorType.user) {
@@ -384,6 +389,7 @@ class PostService {
 
   /// Récupérer le feed public (tous les posts publics)
   /// GET /posts/feed/public
+  /// IMPORTANT: Filtre les posts de groupe côté client
   static Future<List<PostModel>> getPublicFeed({
     int limit = 20,
     int offset = 0,
@@ -403,8 +409,12 @@ class PostService {
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> postsData = jsonResponse['data'];
-      // Debug: afficher les données des posts avec médias
+
+      // Debug: afficher les données des posts avec médias et groupeId
       for (var post in postsData) {
+        if (post['groupe_id'] != null) {
+          print('🚫 [PostService] Post ${post['id']} de groupe ${post['groupe_id']} - sera filtré');
+        }
         if (post['videos'] != null && (post['videos'] as List).isNotEmpty) {
           print('🎬 [PostService] Post ${post['id']} avec vidéos: ${post['videos']}');
         }
@@ -412,7 +422,14 @@ class PostService {
           print('🖼️ [PostService] Post ${post['id']} avec images: ${post['images']}');
         }
       }
-      return postsData.map((json) => PostModel.fromJson(json)).toList();
+
+      // Convertir en PostModel puis filtrer les posts de groupe
+      final allPosts = postsData.map((json) => PostModel.fromJson(json)).toList();
+      final publicPosts = allPosts.where((post) => post.groupeId == null).toList();
+
+      print('📊 [PostService] Feed public: ${allPosts.length} posts reçus, ${publicPosts.length} après filtrage des groupes');
+
+      return publicPosts;
     } else {
       throw Exception('Erreur de récupération du feed public');
     }
@@ -424,6 +441,7 @@ class PostService {
 
   /// Récupérer les posts d'un auteur spécifique
   /// GET /posts/author/:type/:id
+  /// IMPORTANT: Par défaut, exclut les posts de groupe (includeGroupPosts=false)
   static Future<List<PostModel>> getPostsByAuthor(
     int authorId,
     AuthorType authorType, {
@@ -438,7 +456,16 @@ class PostService {
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> postsData = jsonResponse['data'];
-      return postsData.map((json) => PostModel.fromJson(json)).toList();
+      final allPosts = postsData.map((json) => PostModel.fromJson(json)).toList();
+
+      // Si includeGroupPosts=false, filtrer les posts de groupe côté client (sécurité supplémentaire)
+      if (!includeGroupPosts) {
+        final nonGroupPosts = allPosts.where((post) => post.groupeId == null).toList();
+        print('📊 [PostService] Posts auteur $authorId: ${allPosts.length} reçus, ${nonGroupPosts.length} après filtrage');
+        return nonGroupPosts;
+      }
+
+      return allPosts;
     } else {
       throw Exception('Erreur de récupération des posts de l\'auteur');
     }
@@ -483,6 +510,7 @@ class PostService {
   /// Récupérer le feed personnalisé (posts des personnes/sociétés suivies)
   /// GET /posts/feed/my-feed
   /// Nécessite authentification
+  /// IMPORTANT: Filtre les posts de groupe côté client
   static Future<List<PostModel>> getMyFeed({
     int limit = 20,
     int offset = 0,
@@ -502,7 +530,14 @@ class PostService {
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> postsData = jsonResponse['data'];
-      return postsData.map((json) => PostModel.fromJson(json)).toList();
+
+      // Convertir en PostModel puis filtrer les posts de groupe
+      final allPosts = postsData.map((json) => PostModel.fromJson(json)).toList();
+      final nonGroupPosts = allPosts.where((post) => post.groupeId == null).toList();
+
+      print('📊 [PostService] MyFeed: ${allPosts.length} posts reçus, ${nonGroupPosts.length} après filtrage des groupes');
+
+      return nonGroupPosts;
     } else {
       throw Exception('Erreur de récupération du feed');
     }

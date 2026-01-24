@@ -1127,41 +1127,40 @@ class _PostCardState extends State<_PostCard> {
                   ),
                 ),
                 const SizedBox(width: 12),
+                // Zone du nom - Expanded SANS GestureDetector englobant
                 Expanded(
-                  child: GestureDetector(
-                    onTap: _navigateToPostDetails,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: _navigateToPostDetails,
+                        child: Text(
                           widget.post.getAuthorName(),
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
                         ),
-                        Text(
-                          _formatTimestamp(widget.post.createdAt),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withOpacity(.6),
-                          ),
+                      ),
+                      Text(
+                        _formatTimestamp(widget.post.createdAt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurface.withOpacity(.6),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                // Bouton trois points - SÉPARÉ de la zone de navigation
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _showPostOptions(context),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
-                    ),
-                  ),
+                // Espacement avant le bouton
+                const SizedBox(width: 8),
+                // Bouton trois points - IconButton est plus fiable pour les clics
+                IconButton(
+                  icon: Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
+                  onPressed: () => _showPostOptions(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  splashRadius: 20,
                 ),
               ],
             ),

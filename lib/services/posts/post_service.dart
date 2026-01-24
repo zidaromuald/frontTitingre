@@ -410,6 +410,15 @@ class PostService {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> postsData = jsonResponse['data'];
 
+      // Debug: afficher les données d'auteur pour le premier post
+      if (postsData.isNotEmpty) {
+        print('🔍 [PostService] Debug premier post du feed:');
+        print('   - id: ${postsData[0]['id']}');
+        print('   - author_id: ${postsData[0]['author_id']}');
+        print('   - author_type: ${postsData[0]['author_type']}');
+        print('   - author: ${postsData[0]['author']}');
+      }
+
       // Debug: afficher les données des posts avec médias et groupeId
       for (var post in postsData) {
         if (post['groupe_id'] != null) {

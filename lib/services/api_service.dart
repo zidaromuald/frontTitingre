@@ -100,20 +100,21 @@ class ApiService {
   }
 
   /// DELETE Request
-  /// Note: On envoie un body JSON vide pour éviter l'erreur "body cannot be empty"
+  /// Note: Ne pas envoyer de Content-Type pour éviter l'erreur "body cannot be empty"
   static Future<http.Response> delete(String endpoint) async {
-    final headers = await _authHeaders;
+    final token = await _getToken();
     final uri = Uri.parse('$baseUrl$endpoint');
+
+    // Headers sans Content-Type pour DELETE sans body
+    final headers = {
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
 
     print('🌐 [API] DELETE $uri');
 
     try {
-      // Envoyer un body JSON vide pour satisfaire les APIs qui l'exigent
-      final response = await http.delete(
-        uri,
-        headers: headers,
-        body: jsonEncode({}),
-      );
+      final response = await http.delete(uri, headers: headers);
       print('📥 [API] DELETE Response status: ${response.statusCode}');
       print('📥 [API] DELETE Response body: ${response.body}');
       return response;

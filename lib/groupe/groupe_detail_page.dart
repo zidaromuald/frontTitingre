@@ -1,9 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 import '../services/groupe/groupe_service.dart';
 import '../services/groupe/groupe_membre_service.dart';
 import '../services/groupe/groupe_invitation_service.dart';
 import '../services/AuthUS/user_auth_service.dart';
-import '../services/suivre/abonnement_auth_service.dart';
 import '../services/suivre/suivre_auth_service.dart' as suivre;
 import '../services/posts/post_service.dart';
 import '../widgets/r2_network_image.dart';
@@ -35,6 +36,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
   // Posts du groupe
   List<PostModel> _groupePosts = [];
   bool _isLoadingPosts = false;
+  bool _postsLoaded = false; // Flag pour éviter les appels répétés
   String? _postsError;
 
   // Couleurs
@@ -122,6 +124,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
         setState(() {
           _groupePosts = posts;
           _isLoadingPosts = false;
+          _postsLoaded = true; // Marquer comme chargé
         });
       }
     } catch (e) {
@@ -130,6 +133,7 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
         setState(() {
           _postsError = e.toString();
           _isLoadingPosts = false;
+          _postsLoaded = true; // Marquer comme chargé même en cas d'erreur
         });
       }
     }
@@ -277,15 +281,23 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
   Future<void> _showInviteUserDialog() async {
     final TextEditingController searchController = TextEditingController();
     List<UserModel> searchResults = [];
-    List<UserModel> subscribers = [];
+    List<UserModel> myFollowers = []; // Utilisateurs qui me suivent
     List<UserModel> followingUsers = []; // Utilisateurs que je suis
     bool isSearching = false;
     bool isLoading = true;
     int currentTab =
-        0; // 0 = Mes suivis, 1 = Abonnés (si société), 2 = Recherche
+        0; // 0 = Mes suivis, 1 = Mes followers, 2 = Recherche
 
     // Charger les données initiales
     try {
+      // Récupérer l'utilisateur courant pour obtenir son ID
+      final currentUserResponse = await ApiService.get('/auth/me');
+      int? currentUserId;
+      if (currentUserResponse.statusCode == 200) {
+        final userData = jsonDecode(currentUserResponse.body);
+        currentUserId = userData['data']?['id'] ?? userData['id'];
+      }
+
       // Charger les utilisateurs que je suis (avec détails)
       final myFollowing = await suivre.SuivreAuthService.getMyFollowing(
         type: suivre.EntityType.user,
@@ -298,19 +310,20 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
           .toList();
       print('✅ ${followingUsers.length} utilisateurs suivis chargés');
 
-      // Charger les abonnés si c'est une société
-      try {
-        final abonnements = await AbonnementAuthService.getMySubscribers(
-          statut: AbonnementStatut.actif,
-        );
-        subscribers = abonnements
-            .where((abn) => abn.user != null)
-            .map((abn) => UserModel.fromJson(abn.user!))
-            .toList();
-        print('✅ ${subscribers.length} abonnés chargés');
-      } catch (e) {
-        // Pas une société, continuer sans abonnés
-        print('ℹ️ Pas d\'abonnés (probablement pas une société)');
+      // Charger mes followers (utilisateurs qui me suivent)
+      if (currentUserId != null) {
+        try {
+          final followersData = await suivre.SuivreAuthService.getFollowers(
+            entityId: currentUserId,
+            entityType: suivre.EntityType.user,
+          );
+          myFollowers = followersData
+              .map((data) => UserModel.fromJson(data))
+              .toList();
+          print('✅ ${myFollowers.length} followers chargés');
+        } catch (e) {
+          print('⚠️ Erreur chargement followers: $e');
+        }
       }
 
       isLoading = false;
@@ -345,11 +358,11 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                         onTap: () => setDialogState(() => currentTab = 0),
                       ),
                       const SizedBox(width: 8),
-                      if (subscribers.isNotEmpty)
+                      if (myFollowers.isNotEmpty)
                         _buildTabButton(
-                          label: 'Abonnés',
+                          label: 'Mes abonnés',
                           icon: Icons.people,
-                          count: subscribers.length,
+                          count: myFollowers.length,
                           isSelected: currentTab == 1,
                           onTap: () => setDialogState(() => currentTab = 1),
                         ),
@@ -382,12 +395,12 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                     setDialogState: setDialogState,
                   )
                 else if (currentTab == 1)
-                  // Onglet "Abonnés"
+                  // Onglet "Mes abonnés" (utilisateurs qui me suivent)
                   _buildUserList(
-                    users: subscribers,
+                    users: myFollowers,
                     emptyIcon: Icons.people_outline,
                     emptyTitle: 'Aucun abonné',
-                    emptySubtitle: 'Vous n\'avez pas encore d\'abonnés',
+                    emptySubtitle: 'Aucun utilisateur ne vous suit pour le moment',
                     setDialogState: setDialogState,
                   )
                 else if (currentTab == 2)
@@ -970,8 +983,8 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
   }
 
   Widget _buildPostsTab() {
-    // Charger les posts au premier affichage
-    if (_groupePosts.isEmpty && !_isLoadingPosts && _postsError == null) {
+    // Charger les posts au premier affichage uniquement
+    if (!_postsLoaded && !_isLoadingPosts) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadGroupePosts();
       });

@@ -31,6 +31,32 @@ class CommentModel {
   });
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
+    // Gérer plusieurs formats de réponse pour l'auteur
+    final authorData = json['author'] ?? json['user'] ?? json['societe'];
+
+    // Extraire l'ID et le type de l'auteur
+    int? authorId;
+    String? authorType;
+
+    if (authorData != null) {
+      authorId = authorData['id'];
+      // Le type peut être dans 'type', 'author_type' ou déduit de la présence de certaines clés
+      authorType = authorData['type'] ?? authorData['author_type'];
+      if (authorType == null) {
+        // Déduire le type selon les clés présentes
+        if (authorData['nom_societe'] != null ||
+            authorData['raison_sociale'] != null) {
+          authorType = 'Societe';
+        } else {
+          authorType = 'User';
+        }
+      }
+    } else {
+      // Fallback: utiliser les champs séparés si présents
+      authorId = json['author_id'] ?? json['user_id'];
+      authorType = json['author_type'] ?? json['user_type'] ?? 'User';
+    }
+
     return CommentModel(
       id: json['id'],
       postId: json['post_id'],
@@ -39,9 +65,9 @@ class CommentModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
           : null,
-      authorId: json['author']?['id'],
-      authorType: json['author']?['type'],
-      author: json['author'],
+      authorId: authorId,
+      authorType: authorType,
+      author: authorData,
     );
   }
 
@@ -58,10 +84,24 @@ class CommentModel {
   // Méthodes helper
   String getAuthorName() {
     if (author == null) return 'Auteur inconnu';
+
     if (authorType == 'User') {
-      return '${author!['prenom']} ${author!['nom']}';
+      // Gérer plusieurs formats de réponse pour les utilisateurs
+      final prenom = author!['prenom'] ?? author!['first_name'] ?? '';
+      final nom =
+          author!['nom'] ?? author!['last_name'] ?? author!['name'] ?? '';
+
+      if (prenom.toString().isEmpty && nom.toString().isEmpty) {
+        return author!['username'] ?? author!['email'] ?? 'Utilisateur';
+      }
+      return '$prenom $nom'.trim();
     } else {
-      return author!['nom_societe'] ?? author!['nom'] ?? 'Société';
+      // Gérer plusieurs formats de réponse pour les sociétés
+      return author!['nom'] ??
+          author!['nom_societe'] ??
+          author!['name'] ??
+          author!['raison_sociale'] ??
+          'Société';
     }
   }
 

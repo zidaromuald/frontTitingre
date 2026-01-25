@@ -166,10 +166,23 @@ class PostModel {
 
   String getAuthorName() {
     if (author == null) return 'Auteur inconnu';
+
     if (authorType == AuthorType.user) {
-      return '${author!['prenom']} ${author!['nom']}';
+      // Gérer plusieurs formats de réponse pour les utilisateurs
+      final prenom = author!['prenom'] ?? author!['first_name'] ?? '';
+      final nom = author!['nom'] ?? author!['last_name'] ?? author!['name'] ?? '';
+
+      if (prenom.isEmpty && nom.isEmpty) {
+        return author!['username'] ?? author!['email'] ?? 'Utilisateur';
+      }
+      return '$prenom $nom'.trim();
     } else {
-      return author!['nom'] ?? 'Société';
+      // Gérer plusieurs formats de réponse pour les sociétés
+      return author!['nom'] ??
+             author!['nom_societe'] ??
+             author!['name'] ??
+             author!['raison_sociale'] ??
+             'Société';
     }
   }
 
@@ -400,6 +413,9 @@ class PostService {
       'offset': offset.toString(),
       'onlyWithMedia': onlyWithMedia.toString(),
     };
+
+    // Ajouter include=author pour récupérer les données complètes de l'auteur
+    params['include'] = 'author';
 
     final queryString = params.entries
         .map((e) => '${e.key}=${e.value}')

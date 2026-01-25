@@ -1072,15 +1072,6 @@ class _PostCardState extends State<_PostCard> {
     }
   }
 
-  void _navigateToPostDetails() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PostDetailsPage(postId: widget.post.id),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1107,39 +1098,34 @@ class _PostCardState extends State<_PostCard> {
           children: [
             Row(
               children: [
-                GestureDetector(
-                  onTap: _navigateToPostDetails,
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: cs.primaryContainer,
-                    backgroundImage: authorPhoto != null
-                        ? NetworkImage(authorPhoto)
-                        : null,
-                    child: authorPhoto == null
-                        ? Icon(
-                            widget.post.authorType == AuthorType.societe
-                                ? Icons.business
-                                : Icons.person,
-                            size: 18,
-                            color: cs.onPrimaryContainer,
-                          )
-                        : null,
-                  ),
+                // Avatar - non cliquable
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: cs.primaryContainer,
+                  backgroundImage: authorPhoto != null
+                      ? NetworkImage(authorPhoto)
+                      : null,
+                  child: authorPhoto == null
+                      ? Icon(
+                          widget.post.authorType == AuthorType.societe
+                              ? Icons.business
+                              : Icons.person,
+                          size: 18,
+                          color: cs.onPrimaryContainer,
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 12),
-                // Zone du nom - Expanded SANS GestureDetector englobant
+                // Zone du nom - non cliquable
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      GestureDetector(
-                        onTap: _navigateToPostDetails,
-                        child: Text(
-                          widget.post.getAuthorName(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
+                      Text(
+                        widget.post.getAuthorName(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
                       Text(
@@ -1154,7 +1140,7 @@ class _PostCardState extends State<_PostCard> {
                 ),
                 // Espacement avant le bouton
                 const SizedBox(width: 8),
-                // Bouton trois points - IconButton est plus fiable pour les clics
+                // Bouton trois points - SEUL élément cliquable pour accéder aux options
                 IconButton(
                   icon: Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
                   onPressed: () => _showPostOptions(context),

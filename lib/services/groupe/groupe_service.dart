@@ -317,16 +317,41 @@ class GroupeInvitationModel {
 
   String get invitedUserName {
     if (invitedUser == null) return 'Utilisateur #$invitedUserId';
-    final prenom = invitedUser!['prenom'] ?? '';
-    final nom = invitedUser!['nom'] ?? '';
-    return '$prenom $nom'.trim();
+    return _extractUserName(invitedUser!, 'Utilisateur #$invitedUserId');
   }
 
   String get invitedByUserName {
     if (invitedByUser == null) return 'Utilisateur #$invitedByUserId';
-    final prenom = invitedByUser!['prenom'] ?? '';
-    final nom = invitedByUser!['nom'] ?? '';
-    return '$prenom $nom'.trim();
+    return _extractUserName(invitedByUser!, 'Utilisateur #$invitedByUserId');
+  }
+
+  /// Méthode helper pour extraire le nom d'un utilisateur depuis ses données JSON
+  /// Gère plusieurs formats de réponse (prenom/nom, first_name/last_name, etc.)
+  String _extractUserName(Map<String, dynamic> userData, String fallback) {
+    print('🔍 [GroupeInvitationModel] _extractUserName userData: $userData');
+
+    // Essayer prenom/nom (format principal)
+    final prenom = userData['prenom'] ?? userData['first_name'] ?? '';
+    final nom = userData['nom'] ?? userData['last_name'] ?? userData['name'] ?? '';
+
+    final fullName = '$prenom $nom'.trim();
+    if (fullName.isNotEmpty) {
+      print('🔍 [GroupeInvitationModel] Nom extrait: $fullName');
+      return fullName;
+    }
+
+    // Fallback: essayer username ou email
+    if (userData['username'] != null && userData['username'].toString().isNotEmpty) {
+      print('🔍 [GroupeInvitationModel] Fallback username: ${userData['username']}');
+      return userData['username'];
+    }
+    if (userData['email'] != null && userData['email'].toString().isNotEmpty) {
+      print('🔍 [GroupeInvitationModel] Fallback email: ${userData['email']}');
+      return userData['email'];
+    }
+
+    print('🔍 [GroupeInvitationModel] Aucun nom trouvé, utilisation fallback: $fallback');
+    return fallback;
   }
 }
 

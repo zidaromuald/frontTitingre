@@ -11,7 +11,8 @@ class CommentModel {
   final int postId;
   final String contenu;
   final DateTime createdAt;
-  final DateTime? updatedAt; // Optionnel car pas toujours retourné par le backend
+  final DateTime?
+  updatedAt; // Optionnel car pas toujours retourné par le backend
 
   // Informations sur l'auteur
   final int? authorId;
@@ -35,7 +36,9 @@ class CommentModel {
       postId: json['post_id'],
       contenu: json['contenu'],
       createdAt: DateTime.parse(json['created_at']),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
       authorId: json['author']?['id'],
       authorType: json['author']?['type'],
       author: json['author'],
@@ -115,14 +118,20 @@ class CommentService {
       print('📥 [CommentService] Comment data: $commentData');
 
       if (commentData == null) {
-        print('❌ [CommentService] Aucune donnée de commentaire dans la réponse');
-        throw Exception('Format de réponse invalide: aucune donnée de commentaire');
+        print(
+          '❌ [CommentService] Aucune donnée de commentaire dans la réponse',
+        );
+        throw Exception(
+          'Format de réponse invalide: aucune donnée de commentaire',
+        );
       }
 
       return CommentModel.fromJson(commentData);
     } else {
       final error = jsonDecode(response.body);
-      print('❌ [CommentService] Erreur création commentaire: ${error['message']}');
+      print(
+        '❌ [CommentService] Erreur création commentaire: ${error['message']}',
+      );
       throw Exception(error['message'] ?? 'Erreur de création du commentaire');
     }
   }

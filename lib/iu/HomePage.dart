@@ -1172,6 +1172,50 @@ class _PostCard extends StatelessWidget {
     }
   }
 
+  /// Afficher les options du post (voir détails)
+  void _showPostOptions(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.onSurface.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Icon(Icons.visibility, color: cs.primary),
+              title: const Text('Voir le post'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PostDetailsPage(postId: post.id),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1179,79 +1223,75 @@ class _PostCard extends StatelessWidget {
     final authorPhoto = post.getAuthorPhoto();
     final hasMedia = post.hasMedia();
 
-    return InkWell(
-      onTap: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PostDetailsPage(postId: post.id),
+    // Card sans InkWell - seul le bouton trois points est cliquable
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.06),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
-        );
-        // Si le post a été supprimé, on pourrait recharger la liste ici
-        // Mais comme on est dans un StatelessWidget, on laisse le parent gérer
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(.06),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // En-tête avec avatar et nom
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: cs.primaryContainer,
+                  backgroundImage: authorPhoto != null
+                      ? NetworkImage(authorPhoto)
+                      : null,
+                  child: authorPhoto == null
+                      ? Icon(
+                          post.authorType == AuthorType.user
+                              ? Icons.person
+                              : Icons.business,
+                          color: cs.onPrimaryContainer,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        authorName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        _formatTimestamp(post.createdAt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurface.withOpacity(.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Bouton trois points - SEUL élément cliquable
+                IconButton(
+                  icon: Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
+                  onPressed: () => _showPostOptions(context),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  splashRadius: 20,
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // En-tête avec avatar et nom
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: cs.primaryContainer,
-                    backgroundImage: authorPhoto != null
-                        ? NetworkImage(authorPhoto)
-                        : null,
-                    child: authorPhoto == null
-                        ? Icon(
-                            post.authorType == AuthorType.user
-                                ? Icons.person
-                                : Icons.business,
-                            color: cs.onPrimaryContainer,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          authorName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          _formatTimestamp(post.createdAt),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withOpacity(.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
-                ],
-              ),
               const SizedBox(height: 12),
 
               // Contenu texte
@@ -1271,7 +1311,7 @@ class _PostCard extends StatelessWidget {
 
               // Média (image ou vidéo)
               if (hasMedia) ...[
-                ClipRRec(
+                ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: _buildMediaWidget(post.mediaUrls!.first, cs),
                 ),

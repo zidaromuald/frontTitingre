@@ -31,6 +31,18 @@ class CommentModel {
   });
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
+    // DEBUG: Afficher les données brutes du commentaire
+    print('💬 [CommentModel] fromJson - comment id=${json['id']}');
+    print('💬 [CommentModel] json keys: ${json.keys.toList()}');
+    print('💬 [CommentModel] author présent: ${json['author'] != null}');
+    print('💬 [CommentModel] user présent: ${json['user'] != null}');
+    if (json['author'] != null) {
+      print('💬 [CommentModel] author data: ${json['author']}');
+    }
+    if (json['user'] != null) {
+      print('💬 [CommentModel] user data: ${json['user']}');
+    }
+
     // Gérer plusieurs formats de réponse pour l'auteur
     final authorData = json['author'] ?? json['user'] ?? json['societe'];
 
@@ -83,25 +95,39 @@ class CommentModel {
 
   // Méthodes helper
   String getAuthorName() {
-    if (author == null) return 'Auteur inconnu';
+    print('💬 [CommentModel] getAuthorName - author: $author, authorType: $authorType');
+
+    if (author == null) {
+      print('💬 [CommentModel] author est NULL, retourne "Auteur inconnu"');
+      return 'Auteur inconnu';
+    }
+
+    print('💬 [CommentModel] author keys: ${author!.keys.toList()}');
 
     if (authorType == 'User') {
       // Gérer plusieurs formats de réponse pour les utilisateurs
       final prenom = author!['prenom'] ?? author!['first_name'] ?? '';
-      final nom =
-          author!['nom'] ?? author!['last_name'] ?? author!['name'] ?? '';
+      final nom = author!['nom'] ?? author!['last_name'] ?? author!['name'] ?? '';
+
+      print('💬 [CommentModel] prenom: "$prenom", nom: "$nom"');
 
       if (prenom.toString().isEmpty && nom.toString().isEmpty) {
-        return author!['username'] ?? author!['email'] ?? 'Utilisateur';
+        final fallback = author!['username'] ?? author!['email'] ?? 'Utilisateur';
+        print('💬 [CommentModel] prenom/nom vides, fallback: $fallback');
+        return fallback;
       }
-      return '$prenom $nom'.trim();
+      final result = '$prenom $nom'.trim();
+      print('💬 [CommentModel] Nom final: "$result"');
+      return result;
     } else {
       // Gérer plusieurs formats de réponse pour les sociétés
-      return author!['nom'] ??
+      final result = author!['nom'] ??
           author!['nom_societe'] ??
           author!['name'] ??
           author!['raison_sociale'] ??
           'Société';
+      print('💬 [CommentModel] Société nom: $result');
+      return result;
     }
   }
 
@@ -220,11 +246,20 @@ class CommentService {
   /// Récupérer tous les commentaires d'un post avec leurs auteurs
   /// GET /commentaires/post/:postId
   static Future<List<CommentModel>> getPostComments(int postId) async {
-    final response = await ApiService.get('/commentaires/post/$postId');
+    // Ajouter include=author pour récupérer les données de l'auteur du commentaire
+    final response = await ApiService.get('/commentaires/post/$postId?include=author');
+
+    print('💬 [CommentService] getPostComments response: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> commentsData = jsonResponse['commentaires'];
+
+      // Debug: afficher les données du premier commentaire
+      if (commentsData.isNotEmpty) {
+        print('💬 [CommentService] Premier commentaire: ${commentsData.first}');
+      }
+
       return commentsData.map((json) => CommentModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération des commentaires');

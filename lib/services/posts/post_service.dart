@@ -90,6 +90,15 @@ class PostModel {
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
+    // DEBUG: Afficher les données du post pour voir si author est présent
+    print('📦 [PostModel] fromJson - post id=${json['id']}, author présent: ${json['author'] != null}');
+    if (json['author'] != null) {
+      print('📦 [PostModel] author keys: ${json['author'].keys.toList()}');
+      print('📦 [PostModel] author data: ${json['author']}');
+    } else {
+      print('📦 [PostModel] ⚠️ author est NULL - author_id=${json['author_id']}, author_type=${json['author_type']}');
+    }
+
     // Combiner tous les médias (images, videos, audios, documents) en une seule liste
     List<String>? mediaUrls;
 

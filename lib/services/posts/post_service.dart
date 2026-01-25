@@ -99,9 +99,18 @@ class PostModel {
       print('📦 [PostModel] ⚠️ POST DE GROUPE DÉTECTÉ - groupe_id=${json['groupe_id']}');
     }
 
+    // Gérer plusieurs formats de réponse pour l'auteur
+    // Le backend peut retourner: author (objet), user (objet), societe (objet), ou author_name (string)
+    Map<String, dynamic>? authorData = json['author'] ?? json['user'] ?? json['societe'];
+
+    // Si pas d'objet author mais author_name est présent, créer un objet author
+    if (authorData == null && json['author_name'] != null) {
+      authorData = {'name': json['author_name']};
+    }
+
     // DEBUG author
-    if (json['author'] != null) {
-      print('📦 [PostModel] author présent: ${json['author']}');
+    if (authorData != null) {
+      print('📦 [PostModel] author présent: $authorData');
     } else {
       print('📦 [PostModel] ⚠️ author est NULL - author_id=${json['author_id']}, author_type=${json['author_type']}');
     }
@@ -147,7 +156,7 @@ class PostModel {
       updatedAt: DateTime.parse(json['updated_at']),
       authorId: json['author_id'],
       authorType: AuthorType.fromString(json['author_type']),
-      author: json['author'],
+      author: authorData, // Utiliser authorData qui gère plusieurs formats
       groupe: json['groupe'],
       mediaUrls: mediaUrls,
     );
@@ -181,15 +190,24 @@ class PostModel {
   }
 
   String getAuthorName() {
-    if (author == null) return 'Auteur inconnu';
+    // Si author est null, afficher un fallback basé sur authorType
+    if (author == null) {
+      print('⚠️ [PostModel] getAuthorName: author est NULL pour post $id');
+      // Fallback: afficher le type d'auteur
+      if (authorType == AuthorType.societe) {
+        return 'Société #$authorId';
+      } else {
+        return 'Utilisateur #$authorId';
+      }
+    }
 
     if (authorType == AuthorType.user) {
       // Gérer plusieurs formats de réponse pour les utilisateurs
       final prenom = author!['prenom'] ?? author!['first_name'] ?? '';
       final nom = author!['nom'] ?? author!['last_name'] ?? author!['name'] ?? '';
 
-      if (prenom.isEmpty && nom.isEmpty) {
-        return author!['username'] ?? author!['email'] ?? 'Utilisateur';
+      if (prenom.toString().isEmpty && nom.toString().isEmpty) {
+        return author!['username'] ?? author!['email'] ?? 'Utilisateur #$authorId';
       }
       return '$prenom $nom'.trim();
     } else {
@@ -198,7 +216,7 @@ class PostModel {
              author!['nom_societe'] ??
              author!['name'] ??
              author!['raison_sociale'] ??
-             'Société';
+             'Société #$authorId';
     }
   }
 
@@ -457,6 +475,7 @@ class PostService {
         print('   - author_id: ${postsData[0]['author_id']}');
         print('   - author_type: ${postsData[0]['author_type']}');
         print('   - author: ${postsData[0]['author']}');
+        print('   - toutes les clés: ${postsData[0].keys.toList()}');
       }
 
       // Debug: afficher les données de TOUS les posts avec leur groupe_id

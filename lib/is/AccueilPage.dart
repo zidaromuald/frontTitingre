@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 import '../services/AuthUS/societe_auth_service.dart';
 import '../services/posts/post_service.dart';
 import '../services/affichage/unread_content_service.dart';
@@ -923,6 +925,7 @@ class _PostCardState extends State<_PostCard> {
   }
 
   Future<void> _loadCurrentUser() async {
+    // Essayer d'abord de charger le profil Societe
     try {
       final societe = await SocieteAuthService.getMyProfile();
       if (mounted) {
@@ -930,93 +933,136 @@ class _PostCardState extends State<_PostCard> {
           _currentUserId = societe.id;
           _currentUserType = AuthorType.societe;
         });
+        print('👤 [PostCard] Utilisateur chargé: Societe id=${societe.id}');
+      }
+      return;
+    } catch (e) {
+      print('⚠️ [PostCard] Pas de profil Societe, essai User...');
+    }
+
+    // Si pas de Societe, essayer de charger le profil User via /auth/me
+    try {
+      final response = await ApiService.get('/auth/me');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final userData = data['data'] ?? data;
+        final userId = userData['id'];
+        final userType = userData['type'] ?? 'User';
+
+        if (mounted && userId != null) {
+          setState(() {
+            _currentUserId = userId;
+            _currentUserType = userType == 'Societe' ? AuthorType.societe : AuthorType.user;
+          });
+          print('👤 [PostCard] Utilisateur chargé: $userType id=$userId');
+        }
       }
     } catch (e) {
-      debugPrint('Erreur chargement utilisateur: $e');
+      debugPrint('❌ [PostCard] Erreur chargement utilisateur: $e');
     }
   }
 
   Future<void> _showPostOptions(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
 
+    // Debug: afficher les informations pour comprendre le problème
+    print('🔍 [PostCard] _showPostOptions:');
+    print('   - _currentUserId: $_currentUserId');
+    print('   - _currentUserType: $_currentUserType');
+    print('   - post.authorId: ${widget.post.authorId}');
+    print('   - post.authorType: ${widget.post.authorType}');
+
     // Vérifier si l'utilisateur est le propriétaire
     final isOwner = _currentUserId != null &&
                     _currentUserType != null &&
                     widget.post.isOwner(_currentUserId!, _currentUserType!);
 
+    print('   - isOwner: $isOwner');
+
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
         decoration: BoxDecoration(
           color: cs.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Barre de titre
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.onSurface.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Option: Voir le post
-            ListTile(
-              leading: Icon(Icons.visibility, color: cs.primary),
-              title: const Text('Voir le post'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PostDetailsPage(postId: widget.post.id),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Barre indicateur
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.onSurface.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                );
-              },
+                ),
+
+                // Option: Voir le post
+                ListTile(
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  leading: Icon(Icons.visibility, color: cs.primary, size: 22),
+                  title: const Text('Voir le post', style: TextStyle(fontSize: 14)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PostDetailsPage(postId: widget.post.id),
+                      ),
+                    );
+                  },
+                ),
+
+                // Options pour le propriétaire uniquement
+                if (isOwner) ...[
+                  Divider(height: 1, color: cs.outlineVariant),
+
+                  // Option: Modifier
+                  ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    leading: Icon(Icons.edit, color: cs.primary, size: 22),
+                    title: const Text('Modifier', style: TextStyle(fontSize: 14)),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostEditPage(post: widget.post),
+                        ),
+                      );
+                      if (result == true && mounted) {
+                        widget.onPostDeleted();
+                      }
+                    },
+                  ),
+
+                  // Option: Supprimer
+                  ListTile(
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    leading: const Icon(Icons.delete, color: Colors.red, size: 22),
+                    title: const Text('Supprimer', style: TextStyle(color: Colors.red, fontSize: 14)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _confirmDeletePost(context);
+                    },
+                  ),
+                ],
+
+                const SizedBox(height: 4),
+              ],
             ),
-
-            // Options pour le propriétaire uniquement
-            if (isOwner) ...[
-              const Divider(),
-
-              // Option: Modifier
-              ListTile(
-                leading: Icon(Icons.edit, color: cs.primary),
-                title: const Text('Modifier'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PostEditPage(post: widget.post),
-                    ),
-                  );
-                  if (result == true && mounted) {
-                    widget.onPostDeleted();
-                  }
-                },
-              ),
-
-              // Option: Supprimer
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Supprimer', style: TextStyle(color: Colors.red)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmDeletePost(context);
-                },
-              ),
-            ],
-
-            const SizedBox(height: 16),
-          ],
+          ),
         ),
       ),
     );

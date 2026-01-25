@@ -90,11 +90,18 @@ class PostModel {
   });
 
   factory PostModel.fromJson(Map<String, dynamic> json) {
-    // DEBUG: Afficher les données du post pour voir si author est présent
-    print('📦 [PostModel] fromJson - post id=${json['id']}, author présent: ${json['author'] != null}');
+    // DEBUG: Afficher les données du post
+    print('📦 [PostModel] fromJson - post id=${json['id']}');
+    print('📦 [PostModel] groupe_id=${json['groupe_id']}, visibility=${json['visibility']}');
+
+    // DEBUG: Afficher si c'est un post de groupe
+    if (json['groupe_id'] != null) {
+      print('📦 [PostModel] ⚠️ POST DE GROUPE DÉTECTÉ - groupe_id=${json['groupe_id']}');
+    }
+
+    // DEBUG author
     if (json['author'] != null) {
-      print('📦 [PostModel] author keys: ${json['author'].keys.toList()}');
-      print('📦 [PostModel] author data: ${json['author']}');
+      print('📦 [PostModel] author présent: ${json['author']}');
     } else {
       print('📦 [PostModel] ⚠️ author est NULL - author_id=${json['author_id']}, author_type=${json['author_type']}');
     }
@@ -340,7 +347,10 @@ class PostService {
   /// Nécessite authentification
   static Future<PostModel> createPost(CreatePostDto dto) async {
     // Debug: afficher les données envoyées
-    print('📤 [PostService] createPost - DTO: ${dto.toJson()}');
+    final jsonData = dto.toJson();
+    print('📤 [PostService] createPost - DTO: $jsonData');
+    print('📤 [PostService] groupe_id dans DTO: ${jsonData['groupe_id']}');
+    print('📤 [PostService] visibility dans DTO: ${jsonData['visibility']}');
 
     // Debug: vérifier l'utilisateur connecté
     try {
@@ -357,7 +367,12 @@ class PostService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
-      return PostModel.fromJson(jsonResponse['data']);
+      final postData = jsonResponse['data'];
+      print('📥 [PostService] Post créé avec succès:');
+      print('   - id: ${postData['id']}');
+      print('   - groupe_id dans réponse: ${postData['groupe_id']}');
+      print('   - visibility dans réponse: ${postData['visibility']}');
+      return PostModel.fromJson(postData);
     } else {
       final error = jsonDecode(response.body);
       print('❌ [PostService] Erreur création post: ${response.statusCode} - ${response.body}');
@@ -444,17 +459,12 @@ class PostService {
         print('   - author: ${postsData[0]['author']}');
       }
 
-      // Debug: afficher les données des posts avec médias et groupeId
+      // Debug: afficher les données de TOUS les posts avec leur groupe_id
+      print('📋 [PostService] Liste complète des posts reçus:');
       for (var post in postsData) {
-        if (post['groupe_id'] != null) {
-          print('🚫 [PostService] Post ${post['id']} de groupe ${post['groupe_id']} - sera filtré');
-        }
-        if (post['videos'] != null && (post['videos'] as List).isNotEmpty) {
-          print('🎬 [PostService] Post ${post['id']} avec vidéos: ${post['videos']}');
-        }
-        if (post['images'] != null && (post['images'] as List).isNotEmpty) {
-          print('🖼️ [PostService] Post ${post['id']} avec images: ${post['images']}');
-        }
+        final hasGroupeId = post['groupe_id'] != null;
+        final visibility = post['visibility'];
+        print('   📄 Post ${post['id']}: groupe_id=${post['groupe_id']}, visibility=$visibility ${hasGroupeId ? "⚠️ POST DE GROUPE" : ""}');
       }
 
       // Convertir en PostModel puis filtrer les posts de groupe
@@ -490,12 +500,26 @@ class PostService {
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> postsData = jsonResponse['data'];
+
+      // DEBUG: Afficher les données brutes pour vérifier groupe_id
+      print('📋 [PostService] Posts auteur $authorId - données brutes:');
+      for (var post in postsData) {
+        print('   📄 Post ${post['id']}: groupe_id=${post['groupe_id']}, visibility=${post['visibility']}');
+      }
+
       final allPosts = postsData.map((json) => PostModel.fromJson(json)).toList();
 
       // Si includeGroupPosts=false, filtrer les posts de groupe côté client (sécurité supplémentaire)
       if (!includeGroupPosts) {
         final nonGroupPosts = allPosts.where((post) => post.groupeId == null).toList();
-        print('📊 [PostService] Posts auteur $authorId: ${allPosts.length} reçus, ${nonGroupPosts.length} après filtrage');
+        final groupPosts = allPosts.where((post) => post.groupeId != null).toList();
+        print('📊 [PostService] Posts auteur $authorId: ${allPosts.length} total, ${groupPosts.length} de groupe, ${nonGroupPosts.length} publics');
+        if (groupPosts.isNotEmpty) {
+          print('🚫 [PostService] Posts de groupe filtrés:');
+          for (var post in groupPosts) {
+            print('   - Post ${post.id} -> groupe_id=${post.groupeId}');
+          }
+        }
         return nonGroupPosts;
       }
 

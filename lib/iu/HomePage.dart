@@ -649,10 +649,7 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(15),
           color: Colors.grey[300],
           image: logo != null
-              ? DecorationImage(
-                  image: NetworkImage(logo),
-                  fit: BoxFit.cover,
-                )
+              ? DecorationImage(image: NetworkImage(logo), fit: BoxFit.cover)
               : null,
         ),
         child: Stack(
@@ -660,11 +657,7 @@ class _HomePageState extends State<HomePage> {
             // Si pas de logo, afficher une icône par défaut
             if (logo == null)
               Center(
-                child: Icon(
-                  Icons.business,
-                  size: 32,
-                  color: Colors.grey[500],
-                ),
+                child: Icon(Icons.business, size: 32, color: Colors.grey[500]),
               ),
             // Overlay avec le nom de la société
             Positioned(
@@ -673,7 +666,12 @@ class _HomePageState extends State<HomePage> {
               right: 0,
               child: Container(
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 134, 128, 128).withAlpha((255 * 0.7).toInt()),
+                  color: const Color.fromARGB(
+                    255,
+                    134,
+                    128,
+                    128,
+                  ).withAlpha((255 * 0.7).toInt()),
                   borderRadius: const BorderRadius.only(
                     bottomLeft: Radius.circular(15),
                     bottomRight: Radius.circular(15),
@@ -1028,11 +1026,7 @@ class _ProfileAvatar extends StatelessWidget {
         backgroundColor: cs.surfaceContainerHighest,
         backgroundImage: photoUrl != null ? NetworkImage(photoUrl!) : null,
         child: photoUrl == null
-            ? Icon(
-                Icons.person,
-                size: size * 0.5,
-                color: cs.onSurfaceVariant,
-              )
+            ? Icon(Icons.person, size: size * 0.5, color: cs.onSurfaceVariant)
             : null,
       ),
     );
@@ -1094,57 +1088,6 @@ class _SquareAction extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.title, required this.value});
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Expanded(
-      child: Container(
-        height: 62,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: cs.primary,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 11,
-                color: cs.onSurface.withOpacity(.7),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1284,85 +1227,90 @@ class _PostCard extends StatelessWidget {
                 ),
                 // Bouton trois points - SEUL élément cliquable
                 IconButton(
-                  icon: Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
+                  icon: Icon(
+                    Icons.more_horiz,
+                    color: cs.onSurface.withOpacity(.7),
+                  ),
                   onPressed: () => _showPostOptions(context),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                   splashRadius: 20,
                 ),
               ],
             ),
-              const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-              // Contenu texte
-              if (post.contenu.isNotEmpty) ...[
-                Text(
-                  post.contenu,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.4,
-                    color: cs.onSurface.withOpacity(.8),
-                  ),
-                  maxLines: hasMedia ? 2 : null,
-                  overflow: hasMedia ? TextOverflow.ellipsis : null,
+            // Contenu texte
+            if (post.contenu.isNotEmpty) ...[
+              Text(
+                post.contenu,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: cs.onSurface.withOpacity(.8),
                 ),
-                const SizedBox(height: 12),
-              ],
-
-              // Média (image ou vidéo)
-              if (hasMedia) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: _buildMediaWidget(post.mediaUrls!.first, cs),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              // Statistiques et actions (cliquer sur la carte pour interagir)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    // Commentaires (à gauche)
-                    Icon(
-                      Icons.chat_bubble_outline,
-                      size: 20,
-                      color: cs.primary.withOpacity(.8),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${post.commentsCount}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                    const Spacer(),
-                    // Like (à droite avec pouce)
-                    Icon(
-                      Icons.thumb_up_outlined,
-                      size: 20,
-                      color: cs.primary.withOpacity(.8),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${post.likesCount}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
+                maxLines: hasMedia ? 2 : null,
+                overflow: hasMedia ? TextOverflow.ellipsis : null,
               ),
+              const SizedBox(height: 12),
             ],
-          ),
+
+            // Média (image ou vidéo)
+            if (hasMedia) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _buildMediaWidget(post.mediaUrls!.first, cs),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Statistiques et actions (cliquer sur la carte pour interagir)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  // Commentaires (à gauche)
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 20,
+                    color: cs.primary.withOpacity(.8),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${post.commentsCount}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Like (à droite avec pouce)
+                  Icon(
+                    Icons.thumb_up_outlined,
+                    size: 20,
+                    color: cs.primary.withOpacity(.8),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${post.likesCount}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1382,20 +1330,20 @@ class _PostCard extends StatelessWidget {
   bool _isVideo(String url) {
     final lowercaseUrl = url.toLowerCase();
     return lowercaseUrl.endsWith('.mp4') ||
-           lowercaseUrl.endsWith('.mov') ||
-           lowercaseUrl.endsWith('.avi') ||
-           lowercaseUrl.endsWith('.mkv') ||
-           lowercaseUrl.endsWith('.webm');
+        lowercaseUrl.endsWith('.mov') ||
+        lowercaseUrl.endsWith('.avi') ||
+        lowercaseUrl.endsWith('.mkv') ||
+        lowercaseUrl.endsWith('.webm');
   }
 
   /// Détecter si c'est un audio basé sur l'extension
   bool _isAudio(String url) {
     final lowercaseUrl = url.toLowerCase();
     return lowercaseUrl.endsWith('.mp3') ||
-           lowercaseUrl.endsWith('.wav') ||
-           lowercaseUrl.endsWith('.aac') ||
-           lowercaseUrl.endsWith('.m4a') ||
-           lowercaseUrl.endsWith('.ogg');
+        lowercaseUrl.endsWith('.wav') ||
+        lowercaseUrl.endsWith('.aac') ||
+        lowercaseUrl.endsWith('.m4a') ||
+        lowercaseUrl.endsWith('.ogg');
   }
 
   /// Construire le widget média approprié (image, vidéo ou audio)
@@ -1415,11 +1363,7 @@ class _PostCard extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             // Icône de vidéo en arrière-plan
-            Icon(
-              Icons.movie,
-              size: 60,
-              color: Colors.white.withOpacity(0.3),
-            ),
+            Icon(Icons.movie, size: 60, color: Colors.white.withOpacity(0.3)),
             // Bouton play au centre
             Container(
               width: 60,
@@ -1472,11 +1416,7 @@ class _PostCard extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.audio_file,
-              size: 32,
-              color: cs.primary,
-            ),
+            Icon(Icons.audio_file, size: 32, color: cs.primary),
             const SizedBox(width: 12),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,

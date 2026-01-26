@@ -53,11 +53,13 @@ class _AccueilPageState extends State<AccueilPage> {
 
   /// Charger les statistiques de la société (abonnés, suivis, groupes)
   Future<void> _loadStatistics() async {
+    if (!mounted) return;
     setState(() => _isLoadingStats = true);
 
     try {
       // Récupérer le profil de la société pour avoir son ID
       final societe = await SocieteAuthService.getMyProfile();
+      print('📊 [Stats] Societe chargée: id=${societe.id}');
 
       // Charger en parallèle les statistiques et les groupes
       final results = await Future.wait([
@@ -65,8 +67,27 @@ class _AccueilPageState extends State<AccueilPage> {
         GroupeAuthService.getMyGroupes(),
       ]);
 
-      final stats = results[0] as Map<String, dynamic>;
-      final groupes = results[1] as List<GroupeModel>;
+      print('📊 [Stats] Results: ${results[0].runtimeType}, ${results[1].runtimeType}');
+
+      // Gérer les stats avec plus de sécurité
+      Map<String, dynamic> stats = {};
+      if (results[0] is Map<String, dynamic>) {
+        stats = results[0] as Map<String, dynamic>;
+      } else if (results[0] is Map) {
+        stats = Map<String, dynamic>.from(results[0] as Map);
+      }
+
+      // Gérer les groupes avec plus de sécurité
+      List<GroupeModel> groupes = [];
+      if (results[1] is List<GroupeModel>) {
+        groupes = results[1] as List<GroupeModel>;
+      } else if (results[1] is List) {
+        // Essayer de convertir si c'est une liste brute
+        groupes = (results[1] as List).whereType<GroupeModel>().toList();
+      }
+
+      print('📊 [Stats] Stats parsed: abonnes=${stats['abonnes_count']}, suivis=${stats['suivis_count']}');
+      print('📊 [Stats] Groupes count: ${groupes.length}');
 
       if (mounted) {
         setState(() {
@@ -77,11 +98,12 @@ class _AccueilPageState extends State<AccueilPage> {
           _isLoadingStats = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [Stats] Erreur chargement statistiques: $e');
+      print('❌ [Stats] StackTrace: $stackTrace');
       if (mounted) {
         setState(() => _isLoadingStats = false);
       }
-      debugPrint('Erreur chargement statistiques: $e');
     }
   }
 
@@ -102,10 +124,13 @@ class _AccueilPageState extends State<AccueilPage> {
 
   /// Charger le profil complet de la société (nom, logo, etc.)
   Future<void> _loadSocieteProfile() async {
+    if (!mounted) return;
     setState(() => _isLoadingSociete = true);
 
     try {
+      print('👤 [Profile] Chargement du profil société...');
       final societe = await SocieteAuthService.getMyProfile();
+      print('👤 [Profile] Profil chargé: ${societe.nom}, id=${societe.id}');
 
       if (mounted) {
         setState(() {
@@ -113,30 +138,39 @@ class _AccueilPageState extends State<AccueilPage> {
           _currentLogoUrl = societe.profile?.logo;
           _isLoadingSociete = false;
         });
+        print('👤 [Profile] État mis à jour');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [Profile] Erreur chargement profil société: $e');
+      print('❌ [Profile] StackTrace: $stackTrace');
       if (mounted) {
         setState(() => _isLoadingSociete = false);
       }
-      debugPrint('Erreur chargement profil société: $e');
     }
   }
 
   Future<void> _loadPosts() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingPosts = true;
       _errorMessage = null;
     });
 
     try {
+      print('📝 [Posts] Chargement du feed public...');
       final posts = await PostService.getPublicFeed(limit: 20, offset: 0);
+      print('📝 [Posts] ${posts.length} posts chargés');
+
       if (mounted) {
         setState(() {
           _posts = posts;
           _isLoadingPosts = false;
         });
+        print('📝 [Posts] État mis à jour');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [Posts] Erreur de chargement: $e');
+      print('❌ [Posts] StackTrace: $stackTrace');
       if (mounted) {
         setState(() {
           _errorMessage = 'Erreur de chargement: $e';
@@ -925,7 +959,11 @@ class _PostCardState extends State<_PostCard> {
   }
 
   Future<void> _loadCurrentUser() async {
-    // Essayer d'abord de charger le profil Societe
+    if (!mounted) return;
+
+    print('🔄 [PostCard] _loadCurrentUser() démarré...');
+
+    // ÉTAPE 1: Essayer d'abord SocieteAuthService (plus fiable pour détecter le type)
     try {
       final societe = await SocieteAuthService.getMyProfile();
       if (mounted) {
@@ -933,51 +971,94 @@ class _PostCardState extends State<_PostCard> {
           _currentUserId = societe.id;
           _currentUserType = AuthorType.societe;
         });
-        print('👤 [PostCard] Utilisateur chargé: Societe id=${societe.id}');
+        print('✅ [PostCard] Utilisateur chargé: SOCIETE id=${societe.id}');
+        return;
       }
-      return;
     } catch (e) {
-      print('⚠️ [PostCard] Pas de profil Societe, essai User...');
+      print('⚠️ [PostCard] Pas de profil Societe: $e');
+      // Continuer avec la deuxième méthode
     }
 
-    // Si pas de Societe, essayer de charger le profil User via /auth/me
+    // ÉTAPE 2: Si pas de Societe, essayer /auth/me pour un User
     try {
+      if (!mounted) return;
+
       final response = await ApiService.get('/auth/me');
+      print('📥 [PostCard] /auth/me response: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final userData = data['data'] ?? data;
         final userId = userData['id'];
-        final userType = userData['type'] ?? 'User';
 
-        if (mounted && userId != null) {
+        if (userId == null) {
+          print('⚠️ [PostCard] userId est null dans /auth/me');
+          return;
+        }
+
+        // Détecter le type: vérifier les champs spécifiques à Societe
+        String detectedType = 'User';
+        if (userData['nom_societe'] != null ||
+            userData['raison_sociale'] != null ||
+            userData['type'] == 'Societe' ||
+            userData['user_type'] == 'Societe') {
+          detectedType = 'Societe';
+        } else if (userData['type'] != null) {
+          detectedType = userData['type'];
+        }
+
+        print('📋 [PostCard] /auth/me: id=$userId, detectedType=$detectedType');
+
+        if (mounted) {
           setState(() {
             _currentUserId = userId;
-            _currentUserType = userType == 'Societe' ? AuthorType.societe : AuthorType.user;
+            _currentUserType = detectedType == 'Societe' ? AuthorType.societe : AuthorType.user;
           });
-          print('👤 [PostCard] Utilisateur chargé: $userType id=$userId');
+          print('✅ [PostCard] Utilisateur chargé: $detectedType id=$userId');
+          return;
         }
       }
     } catch (e) {
-      debugPrint('❌ [PostCard] Erreur chargement utilisateur: $e');
+      print('⚠️ [PostCard] Erreur /auth/me: $e');
     }
+
+    print('❌ [PostCard] Impossible de charger l\'utilisateur courant');
   }
 
   Future<void> _showPostOptions(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
 
-    // Debug: afficher les informations pour comprendre le problème
-    print('🔍 [PostCard] _showPostOptions:');
-    print('   - _currentUserId: $_currentUserId');
-    print('   - _currentUserType: $_currentUserType');
-    print('   - post.authorId: ${widget.post.authorId}');
-    print('   - post.authorType: ${widget.post.authorType}');
+    // Si l'utilisateur n'est pas encore chargé, attendre
+    if (_currentUserId == null || _currentUserType == null) {
+      print('⏳ [PostCard] Utilisateur non chargé, rechargement...');
+      await _loadCurrentUser();
+    }
+
+    // Debug DÉTAILLÉ: afficher les informations pour comprendre le problème
+    print('═══════════════════════════════════════════════════════');
+    print('🔍 [PostCard] DEBUG _showPostOptions:');
+    print('   📱 UTILISATEUR CONNECTÉ:');
+    print('      - _currentUserId: $_currentUserId');
+    print('      - _currentUserType: $_currentUserType (value: ${_currentUserType?.value})');
+    print('   📝 POST:');
+    print('      - post.id: ${widget.post.id}');
+    print('      - post.authorId: ${widget.post.authorId}');
+    print('      - post.authorType: ${widget.post.authorType} (value: ${widget.post.authorType.value})');
+
+    // Comparer explicitement
+    final idMatch = _currentUserId == widget.post.authorId;
+    final typeMatch = _currentUserType == widget.post.authorType;
+    print('   🔎 COMPARAISON:');
+    print('      - IDs égaux: $idMatch ($_currentUserId == ${widget.post.authorId})');
+    print('      - Types égaux: $typeMatch ($_currentUserType == ${widget.post.authorType})');
 
     // Vérifier si l'utilisateur est le propriétaire
     final isOwner = _currentUserId != null &&
                     _currentUserType != null &&
-                    widget.post.isOwner(_currentUserId!, _currentUserType!);
+                    idMatch && typeMatch;
 
-    print('   - isOwner: $isOwner');
+    print('   ✅ isOwner: $isOwner');
+    print('═══════════════════════════════════════════════════════');
 
     await showModalBottomSheet(
       context: context,

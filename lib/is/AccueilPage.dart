@@ -61,39 +61,37 @@ class _AccueilPageState extends State<AccueilPage> {
       final societe = await SocieteAuthService.getMyProfile();
       print('📊 [Stats] Societe chargée: id=${societe.id}');
 
-      // Charger en parallèle les statistiques et les groupes
-      final results = await Future.wait([
-        SuivreAuthService.getSocieteStats(societe.id),
-        GroupeAuthService.getMyGroupes(),
-      ]);
-
-      print('📊 [Stats] Results: ${results[0].runtimeType}, ${results[1].runtimeType}');
-
-      // Gérer les stats avec plus de sécurité
-      Map<String, dynamic> stats = {};
-      if (results[0] is Map<String, dynamic>) {
-        stats = results[0] as Map<String, dynamic>;
-      } else if (results[0] is Map) {
-        stats = Map<String, dynamic>.from(results[0] as Map);
-      }
-
-      // Gérer les groupes avec plus de sécurité
+      // Charger les groupes d'abord (plus fiable)
       List<GroupeModel> groupes = [];
-      if (results[1] is List<GroupeModel>) {
-        groupes = results[1] as List<GroupeModel>;
-      } else if (results[1] is List) {
-        // Essayer de convertir si c'est une liste brute
-        groupes = (results[1] as List).whereType<GroupeModel>().toList();
+      try {
+        groupes = await GroupeAuthService.getMyGroupes();
+        print('📊 [Stats] Groupes chargés: ${groupes.length}');
+      } catch (e) {
+        print('⚠️ [Stats] Erreur chargement groupes: $e');
       }
 
-      print('📊 [Stats] Stats parsed: abonnes=${stats['abonnes_count']}, suivis=${stats['suivis_count']}');
-      print('📊 [Stats] Groupes count: ${groupes.length}');
+      // Charger les stats séparément
+      int abonnes = 0;
+      int suivis = 0;
+      try {
+        final statsResult = await SuivreAuthService.getSocieteStats(societe.id);
+        print('📊 [Stats] Stats result type: ${statsResult.runtimeType}');
+        print('📊 [Stats] Stats result: $statsResult');
+
+        if (statsResult is Map) {
+          abonnes = statsResult['abonnes_count'] ?? statsResult['followers_count'] ?? 0;
+          suivis = statsResult['suivis_count'] ?? statsResult['following_count'] ?? 0;
+        }
+      } catch (e) {
+        print('⚠️ [Stats] Erreur chargement stats suivis: $e');
+      }
+
+      print('📊 [Stats] Final: abonnes=$abonnes, suivis=$suivis, groupes=${groupes.length}');
 
       if (mounted) {
         setState(() {
-          _abonnesCount =
-              stats['abonnes_count'] ?? stats['followers_count'] ?? 0;
-          _suivisCount = stats['suivis_count'] ?? stats['following_count'] ?? 0;
+          _abonnesCount = abonnes;
+          _suivisCount = suivis;
           _groupesCount = groupes.length;
           _isLoadingStats = false;
         });
@@ -102,7 +100,12 @@ class _AccueilPageState extends State<AccueilPage> {
       print('❌ [Stats] Erreur chargement statistiques: $e');
       print('❌ [Stats] StackTrace: $stackTrace');
       if (mounted) {
-        setState(() => _isLoadingStats = false);
+        setState(() {
+          _abonnesCount = 0;
+          _suivisCount = 0;
+          _groupesCount = 0;
+          _isLoadingStats = false;
+        });
       }
     }
   }

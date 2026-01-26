@@ -115,6 +115,31 @@ class PostModel {
       print('📦 [PostModel] ⚠️ author est NULL - author_id=${json['author_id']}, author_type=${json['author_type']}');
     }
 
+    // CORRECTION: Récupérer authorId et authorType depuis author si les champs directs sont null
+    // Le backend peut retourner author_id/author_type OU author.id/author.type
+    int? authorId = json['author_id'];
+    String? authorTypeStr = json['author_type'];
+
+    // Si author_id est null mais author.id existe, utiliser author.id
+    if (authorId == null && authorData != null && authorData['id'] != null) {
+      authorId = authorData['id'];
+      print('📦 [PostModel] ✅ authorId récupéré depuis author.id: $authorId');
+    }
+
+    // Si author_type est null mais author.type existe, utiliser author.type
+    if (authorTypeStr == null && authorData != null && authorData['type'] != null) {
+      authorTypeStr = authorData['type'];
+      print('📦 [PostModel] ✅ authorType récupéré depuis author.type: $authorTypeStr');
+    }
+
+    print('📦 [PostModel] Final: authorId=$authorId, authorType=$authorTypeStr');
+
+    // S'assurer que authorId n'est pas null (requis par le modèle)
+    if (authorId == null) {
+      print('❌ [PostModel] ERREUR CRITIQUE: authorId est null pour post ${json['id']}!');
+      authorId = 0; // Valeur par défaut pour éviter le crash
+    }
+
     // Combiner tous les médias (images, videos, audios, documents) en une seule liste
     List<String>? mediaUrls;
 
@@ -154,8 +179,8 @@ class PostModel {
       sharesCount: json['shares_count'] ?? 0,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
-      authorId: json['author_id'],
-      authorType: AuthorType.fromString(json['author_type']),
+      authorId: authorId, // Garanti non-null après la vérification ci-dessus
+      authorType: AuthorType.fromString(authorTypeStr ?? 'User'),
       author: authorData, // Utiliser authorData qui gère plusieurs formats
       groupe: json['groupe'],
       mediaUrls: mediaUrls,

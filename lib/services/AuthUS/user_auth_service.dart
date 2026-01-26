@@ -234,13 +234,29 @@ class UserAuthService {
 
   /// Récupérer le profil complet de l'utilisateur connecté (avec profil)
   static Future<UserModel> getMyProfile() async {
+    print('🔍 [UserAuthService] getMyProfile() - Appel GET /users/me...');
+
+    // Vérifier d'abord si on est bien connecté en tant que User
+    final userType = await AuthBaseService.getUserType();
+    print('🔍 [UserAuthService] Type utilisateur stocké: $userType');
+
+    if (userType != 'user') {
+      print('⚠️ [UserAuthService] ATTENTION: userType != "user" (=$userType)');
+      throw Exception('Non connecté en tant que User (type=$userType)');
+    }
+
     final response = await ApiService.get('/users/me');
+    print('📥 [UserAuthService] Response status: ${response.statusCode}');
+    print('📥 [UserAuthService] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return UserModel.fromJson(jsonResponse['data']);
+      final user = UserModel.fromJson(jsonResponse['data']);
+      print('✅ [UserAuthService] User récupéré: id=${user.id}, nom=${user.nom}, prenom=${user.prenom}');
+      return user;
     } else {
-      throw Exception('Profil non trouvé');
+      print('❌ [UserAuthService] Erreur: ${response.statusCode} - ${response.body}');
+      throw Exception('Profil non trouvé (status=${response.statusCode})');
     }
   }
 

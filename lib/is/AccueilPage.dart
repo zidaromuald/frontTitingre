@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../services/AuthUS/auth_base_service.dart';
 import '../services/AuthUS/societe_auth_service.dart';
+import '../services/AuthUS/user_auth_service.dart';
 import '../services/posts/post_service.dart';
 import '../services/affichage/unread_content_service.dart';
 import '../services/suivre/suivre_auth_service.dart';
@@ -966,7 +966,46 @@ class _PostCardState extends State<_PostCard> {
 
     print('🔄 [PostCard] _loadCurrentUser() démarré...');
 
-    // ÉTAPE 1: Essayer d'abord SocieteAuthService (plus fiable pour détecter le type)
+    // ÉTAPE 1: Vérifier le type stocké dans SharedPreferences (défini lors du login)
+    final storedType = await AuthBaseService.getUserType();
+    print('🔍 [PostCard] Type stocké dans SharedPreferences: $storedType');
+
+    if (storedType == 'societe') {
+      // L'utilisateur est connecté en tant que Societe
+      try {
+        final societe = await SocieteAuthService.getMyProfile();
+        if (mounted) {
+          setState(() {
+            _currentUserId = societe.id;
+            _currentUserType = AuthorType.societe;
+          });
+          print('✅ [PostCard] Utilisateur chargé: SOCIETE id=${societe.id}');
+          return;
+        }
+      } catch (e) {
+        print('⚠️ [PostCard] Erreur SocieteAuthService.getMyProfile(): $e');
+      }
+    } else if (storedType == 'user') {
+      // L'utilisateur est connecté en tant que User
+      try {
+        final user = await UserAuthService.getMyProfile();
+        if (mounted) {
+          setState(() {
+            _currentUserId = user.id;
+            _currentUserType = AuthorType.user;
+          });
+          print('✅ [PostCard] Utilisateur chargé: USER id=${user.id}');
+          return;
+        }
+      } catch (e) {
+        print('⚠️ [PostCard] Erreur UserAuthService.getMyProfile(): $e');
+      }
+    }
+
+    // FALLBACK: Si le type stocké est inconnu, essayer les deux services
+    print('⚠️ [PostCard] Type stocké inconnu ou null, tentative fallback...');
+
+    // Essayer Societe d'abord
     try {
       final societe = await SocieteAuthService.getMyProfile();
       if (mounted) {
@@ -974,55 +1013,26 @@ class _PostCardState extends State<_PostCard> {
           _currentUserId = societe.id;
           _currentUserType = AuthorType.societe;
         });
-        print('✅ [PostCard] Utilisateur chargé: SOCIETE id=${societe.id}');
+        print('✅ [PostCard] Fallback: SOCIETE id=${societe.id}');
         return;
       }
     } catch (e) {
-      print('⚠️ [PostCard] Pas de profil Societe: $e');
-      // Continuer avec la deuxième méthode
+      print('⚠️ [PostCard] Fallback Societe échoué: $e');
     }
 
-    // ÉTAPE 2: Si pas de Societe, essayer /auth/me pour un User
+    // Essayer User ensuite
     try {
-      if (!mounted) return;
-
-      final response = await ApiService.get('/auth/me');
-      print('📥 [PostCard] /auth/me response: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final userData = data['data'] ?? data;
-        final userId = userData['id'];
-
-        if (userId == null) {
-          print('⚠️ [PostCard] userId est null dans /auth/me');
-          return;
-        }
-
-        // Détecter le type: vérifier les champs spécifiques à Societe
-        String detectedType = 'User';
-        if (userData['nom_societe'] != null ||
-            userData['raison_sociale'] != null ||
-            userData['type'] == 'Societe' ||
-            userData['user_type'] == 'Societe') {
-          detectedType = 'Societe';
-        } else if (userData['type'] != null) {
-          detectedType = userData['type'];
-        }
-
-        print('📋 [PostCard] /auth/me: id=$userId, detectedType=$detectedType');
-
-        if (mounted) {
-          setState(() {
-            _currentUserId = userId;
-            _currentUserType = detectedType == 'Societe' ? AuthorType.societe : AuthorType.user;
-          });
-          print('✅ [PostCard] Utilisateur chargé: $detectedType id=$userId');
-          return;
-        }
+      final user = await UserAuthService.getMyProfile();
+      if (mounted) {
+        setState(() {
+          _currentUserId = user.id;
+          _currentUserType = AuthorType.user;
+        });
+        print('✅ [PostCard] Fallback: USER id=${user.id}');
+        return;
       }
     } catch (e) {
-      print('⚠️ [PostCard] Erreur /auth/me: $e');
+      print('⚠️ [PostCard] Fallback User échoué: $e');
     }
 
     print('❌ [PostCard] Impossible de charger l\'utilisateur courant');

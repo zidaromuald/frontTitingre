@@ -58,29 +58,48 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
       int? userId;
       String? userType;
 
+      print('🔍 [PostDetails] Vérification auteur...');
+      print('🔍 [PostDetails] Post authorId=${post.authorId}, authorType=${post.authorType}');
+
       try {
         // Essayer de récupérer l'utilisateur connecté
         try {
+          print('🔍 [PostDetails] Tentative UserAuthService.getMyProfile()...');
           final currentUser = await UserAuthService.getMyProfile();
           userId = currentUser.id;
           userType = 'User';
+          print('✅ [PostDetails] User connecté: id=${currentUser.id}');
+          print('🔍 [PostDetails] Comparaison: post.authorType=${post.authorType} == AuthorType.user=${AuthorType.user} ? ${post.authorType == AuthorType.user}');
+          print('🔍 [PostDetails] Comparaison: currentUser.id=${currentUser.id} == post.authorId=${post.authorId} ? ${currentUser.id == post.authorId}');
           isAuthor = post.authorType == AuthorType.user && currentUser.id == post.authorId;
+          print('🔍 [PostDetails] isAuthor=$isAuthor');
         } catch (e) {
+          print('⚠️ [PostDetails] UserAuthService.getMyProfile() échoué: $e');
           // Essayer avec société
           try {
+            print('🔍 [PostDetails] Tentative SocieteAuthService.getMyProfile()...');
             final currentSociete = await SocieteAuthService.getMyProfile();
             userId = currentSociete.id;
             userType = 'Societe';
+            print('✅ [PostDetails] Societe connectée: id=${currentSociete.id}');
+            print('🔍 [PostDetails] Comparaison: post.authorType=${post.authorType} == AuthorType.societe=${AuthorType.societe} ? ${post.authorType == AuthorType.societe}');
+            print('🔍 [PostDetails] Comparaison: currentSociete.id=${currentSociete.id} == post.authorId=${post.authorId} ? ${currentSociete.id == post.authorId}');
             isAuthor = post.authorType == AuthorType.societe && currentSociete.id == post.authorId;
+            print('🔍 [PostDetails] isAuthor=$isAuthor');
           } catch (e) {
             // Non connecté
+            print('⚠️ [PostDetails] SocieteAuthService.getMyProfile() échoué: $e');
+            print('❌ [PostDetails] Utilisateur non connecté');
             isAuthor = false;
           }
         }
       } catch (e) {
         // L'utilisateur n'est pas connecté ou erreur
+        print('❌ [PostDetails] Erreur générale: $e');
         isAuthor = false;
       }
+
+      print('📋 [PostDetails] Résultat final: isAuthor=$isAuthor, userId=$userId, userType=$userType');
 
       if (mounted) {
         setState(() {

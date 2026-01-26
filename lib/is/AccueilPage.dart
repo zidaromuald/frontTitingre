@@ -1039,6 +1039,8 @@ class _PostCardState extends State<_PostCard> {
   }
 
   Future<void> _showPostOptions(BuildContext context) async {
+    // Sauvegarder le context parent avant d'ouvrir le bottomsheet
+    final parentContext = context;
     final cs = Theme.of(context).colorScheme;
 
     // Si l'utilisateur n'est pas encore chargé, attendre
@@ -1077,7 +1079,7 @@ class _PostCardState extends State<_PostCard> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
+      builder: (bottomSheetContext) => Container(
         decoration: BoxDecoration(
           color: cs.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -1106,9 +1108,9 @@ class _PostCardState extends State<_PostCard> {
                   leading: Icon(Icons.visibility, color: cs.primary, size: 22),
                   title: const Text('Voir le post', style: TextStyle(fontSize: 14)),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(bottomSheetContext);
                     Navigator.push(
-                      context,
+                      parentContext,
                       MaterialPageRoute(
                         builder: (context) => PostDetailsPage(postId: widget.post.id),
                       ),
@@ -1127,9 +1129,9 @@ class _PostCardState extends State<_PostCard> {
                     leading: Icon(Icons.edit, color: cs.primary, size: 22),
                     title: const Text('Modifier', style: TextStyle(fontSize: 14)),
                     onTap: () async {
-                      Navigator.pop(context);
+                      Navigator.pop(bottomSheetContext);
                       final result = await Navigator.push(
-                        context,
+                        parentContext,
                         MaterialPageRoute(
                           builder: (context) => PostEditPage(post: widget.post),
                         ),
@@ -1147,8 +1149,8 @@ class _PostCardState extends State<_PostCard> {
                     leading: const Icon(Icons.delete, color: Colors.red, size: 22),
                     title: const Text('Supprimer', style: TextStyle(color: Colors.red, fontSize: 14)),
                     onTap: () {
-                      Navigator.pop(context);
-                      _confirmDeletePost(context);
+                      Navigator.pop(bottomSheetContext);
+                      _confirmDeletePost(parentContext);
                     },
                   ),
                 ],

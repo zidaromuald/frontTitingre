@@ -1163,6 +1163,8 @@ class _PostCardState extends State<_PostCard> {
 
   /// Afficher les options du post (voir détails, modifier, supprimer)
   Future<void> _showPostOptions(BuildContext context) async {
+    // Sauvegarder le context parent avant d'ouvrir le bottomsheet
+    final parentContext = context;
     final cs = Theme.of(context).colorScheme;
 
     // S'assurer que l'utilisateur est chargé
@@ -1181,7 +1183,7 @@ class _PostCardState extends State<_PostCard> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (bottomSheetContext) => Container(
         decoration: BoxDecoration(
           color: cs.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -1204,9 +1206,9 @@ class _PostCardState extends State<_PostCard> {
               leading: Icon(Icons.visibility, color: cs.primary),
               title: const Text('Voir le post'),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(bottomSheetContext);
                 Navigator.push(
-                  context,
+                  parentContext,
                   MaterialPageRoute(
                     builder: (context) => PostDetailsPage(postId: widget.post.id),
                   ),
@@ -1221,9 +1223,9 @@ class _PostCardState extends State<_PostCard> {
                 leading: Icon(Icons.edit, color: cs.primary),
                 title: const Text('Modifier'),
                 onTap: () async {
-                  Navigator.pop(context);
+                  Navigator.pop(bottomSheetContext);
                   final result = await Navigator.push(
-                    context,
+                    parentContext,
                     MaterialPageRoute(
                       builder: (context) => PostEditPage(post: widget.post),
                     ),
@@ -1238,8 +1240,8 @@ class _PostCardState extends State<_PostCard> {
                 leading: const Icon(Icons.delete, color: Colors.red),
                 title: const Text('Supprimer', style: TextStyle(color: Colors.red)),
                 onTap: () {
-                  Navigator.pop(context);
-                  _confirmDeletePost(context);
+                  Navigator.pop(bottomSheetContext);
+                  _confirmDeletePost(parentContext);
                 },
               ),
             ],

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:gestauth_clean/iu/onglets/paramInfo/parametre.dart';
 import 'package:gestauth_clean/iu/onglets/postInfo/post.dart';
 import 'package:gestauth_clean/iu/onglets/postInfo/post_details_page.dart';
+import 'package:gestauth_clean/iu/onglets/postInfo/post_edit_page.dart';
 //import 'package:gestauth_clean/iu/onglets/postInfo/post_search_page.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/service.dart';
 import 'package:gestauth_clean/services/posts/post_service.dart';
 import 'package:gestauth_clean/services/affichage/unread_content_service.dart';
+import 'package:gestauth_clean/services/AuthUS/auth_base_service.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
+import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/suivre/abonnement_auth_service.dart';
 import 'package:gestauth_clean/widgets/r2_network_image.dart';
 
@@ -765,7 +768,7 @@ class _HomePageState extends State<HomePage> {
         _posts.length,
         (index) => Padding(
           padding: EdgeInsets.only(bottom: index < _posts.length - 1 ? 12 : 0),
-          child: _PostCard(post: _posts[index]),
+          child: _PostCard(post: _posts[index], onPostDeleted: _refreshPosts),
         ),
       ),
     );
@@ -794,20 +797,6 @@ class _HomePageState extends State<HomePage> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        /* actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PostSearchPage(),
-                ),
-              );
-            },
-            tooltip: 'Rechercher des posts',
-          ),
-        ],*/
       ),
       body: SafeArea(
         child: Column(
@@ -1094,9 +1083,66 @@ class _SquareAction extends StatelessWidget {
   }
 }
 
-class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post});
+class _PostCard extends StatefulWidget {
+  const _PostCard({required this.post, required this.onPostDeleted});
   final PostModel post;
+  final VoidCallback onPostDeleted;
+
+  @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  int? _currentUserId;
+  AuthorType? _currentUserType;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    if (!mounted) return;
+
+    print('🔄 [PostCard-Home] _loadCurrentUser() démarré...');
+
+    // Vérifier le type stocké dans SharedPreferences
+    final storedType = await AuthBaseService.getUserType();
+    print('🔍 [PostCard-Home] Type stocké: $storedType');
+
+    if (storedType == 'societe') {
+      try {
+        final societe = await SocieteAuthService.getMyProfile();
+        if (mounted) {
+          setState(() {
+            _currentUserId = societe.id;
+            _currentUserType = AuthorType.societe;
+          });
+          print('✅ [PostCard-Home] SOCIETE id=${societe.id}');
+          return;
+        }
+      } catch (e) {
+        print('⚠️ [PostCard-Home] Erreur Societe: $e');
+      }
+    } else if (storedType == 'user') {
+      try {
+        final user = await UserAuthService.getMyProfile();
+        if (mounted) {
+          setState(() {
+            _currentUserId = user.id;
+            _currentUserType = AuthorType.user;
+          });
+          print('✅ [PostCard-Home] USER id=${user.id}');
+          return;
+        }
+      } catch (e) {
+        print('⚠️ [PostCard-Home] Erreur User: $e');
+      }
+    }
+
+    print('❌ [PostCard-Home] Impossible de charger l\'utilisateur');
+  }
 
   String _formatTimestamp(DateTime dateTime) {
     final now = DateTime.now();
@@ -1115,9 +1161,23 @@ class _PostCard extends StatelessWidget {
     }
   }
 
-  /// Afficher les options du post (voir détails)
-  void _showPostOptions(BuildContext context) {
+  /// Afficher les options du post (voir détails, modifier, supprimer)
+  Future<void> _showPostOptions(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
+
+    // S'assurer que l'utilisateur est chargé
+    if (_currentUserId == null || _currentUserType == null) {
+      await _loadCurrentUser();
+    }
+
+    // Vérifier si l'utilisateur est l'auteur
+    final isOwner = _currentUserId != null &&
+        _currentUserType != null &&
+        _currentUserId == widget.post.authorId &&
+        _currentUserType == widget.post.authorType;
+
+    print('🔍 [PostCard-Home] isOwner=$isOwner (userId=$_currentUserId, postAuthorId=${widget.post.authorId})');
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1139,6 +1199,7 @@ class _PostCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+            // Option: Voir le post
             ListTile(
               leading: Icon(Icons.visibility, color: cs.primary),
               title: const Text('Voir le post'),
@@ -1147,11 +1208,41 @@ class _PostCard extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PostDetailsPage(postId: post.id),
+                    builder: (context) => PostDetailsPage(postId: widget.post.id),
                   ),
                 );
               },
             ),
+            // Options pour l'auteur uniquement
+            if (isOwner) ...[
+              Divider(height: 1, color: cs.outlineVariant),
+              // Option: Modifier
+              ListTile(
+                leading: Icon(Icons.edit, color: cs.primary),
+                title: const Text('Modifier'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PostEditPage(post: widget.post),
+                    ),
+                  );
+                  if (result == true && mounted) {
+                    widget.onPostDeleted();
+                  }
+                },
+              ),
+              // Option: Supprimer
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeletePost(context);
+                },
+              ),
+            ],
             const SizedBox(height: 16),
           ],
         ),
@@ -1159,12 +1250,57 @@ class _PostCard extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmDeletePost(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le post'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer ce post ? Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await PostService.deletePost(widget.post.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Post supprimé avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          widget.onPostDeleted();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final authorName = post.getAuthorName();
-    final authorPhoto = post.getAuthorPhoto();
-    final hasMedia = post.hasMedia();
+    final authorName = widget.post.getAuthorName();
+    final authorPhoto = widget.post.getAuthorPhoto();
+    final hasMedia = widget.post.hasMedia();
 
     // Card sans InkWell - seul le bouton trois points est cliquable
     return Container(
@@ -1196,7 +1332,7 @@ class _PostCard extends StatelessWidget {
                       : null,
                   child: authorPhoto == null
                       ? Icon(
-                          post.authorType == AuthorType.user
+                          widget.post.authorType == AuthorType.user
                               ? Icons.person
                               : Icons.business,
                           color: cs.onPrimaryContainer,
@@ -1216,7 +1352,7 @@ class _PostCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        _formatTimestamp(post.createdAt),
+                        _formatTimestamp(widget.post.createdAt),
                         style: TextStyle(
                           fontSize: 11,
                           color: cs.onSurface.withOpacity(.6),
@@ -1244,9 +1380,9 @@ class _PostCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Contenu texte
-            if (post.contenu.isNotEmpty) ...[
+            if (widget.post.contenu.isNotEmpty) ...[
               Text(
-                post.contenu,
+                widget.post.contenu,
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.4,
@@ -1262,7 +1398,7 @@ class _PostCard extends StatelessWidget {
             if (hasMedia) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: _buildMediaWidget(post.mediaUrls!.first, cs),
+                child: _buildMediaWidget(widget.post.mediaUrls!.first, cs),
               ),
               const SizedBox(height: 12),
             ],
@@ -1284,7 +1420,7 @@ class _PostCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    '${post.commentsCount}',
+                    '${widget.post.commentsCount}',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1300,7 +1436,7 @@ class _PostCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    '${post.likesCount}',
+                    '${widget.post.likesCount}',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,

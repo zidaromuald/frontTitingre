@@ -99,11 +99,16 @@ class SocieteModel {
   });
 
   factory SocieteModel.fromJson(Map<String, dynamic> json) {
+    // Le backend peut retourner 'nom' ou 'nom_societe' selon l'endpoint
+    final nom = json['nom'] ?? json['nom_societe'] ?? 'Société sans nom';
+    // Le backend peut retourner 'telephone' ou 'numero'
+    final telephone = json['telephone'] ?? json['numero'];
+
     return SocieteModel(
       id: json['id'],
-      nom: json['nom'],
+      nom: nom,
       email: json['email'],
-      telephone: json['telephone'],
+      telephone: telephone,
       adresse: json['adresse'],
       secteurActivite: json['secteur_activite'],
       profile: json['profile'] != null

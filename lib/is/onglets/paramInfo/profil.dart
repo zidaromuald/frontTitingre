@@ -75,7 +75,7 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
       if (mounted) {
         setState(() {
           _societe = societe;
-          _logoUrl = societe.profile?.logo;
+          _logoUrl = societe.profile?.getLogoUrl();
 
           // Remplir les controllers avec les données existantes
           _descriptionController.text = societe.profile?.description ?? '';

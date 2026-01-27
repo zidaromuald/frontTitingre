@@ -138,7 +138,7 @@ class _AccueilPageState extends State<AccueilPage> {
       if (mounted) {
         setState(() {
           _currentSociete = societe;
-          _currentLogoUrl = societe.profile?.logo;
+          _currentLogoUrl = societe.profile?.getLogoUrl();
           _isLoadingSociete = false;
         });
         print('👤 [Profile] État mis à jour');

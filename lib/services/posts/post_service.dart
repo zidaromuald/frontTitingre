@@ -530,10 +530,12 @@ class PostService {
   /// Récupérer les posts d'un auteur spécifique
   /// GET /posts/author/:type/:id
   /// IMPORTANT: Par défaut, exclut les posts de groupe (includeGroupPosts=false)
+  /// [authorData] - Données optionnelles de l'auteur à injecter si le backend ne les retourne pas
   static Future<List<PostModel>> getPostsByAuthor(
     int authorId,
     AuthorType authorType, {
     bool includeGroupPosts = false,
+    Map<String, dynamic>? authorData,
   }) async {
     final typeString = authorType.value;
     final includeParam = includeGroupPosts ? '?includeGroupPosts=true' : '';
@@ -551,7 +553,43 @@ class PostService {
         print('   📄 Post ${post['id']}: groupe_id=${post['groupe_id']}, visibility=${post['visibility']}');
       }
 
-      final allPosts = postsData.map((json) => PostModel.fromJson(json)).toList();
+      // CORRECTION: Si le backend ne retourne pas les données d'auteur, les injecter
+      // On connaît l'auteur car c'est dans l'URL de la requête
+      final postsWithAuthor = postsData.map((json) {
+        final postJson = Map<String, dynamic>.from(json);
+
+        // Si author_id est null, injecter l'authorId connu
+        if (postJson['author_id'] == null) {
+          postJson['author_id'] = authorId;
+          print('📦 [PostService] Injection author_id=$authorId pour post ${postJson['id']}');
+        }
+
+        // Si author_type est null, injecter l'authorType connu
+        if (postJson['author_type'] == null) {
+          postJson['author_type'] = typeString;
+          print('📦 [PostService] Injection author_type=$typeString pour post ${postJson['id']}');
+        }
+
+        // Si author est null et qu'on a des données d'auteur, les injecter
+        if (postJson['author'] == null && authorData != null) {
+          postJson['author'] = {
+            'id': authorId,
+            'type': typeString,
+            ...authorData,
+          };
+          print('📦 [PostService] Injection author data pour post ${postJson['id']}');
+        } else if (postJson['author'] == null) {
+          // Créer un auteur minimal avec juste l'ID et le type
+          postJson['author'] = {
+            'id': authorId,
+            'type': typeString,
+          };
+        }
+
+        return postJson;
+      }).toList();
+
+      final allPosts = postsWithAuthor.map((json) => PostModel.fromJson(json)).toList();
 
       // Si includeGroupPosts=false, filtrer les posts de groupe côté client (sécurité supplémentaire)
       if (!includeGroupPosts) {

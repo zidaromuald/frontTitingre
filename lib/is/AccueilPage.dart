@@ -61,10 +61,10 @@ class _AccueilPageState extends State<AccueilPage> {
       final societe = await SocieteAuthService.getMyProfile();
       print('📊 [Stats] Societe chargée: id=${societe.id}');
 
-      // Charger les groupes d'abord (plus fiable)
+      // Charger les groupes avec la méthode spécifique pour sociétés
       List<GroupeModel> groupes = [];
       try {
-        groupes = await GroupeAuthService.getMyGroupes();
+        groupes = await GroupeAuthService.getMySocieteGroupes(societe.id);
         print('📊 [Stats] Groupes chargés: ${groupes.length}');
       } catch (e) {
         print('⚠️ [Stats] Erreur chargement groupes: $e');

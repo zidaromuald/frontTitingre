@@ -33,25 +33,30 @@ class SocieteProfilModel {
   });
 
   factory SocieteProfilModel.fromJson(Map<String, dynamic> json) {
+    // Helper pour convertir une liste en List<String> en filtrant les nulls
+    // et en convertissant les valeurs en String pour éviter BindingError
+    List<String>? parseStringList(dynamic value) {
+      if (value == null) return null;
+      if (value is! List) return null;
+      return value
+          .where((e) => e != null) // Filtrer les nulls
+          .map((e) => e.toString()) // Convertir en String
+          .toList();
+    }
+
     return SocieteProfilModel(
       id: json['id'],
       societeId: json['societe_id'],
-      logo: json['logo'],
-      description: json['description'],
-      produits: json['produits'] != null
-          ? List<String>.from(json['produits'])
-          : null,
-      services: json['services'] != null
-          ? List<String>.from(json['services'])
-          : null,
-      centresInteret: json['centres_interet'] != null
-          ? List<String>.from(json['centres_interet'])
-          : null,
-      siteWeb: json['site_web'],
+      logo: json['logo']?.toString(),
+      description: json['description']?.toString(),
+      produits: parseStringList(json['produits']),
+      services: parseStringList(json['services']),
+      centresInteret: parseStringList(json['centres_interet']),
+      siteWeb: json['site_web']?.toString(),
       nombreEmployes: json['nombre_employes'],
       anneeCreation: json['annee_creation'],
-      chiffreAffaires: json['chiffre_affaires'],
-      certifications: json['certifications'],
+      chiffreAffaires: json['chiffre_affaires']?.toString(),
+      certifications: json['certifications']?.toString(),
     );
   }
 
@@ -100,19 +105,20 @@ class SocieteModel {
 
   factory SocieteModel.fromJson(Map<String, dynamic> json) {
     // Le backend peut retourner 'nom' ou 'nom_societe' selon l'endpoint
-    final nom = json['nom'] ?? json['nom_societe'] ?? 'Société sans nom';
+    // IMPORTANT: Convertir en String pour éviter BindingError sur Flutter Web
+    final nom = (json['nom'] ?? json['nom_societe'] ?? 'Société sans nom').toString();
     // Le backend peut retourner 'telephone' ou 'numero'
-    final telephone = json['telephone'] ?? json['numero'];
+    final telephone = (json['telephone'] ?? json['numero'])?.toString();
     // Le backend peut retourner null pour email
-    final email = json['email'] ?? '';
+    final email = (json['email'] ?? '').toString();
 
     return SocieteModel(
       id: json['id'],
       nom: nom,
       email: email,
       telephone: telephone,
-      adresse: json['adresse'],
-      secteurActivite: json['secteur_activite'],
+      adresse: json['adresse']?.toString(),
+      secteurActivite: json['secteur_activite']?.toString(),
       profile: json['profile'] != null
           ? SocieteProfilModel.fromJson(json['profile'])
           : null,

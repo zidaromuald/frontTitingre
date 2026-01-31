@@ -29,9 +29,10 @@ class GroupeWithUnreadContent {
   factory GroupeWithUnreadContent.fromJson(Map<String, dynamic> json) {
     return GroupeWithUnreadContent(
       id: json['id'],
-      nom: json['nom'],
-      description: json['description'],
-      logo: json['logo'],
+      // IMPORTANT: Convertir en String pour éviter BindingError sur Flutter Web
+      nom: (json['nom'] ?? 'Groupe sans nom').toString(),
+      description: json['description']?.toString(),
+      logo: json['logo']?.toString(),
       unreadMessagesCount: json['unread_messages_count'] ?? 0,
       unreadPostsCount: json['unread_posts_count'] ?? 0,
       lastActivityAt: json['last_activity_at'] != null
@@ -66,8 +67,9 @@ class SocieteWithUnreadContent {
   factory SocieteWithUnreadContent.fromJson(Map<String, dynamic> json) {
     return SocieteWithUnreadContent(
       id: json['id'],
-      nom: json['nom'],
-      logo: json['logo'],
+      // IMPORTANT: Convertir en String pour éviter BindingError sur Flutter Web
+      nom: (json['nom'] ?? 'Société sans nom').toString(),
+      logo: json['logo']?.toString(),
       unreadMessagesCount: json['unread_messages_count'] ?? 0,
       lastActivityAt: json['last_activity_at'] != null
           ? DateTime.parse(json['last_activity_at'])

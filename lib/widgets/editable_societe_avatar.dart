@@ -86,15 +86,16 @@ class _EditableSocieteAvatarState extends State<EditableSocieteAvatar> {
       final response = await SocieteAuthService.uploadLogo(image.path);
 
       // Mettre à jour l'URL du logo
-      final newLogoUrl = response['logo'] ?? response['url'];
+      // IMPORTANT: Convertir en String pour éviter BindingError sur Flutter Web
+      final newLogoUrl = (response['logo'] ?? response['url'])?.toString();
 
       setState(() {
         _logoUrl = newLogoUrl;
         _isUploading = false;
       });
 
-      // Notifier le parent si un callback est fourni
-      if (widget.onLogoUpdated != null && mounted) {
+      // Notifier le parent si un callback est fourni et si l'URL n'est pas null
+      if (widget.onLogoUpdated != null && mounted && newLogoUrl != null) {
         widget.onLogoUpdated!(newLogoUrl);
       }
 

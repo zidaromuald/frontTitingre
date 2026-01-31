@@ -83,7 +83,7 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
       final results = await Future.wait([
         UserAuthService.autocomplete(query),
         GroupeAuthService.searchGroupes(query: query, limit: 20),
-        SocieteAuthService.autocomplete(query),
+        _searchSocietesWithFallback(query),
       ]);
 
       debugPrint('🔍 [Search] Users trouvés: ${(results[0] as List).length}');
@@ -111,6 +111,37 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
           ),
         );
       }
+    }
+  }
+
+  /// Recherche de sociétés avec fallback : autocomplete -> searchSocietes -> searchByName
+  Future<List<SocieteModel>> _searchSocietesWithFallback(String query) async {
+    try {
+      // 1. Essayer l'autocomplete d'abord
+      debugPrint('🔍 [Search] Essai autocomplete sociétés...');
+      final autocompleteResults = await SocieteAuthService.autocomplete(query);
+      if (autocompleteResults.isNotEmpty) {
+        debugPrint('🔍 [Search] Autocomplete: ${autocompleteResults.length} résultats');
+        return autocompleteResults;
+      }
+
+      // 2. Si autocomplete ne retourne rien, essayer searchSocietes
+      debugPrint('🔍 [Search] Autocomplete vide, essai searchSocietes...');
+      final searchResults = await SocieteAuthService.searchSocietes(query: query, limit: 20);
+      if (searchResults.isNotEmpty) {
+        debugPrint('🔍 [Search] searchSocietes: ${searchResults.length} résultats');
+        return searchResults;
+      }
+
+      // 3. En dernier recours, essayer searchByName
+      debugPrint('🔍 [Search] searchSocietes vide, essai searchByName...');
+      final byNameResults = await SocieteAuthService.searchByName(query);
+      debugPrint('🔍 [Search] searchByName: ${byNameResults.length} résultats');
+      return byNameResults;
+    } catch (e) {
+      debugPrint('⚠️ [Search] Erreur recherche sociétés: $e');
+      // En cas d'erreur, retourner une liste vide plutôt que de faire échouer toute la recherche
+      return [];
     }
   }
 

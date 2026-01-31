@@ -421,8 +421,9 @@ class GroupeModel {
 
     return GroupeModel(
       id: json['id'],
-      nom: json['nom'],
-      description: json['description'],
+      // IMPORTANT: Convertir en String pour éviter BindingError sur Flutter Web
+      nom: (json['nom'] ?? 'Groupe sans nom').toString(),
+      description: json['description']?.toString(),
       createdById: createdById,
       createdByType: createdByType,
       type: GroupeType.fromString(json['type'] ?? 'prive'),

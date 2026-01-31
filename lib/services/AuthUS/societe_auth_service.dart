@@ -352,15 +352,21 @@ class SocieteAuthService {
 
   /// Autocomplétion pour la recherche de sociétés
   static Future<List<SocieteModel>> autocomplete(String term) async {
-    print('🔍 [SocieteAuth] Autocomplete sociétés pour: "$term"');
-    final response = await ApiService.get('/societes/autocomplete?term=$term');
+    // Encoder le terme de recherche pour éviter les problèmes avec les caractères spéciaux
+    final encodedTerm = Uri.encodeQueryComponent(term);
+    print('🔍 [SocieteAuth] Autocomplete sociétés pour: "$term" (encoded: "$encodedTerm")');
+    final response = await ApiService.get('/societes/autocomplete?term=$encodedTerm');
 
     print('🔍 [SocieteAuth] Response status: ${response.statusCode}');
+    print('🔍 [SocieteAuth] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> societesData = jsonResponse['data'] ?? [];
       print('🔍 [SocieteAuth] Sociétés data count: ${societesData.length}');
+      for (var s in societesData) {
+        print('🔍 [SocieteAuth] Société trouvée: ${s['nom'] ?? s['nom_societe'] ?? 'sans nom'}');
+      }
       return societesData.map((json) => SocieteModel.fromJson(json)).toList();
     } else {
       print('❌ [SocieteAuth] Erreur: ${response.body}');
@@ -395,33 +401,46 @@ class SocieteAuthService {
     int? offset,
   }) async {
     final params = <String>[];
-    if (query != null) params.add('q=$query');
-    if (secteur != null) params.add('secteur=$secteur');
-    if (produit != null) params.add('produit=$produit');
+    // Encoder les paramètres de recherche
+    if (query != null) params.add('q=${Uri.encodeQueryComponent(query)}');
+    if (secteur != null) params.add('secteur=${Uri.encodeQueryComponent(secteur)}');
+    if (produit != null) params.add('produit=${Uri.encodeQueryComponent(produit)}');
     if (limit != null) params.add('limit=$limit');
     if (offset != null) params.add('offset=$offset');
 
     final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
+    print('🔍 [SocieteAuth] searchSocietes: /societes/search$queryString');
     final response = await ApiService.get('/societes/search$queryString');
+
+    print('🔍 [SocieteAuth] searchSocietes response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> societesData = jsonResponse['data'];
+      final List<dynamic> societesData = jsonResponse['data'] ?? [];
+      print('🔍 [SocieteAuth] searchSocietes: ${societesData.length} résultats');
       return societesData.map((json) => SocieteModel.fromJson(json)).toList();
     } else {
+      print('❌ [SocieteAuth] searchSocietes erreur: ${response.body}');
       throw Exception('Erreur de recherche');
     }
   }
 
   /// Recherche rapide par nom
   static Future<List<SocieteModel>> searchByName(String name) async {
-    final response = await ApiService.get('/societes/search-by-name?q=$name');
+    // Encoder le nom pour éviter les problèmes avec les caractères spéciaux
+    final encodedName = Uri.encodeQueryComponent(name);
+    print('🔍 [SocieteAuth] searchByName: "$name" (encoded: "$encodedName")');
+    final response = await ApiService.get('/societes/search-by-name?q=$encodedName');
+
+    print('🔍 [SocieteAuth] searchByName response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> societesData = jsonResponse['data'];
+      final List<dynamic> societesData = jsonResponse['data'] ?? [];
+      print('🔍 [SocieteAuth] searchByName: ${societesData.length} résultats');
       return societesData.map((json) => SocieteModel.fromJson(json)).toList();
     } else {
+      print('❌ [SocieteAuth] searchByName erreur: ${response.body}');
       throw Exception('Erreur de recherche');
     }
   }

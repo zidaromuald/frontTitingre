@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../api_service.dart';
 
 // ============================================================================
@@ -228,20 +229,22 @@ class PostModel {
 
     if (authorType == AuthorType.user) {
       // Gérer plusieurs formats de réponse pour les utilisateurs
-      final prenom = author!['prenom'] ?? author!['first_name'] ?? '';
-      final nom = author!['nom'] ?? author!['last_name'] ?? author!['name'] ?? '';
+      // IMPORTANT: Convertir explicitement en String pour éviter BindingError sur Flutter Web
+      final prenom = (author!['prenom'] ?? author!['first_name'] ?? '').toString();
+      final nom = (author!['nom'] ?? author!['last_name'] ?? author!['name'] ?? '').toString();
 
-      if (prenom.toString().isEmpty && nom.toString().isEmpty) {
-        return author!['username'] ?? author!['email'] ?? 'Utilisateur #$authorId';
+      if (prenom.isEmpty && nom.isEmpty) {
+        return (author!['username'] ?? author!['email'] ?? 'Utilisateur #$authorId').toString();
       }
       return '$prenom $nom'.trim();
     } else {
       // Gérer plusieurs formats de réponse pour les sociétés
-      return author!['nom'] ??
+      // IMPORTANT: Convertir explicitement en String pour éviter BindingError sur Flutter Web
+      return (author!['nom'] ??
              author!['nom_societe'] ??
              author!['name'] ??
              author!['raison_sociale'] ??
-             'Société #$authorId';
+             'Société #$authorId').toString();
     }
   }
 
@@ -692,9 +695,24 @@ class PostService {
     bool onlyWithMedia = false,
   }) async {
     try {
-      // Récupérer l'utilisateur connecté pour avoir son ID
-      final meResponse = await ApiService.get('/auth/me');
+      // Déterminer le type d'utilisateur depuis le cache local
+      final prefs = await SharedPreferences.getInstance();
+      final cachedUserType = prefs.getString('user_type');
+
+      print('📤 [PostService] getPersonalizedFeed - cachedUserType: $cachedUserType');
+
+      // Utiliser le bon endpoint selon le type d'utilisateur
+      // /auth/me ne fonctionne pas pour les sociétés (retourne 403)
+      final String meEndpoint;
+      if (cachedUserType == 'societe') {
+        meEndpoint = '/societes/me';  // Endpoint spécifique pour les sociétés
+      } else {
+        meEndpoint = '/users/me';  // Endpoint spécifique pour les users
+      }
+
+      final meResponse = await ApiService.get(meEndpoint);
       if (meResponse.statusCode != 200) {
+        print('⚠️ [PostService] Endpoint $meEndpoint a échoué (${meResponse.statusCode}), fallback vers getMyFeed');
         // Fallback: utiliser getMyFeed si on ne peut pas récupérer l'utilisateur
         return getMyFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia);
       }
@@ -702,7 +720,8 @@ class PostService {
       final meData = jsonDecode(meResponse.body);
       final userData = meData['data'] ?? meData;
       final userId = userData['id'];
-      final userType = userData['type'] ?? 'User';
+      // Déterminer le type depuis le cache ou la réponse
+      final userType = cachedUserType == 'societe' ? 'Societe' : (userData['type'] ?? 'User');
 
       print('📤 [PostService] getPersonalizedFeed - userId: $userId, userType: $userType');
 

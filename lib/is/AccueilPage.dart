@@ -160,8 +160,9 @@ class _AccueilPageState extends State<AccueilPage> {
     });
 
     try {
-      print('📝 [Posts] Chargement du feed public...');
-      final posts = await PostService.getPublicFeed(limit: 20, offset: 0);
+      print('📝 [Posts] Chargement du feed personnalisé (mes posts + suivis)...');
+      // Utiliser getPersonalizedFeed pour voir uniquement ses posts + ceux des personnes suivies
+      final posts = await PostService.getPersonalizedFeed(limit: 20, offset: 0);
       print('📝 [Posts] ${posts.length} posts chargés');
 
       if (mounted) {

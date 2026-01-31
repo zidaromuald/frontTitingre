@@ -216,7 +216,19 @@ class _ServicePageState extends State<ServicePage> {
             fontSize: 18,
           ),
         ),
-      
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GlobalSearchPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.search, color: Colors.white),
+          ),
+        ],
       ),
       body: Column(
         children: [

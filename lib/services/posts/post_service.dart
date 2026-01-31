@@ -700,17 +700,36 @@ class PostService {
       }
 
       final meData = jsonDecode(meResponse.body);
-      final userId = meData['data']?['id'] ?? meData['id'];
-      final userType = meData['data']?['type'] ?? 'User';
+      final userData = meData['data'] ?? meData;
+      final userId = userData['id'];
+      final userType = userData['type'] ?? 'User';
 
       print('📤 [PostService] getPersonalizedFeed - userId: $userId, userType: $userType');
 
+      // Préparer les données d'auteur pour l'injection dans les posts
+      // Cela permet d'afficher le nom de l'utilisateur même si le backend ne le retourne pas
+      final Map<String, dynamic> authorData = {
+        'id': userId,
+        'type': userType,
+        // Pour un User
+        if (userType == 'User') 'nom': userData['nom'] ?? '',
+        if (userType == 'User') 'prenom': userData['prenom'] ?? '',
+        if (userType == 'User') 'email': userData['email'],
+        if (userType == 'User') 'profile': userData['profile'],
+        // Pour une Societe
+        if (userType == 'Societe') 'nom': userData['nom'] ?? userData['nom_societe'] ?? '',
+        if (userType == 'Societe') 'profile': userData['profile'],
+      };
+
+      print('📤 [PostService] authorData préparé: $authorData');
+
       // Charger en parallèle : mes posts + feed des suivis
       final results = await Future.wait([
-        // Mes propres posts
+        // Mes propres posts (avec données d'auteur injectées)
         getPostsByAuthor(
           userId,
           userType == 'Societe' ? AuthorType.societe : AuthorType.user,
+          authorData: authorData,
         ),
         // Feed des personnes que je suis
         getMyFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia),

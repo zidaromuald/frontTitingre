@@ -103,11 +103,13 @@ class SocieteModel {
     final nom = json['nom'] ?? json['nom_societe'] ?? 'Société sans nom';
     // Le backend peut retourner 'telephone' ou 'numero'
     final telephone = json['telephone'] ?? json['numero'];
+    // Le backend peut retourner null pour email
+    final email = json['email'] ?? '';
 
     return SocieteModel(
       id: json['id'],
       nom: nom,
-      email: json['email'],
+      email: email,
       telephone: telephone,
       adresse: json['adresse'],
       secteurActivite: json['secteur_activite'],

@@ -20,6 +20,11 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
   SocieteModel? _societe;
   String? _logoUrl;
 
+  // Controllers pour les champs en lecture seule
+  late TextEditingController _nomController;
+  late TextEditingController _emailController;
+  late TextEditingController _telephoneController;
+
   // Controllers pour les champs éditables
   late TextEditingController _descriptionController;
   late TextEditingController _siteWebController;
@@ -41,6 +46,11 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
   @override
   void initState() {
     super.initState();
+    // Controllers pour les champs en lecture seule
+    _nomController = TextEditingController();
+    _emailController = TextEditingController();
+    _telephoneController = TextEditingController();
+    // Controllers pour les champs éditables
     _descriptionController = TextEditingController();
     _siteWebController = TextEditingController();
     _nombreEmployesController = TextEditingController();
@@ -77,6 +87,11 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
           _societe = societe;
           _logoUrl = societe.profile?.getLogoUrl();
 
+          // Remplir les controllers pour les champs en lecture seule (avec ?? '' pour éviter null)
+          _nomController.text = societe.nom ?? '';
+          _emailController.text = societe.email ?? '';
+          _telephoneController.text = societe.telephone ?? '';
+
           // Remplir les controllers avec les données existantes
           _descriptionController.text = societe.profile?.description ?? '';
           _siteWebController.text = societe.profile?.siteWeb ?? '';
@@ -89,10 +104,10 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
           _certificationsController.text =
               societe.profile?.certifications ?? '';
 
-          // Remplir les listes
-          _produits = societe.profile?.produits ?? [];
-          _services = societe.profile?.services ?? [];
-          _centresInteret = societe.profile?.centresInteret ?? [];
+          // Remplir les listes (filtrer les valeurs null potentielles)
+          _produits = (societe.profile?.produits ?? []).whereType<String>().toList();
+          _services = (societe.profile?.services ?? []).whereType<String>().toList();
+          _centresInteret = (societe.profile?.centresInteret ?? []).whereType<String>().toList();
 
           _isLoading = false;
         });
@@ -253,8 +268,10 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
 
               // Section Informations de la société (non modifiables)
               _buildSectionTitle('Informations de la société'),
-              _buildReadOnlyCard("Nom de la société", _societe!.nom),
-              _buildReadOnlyCard("Email", _societe!.email),
+              _buildReadOnlyCard("Nom de la société", _nomController.text),
+              _buildReadOnlyCard("Email", _emailController.text),
+              if (_telephoneController.text.isNotEmpty)
+                _buildReadOnlyCard("Téléphone", _telephoneController.text),
 
               const SizedBox(height: 16),
               const Divider(),
@@ -661,6 +678,11 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
 
   @override
   void dispose() {
+    // Controllers pour les champs en lecture seule
+    _nomController.dispose();
+    _emailController.dispose();
+    _telephoneController.dispose();
+    // Controllers pour les champs éditables
     _descriptionController.dispose();
     _siteWebController.dispose();
     _nombreEmployesController.dispose();

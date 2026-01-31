@@ -58,12 +58,19 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   }
 
   Future<void> _loadData() async {
+    // 1. Charger le profil utilisateur et le pagePartenaritId en parallèle
     await Future.wait([
       _loadUserProfile(),
       _loadPagePartenaritId(),
-      _loadTransactions(),
-      _loadInformations(),
     ]);
+
+    // 2. Une fois le pagePartenaritId chargé, charger les transactions et informations
+    if (_pagePartenaritId != null) {
+      await Future.wait([
+        _loadTransactions(),
+        _loadInformations(),
+      ]);
+    }
   }
 
   Future<void> _loadPagePartenaritId() async {
@@ -124,12 +131,15 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   }
 
   Future<void> _loadTransactions() async {
+    if (_pagePartenaritId == null) {
+      setState(() => _isLoadingTransactions = false);
+      return;
+    }
+
     setState(() => _isLoadingTransactions = true);
 
     try {
-      // TODO: Récupérer le vrai ID de page partenariat depuis le backend
-      // Pour l'instant, on utilise l'ID de l'utilisateur
-      final transactions = await TransactionPartenaritService.getTransactionsForPage(widget.userId);
+      final transactions = await TransactionPartenaritService.getTransactionsForPage(_pagePartenaritId!);
 
       if (mounted) {
         setState(() {
@@ -146,11 +156,15 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   }
 
   Future<void> _loadInformations() async {
+    if (_pagePartenaritId == null) {
+      setState(() => _isLoadingInformations = false);
+      return;
+    }
+
     setState(() => _isLoadingInformations = true);
 
     try {
-      // TODO: Récupérer le vrai ID de page partenariat depuis le backend
-      final informations = await InformationPartenaireService.getInformationsForPage(widget.userId);
+      final informations = await InformationPartenaireService.getInformationsForPage(_pagePartenaritId!);
 
       if (mounted) {
         setState(() {

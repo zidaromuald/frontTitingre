@@ -25,8 +25,48 @@ class _CategoriePageState extends State<CategoriePage> {
   static const Color mattermostDarkGray = Color(0xFF8D8D8D);
   static const Color categoryGreen = Color(0xFF0D5648);
 
-  // Note: Les collaborateurs sont maintenant récupérés dynamiquement
-  // via UserAuthService.searchUsers() ou SuivreAuthService.getMySuivis()
+  // État pour les groupes chargés dynamiquement
+  List<GroupeModel> _mesGroupes = [];
+  bool _isLoadingGroupes = false;
+  String? _groupesError;
+
+  @override
+  void initState() {
+    super.initState();
+    // Charger les groupes dynamiquement si c'est la catégorie Canaux
+    if (widget.categorie['nom'] == 'Canaux') {
+      _loadMesGroupes();
+    }
+  }
+
+  /// Charge les groupes de l'utilisateur/société connecté(e)
+  Future<void> _loadMesGroupes() async {
+    setState(() {
+      _isLoadingGroupes = true;
+      _groupesError = null;
+    });
+
+    try {
+      debugPrint('📤 [CategoriePage] Chargement groupes via getMyGroupes()...');
+      final groupes = await GroupeAuthService.getMyGroupes();
+      debugPrint('📥 [CategoriePage] ${groupes.length} groupes récupérés');
+
+      if (mounted) {
+        setState(() {
+          _mesGroupes = groupes;
+          _isLoadingGroupes = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ [CategoriePage] Erreur chargement groupes: $e');
+      if (mounted) {
+        setState(() {
+          _groupesError = e.toString();
+          _isLoadingGroupes = false;
+        });
+      }
+    }
+  }
 
   /// Retourne la couleur de l'AppBar selon la catégorie
   Color _getAppBarColor() {
@@ -162,19 +202,194 @@ class _CategoriePageState extends State<CategoriePage> {
           const SizedBox(height: 20),
 
           // Mes canaux
-          const Text(
-            "Mes canaux",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: mattermostBlue,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Mes canaux",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: mattermostBlue,
+                ),
+              ),
+              if (_isLoadingGroupes)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
           ),
           const SizedBox(height: 12),
 
-          // Liste des canaux existants
-          ...widget.groupes.map((groupe) => _buildChannelCard(groupe)),
+          // Affichage selon l'état
+          if (_isLoadingGroupes && _mesGroupes.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_groupesError != null)
+            Center(
+              child: Column(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red[400], size: 48),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Erreur de chargement',
+                    style: TextStyle(color: Colors.red[600]),
+                  ),
+                  TextButton(
+                    onPressed: _loadMesGroupes,
+                    child: const Text('Réessayer'),
+                  ),
+                ],
+              ),
+            )
+          else if (_mesGroupes.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Icon(Icons.tag, size: 48, color: Colors.grey[400]),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Aucun canal pour le moment',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Créez votre premier canal ci-dessus',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            // Liste des canaux chargés dynamiquement
+            ..._mesGroupes.map((groupe) => _buildChannelCardFromModel(groupe)),
         ],
+      ),
+    );
+  }
+
+  // Widget pour les cartes de canaux (depuis GroupeModel)
+  Widget _buildChannelCardFromModel(GroupeModel groupe) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: widget.categorie['color'].withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.tag, color: widget.categorie['color'], size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  groupe.nom,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (groupe.description != null && groupe.description!.isNotEmpty)
+                  Text(
+                    groupe.description!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: mattermostDarkGray,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                Row(
+                  children: [
+                    Text(
+                      "${groupe.membresCount ?? 0} membres",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: widget.categorie['color'],
+                      ),
+                    ),
+                    if (groupe.myRole != null) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: groupe.myRole == 'admin'
+                              ? mattermostGreen.withOpacity(0.1)
+                              : mattermostBlue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          groupe.myRole == 'admin' ? 'Admin' : 'Membre',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: groupe.myRole == 'admin'
+                                ? mattermostGreen
+                                : mattermostBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _openChannelFromModel(groupe),
+            icon: Icon(
+              Icons.arrow_forward_ios,
+              color: widget.categorie['color'],
+              size: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openChannelFromModel(GroupeModel groupe) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            backgroundColor: widget.categorie['color'],
+            title: Text(
+              "#${groupe.nom}",
+              style: const TextStyle(color: Colors.white),
+            ),
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(child: Text("Discussion dans ${groupe.nom}")),
+        ),
       ),
     );
   }
@@ -521,8 +736,8 @@ class _CategoriePageState extends State<CategoriePage> {
         ),
       );
 
-      // Recharger les groupes si possible (nécessite un callback ou setState du parent)
-      setState(() {});
+      // Recharger les groupes dynamiquement
+      _loadMesGroupes();
     }
   }
 

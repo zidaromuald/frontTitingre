@@ -287,6 +287,7 @@ class SuivreAuthService {
 
   /// Récupérer les followers d'une entité
   /// GET /suivis/:type/:id/followers
+  /// Retourne les données utilisateur extraites des relations de suivi
   static Future<List<Map<String, dynamic>>> getFollowers({
     required int entityId,
     required EntityType entityType,
@@ -300,9 +301,38 @@ class SuivreAuthService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final data = List<Map<String, dynamic>>.from(jsonResponse['data'] ?? []);
-      print('📥 [SuivreAuth] ${data.length} followers récupérés');
-      return data;
+      final List<dynamic> rawData = jsonResponse['data'] ?? [];
+      print('📥 [SuivreAuth] ${rawData.length} followers récupérés');
+
+      // Extraire les données utilisateur - peut être imbriqué dans 'user', 'follower', ou directement
+      final List<Map<String, dynamic>> followers = [];
+      for (var item in rawData) {
+        print('   📦 [SuivreAuth] Follower item keys: ${item.keys.toList()}');
+
+        Map<String, dynamic>? userData;
+
+        // Essayer différentes structures possibles
+        if (item['user'] != null) {
+          userData = Map<String, dynamic>.from(item['user']);
+          print('   ✅ [SuivreAuth] Trouvé dans "user"');
+        } else if (item['follower'] != null) {
+          userData = Map<String, dynamic>.from(item['follower']);
+          print('   ✅ [SuivreAuth] Trouvé dans "follower"');
+        } else if (item['id'] != null && (item['nom'] != null || item['prenom'] != null)) {
+          // Données utilisateur directement dans l'objet
+          userData = Map<String, dynamic>.from(item);
+          print('   ✅ [SuivreAuth] Données directes');
+        } else {
+          // Dernier recours: utiliser l'item tel quel
+          userData = Map<String, dynamic>.from(item);
+          print('   ⚠️ [SuivreAuth] Structure inconnue, utilisation brute');
+        }
+
+        followers.add(userData);
+      }
+
+      print('📥 [SuivreAuth] ${followers.length} followers extraits avec succès');
+      return followers;
     } else {
       print('❌ [SuivreAuth] Erreur getFollowers: ${response.body}');
       throw Exception('Erreur de récupération des followers');

@@ -336,6 +336,7 @@ class UserAuthService {
   }
 
   /// Rechercher des utilisateurs
+  /// Utilise l'endpoint autocomplete qui fonctionne avec le paramètre 'term'
   static Future<List<UserModel>> searchUsers({
     required String query,
     int? limit,
@@ -345,14 +346,10 @@ class UserAuthService {
     final encodedQuery = Uri.encodeQueryComponent(query);
     print('🔍 [UserAuth] searchUsers: "$query" (encoded: "$encodedQuery")');
 
-    final params = <String>[];
-    params.add('q=$encodedQuery');
-    if (limit != null) params.add('limit=$limit');
-    if (offset != null) params.add('offset=$offset');
-
-    final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
-    print('🔍 [UserAuth] GET /users/search$queryString');
-    final response = await ApiService.get('/users/search$queryString');
+    // Utiliser autocomplete qui fonctionne avec 'term' au lieu de /users/search?q=
+    // Le backend n'accepte pas les params q et limit sur /users/search
+    print('🔍 [UserAuth] GET /users/autocomplete?term=$encodedQuery');
+    final response = await ApiService.get('/users/autocomplete?term=$encodedQuery');
 
     print('🔍 [UserAuth] Response status: ${response.statusCode}');
 
@@ -360,7 +357,17 @@ class UserAuthService {
       final jsonResponse = jsonDecode(response.body);
       final List<dynamic> usersData = jsonResponse['data'] ?? [];
       print('🔍 [UserAuth] searchUsers: ${usersData.length} résultats');
-      return usersData.map((json) => UserModel.fromJson(json)).toList();
+
+      // Appliquer la limite côté client si spécifiée
+      var results = usersData.map((json) => UserModel.fromJson(json)).toList();
+      if (limit != null && results.length > limit) {
+        results = results.take(limit).toList();
+      }
+      if (offset != null && offset > 0 && results.length > offset) {
+        results = results.skip(offset).toList();
+      }
+
+      return results;
     } else {
       print('❌ [UserAuth] searchUsers erreur: ${response.body}');
       throw Exception('Erreur de recherche: ${response.statusCode}');

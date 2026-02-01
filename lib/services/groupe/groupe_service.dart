@@ -370,6 +370,7 @@ class GroupeModel {
   final DateTime? updatedAt;
   final GroupeProfilModel? profil;
   final int? membresCount;
+  final String? myRole; // Rôle de l'utilisateur connecté dans ce groupe (membre, moderateur, admin)
 
   GroupeModel({
     required this.id,
@@ -385,6 +386,7 @@ class GroupeModel {
     this.updatedAt,
     this.profil,
     this.membresCount,
+    this.myRole,
   });
 
   factory GroupeModel.fromJson(Map<String, dynamic> json) {
@@ -436,6 +438,7 @@ class GroupeModel {
           ? GroupeProfilModel.fromJson(json['profil'])
           : null,
       membresCount: membresCount,
+      myRole: json['myRole'] ?? json['my_role'],
     );
   }
 
@@ -465,6 +468,12 @@ class GroupeModel {
 
   String? getPhotoCouvertureUrl() => profil?.getPhotoCouvertureUrl();
   String? getLogoUrl() => profil?.getLogoUrl();
+
+  // Helpers pour myRole
+  bool get isMyRoleAdmin => myRole == 'admin';
+  bool get isMyRoleModerator => myRole == 'moderateur';
+  bool get isMyRoleMember => myRole == 'membre';
+  bool get amIMember => myRole != null;
 }
 
 // ============================================================================

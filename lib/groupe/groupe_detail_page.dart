@@ -281,21 +281,26 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
   Future<void> _showInviteUserDialog() async {
     final TextEditingController searchController = TextEditingController();
     List<UserModel> searchResults = [];
-    List<UserModel> myFollowers = []; // Utilisateurs qui me suivent
+    List<UserModel> myFollowers = []; // Utilisateurs qui me suivent (pour groupes User)
+    List<UserModel> myAbonnes = []; // Abonnés de la société (pour groupes Société)
     List<UserModel> followingUsers = []; // Utilisateurs que je suis
     bool isSearching = false;
     bool isLoading = true;
-    int currentTab =
-        0; // 0 = Mes suivis, 1 = Mes followers, 2 = Recherche
+    int currentTab = 0; // 0 = Mes suivis, 1 = Mes abonnés/followers, 2 = Recherche
+
+    // Déterminer si le groupe est créé par une Société
+    final isGroupeFromSociete = _groupe?.isCreatedBySociete() ?? false;
+    print('📦 [Invitation] Groupe créé par Société: $isGroupeFromSociete');
 
     // Charger les données initiales
     try {
-      // Récupérer l'utilisateur courant pour obtenir son ID
+      // Récupérer l'utilisateur/société courant pour obtenir son ID
       final currentUserResponse = await ApiService.get('/auth/me');
       int? currentUserId;
       if (currentUserResponse.statusCode == 200) {
         final userData = jsonDecode(currentUserResponse.body);
         currentUserId = userData['data']?['id'] ?? userData['id'];
+        print('📦 [Invitation] Utilisateur courant ID: $currentUserId');
       }
 
       // Charger les utilisateurs que je suis (avec détails)
@@ -310,19 +315,40 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
           .toList();
       print('✅ ${followingUsers.length} utilisateurs suivis chargés');
 
-      // Charger mes followers (utilisateurs qui me suivent)
-      if (currentUserId != null) {
-        try {
-          final followersData = await suivre.SuivreAuthService.getFollowers(
-            entityId: currentUserId,
-            entityType: suivre.EntityType.user,
-          );
-          myFollowers = followersData
-              .map((data) => UserModel.fromJson(data))
-              .toList();
-          print('✅ ${myFollowers.length} followers chargés');
-        } catch (e) {
-          print('⚠️ Erreur chargement followers: $e');
+      // Charger selon le type de créateur du groupe
+      if (isGroupeFromSociete) {
+        // Pour les groupes de Société: charger les ABONNÉS de la société
+        print('📦 [Invitation] Chargement des abonnés de la société...');
+        if (_groupe?.createdById != null) {
+          try {
+            final abonnesData = await suivre.SuivreAuthService.getFollowers(
+              entityId: _groupe!.createdById,
+              entityType: suivre.EntityType.societe,
+            );
+            myAbonnes = abonnesData
+                .map((data) => UserModel.fromJson(data))
+                .toList();
+            print('✅ ${myAbonnes.length} abonnés de la société chargés');
+          } catch (e) {
+            print('⚠️ Erreur chargement abonnés société: $e');
+          }
+        }
+      } else {
+        // Pour les groupes d'User: charger les FOLLOWERS de l'utilisateur
+        print('📦 [Invitation] Chargement des followers de l\'utilisateur...');
+        if (currentUserId != null) {
+          try {
+            final followersData = await suivre.SuivreAuthService.getFollowers(
+              entityId: currentUserId,
+              entityType: suivre.EntityType.user,
+            );
+            myFollowers = followersData
+                .map((data) => UserModel.fromJson(data))
+                .toList();
+            print('✅ ${myFollowers.length} followers chargés');
+          } catch (e) {
+            print('⚠️ Erreur chargement followers: $e');
+          }
         }
       }
 
@@ -358,10 +384,20 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                         onTap: () => setDialogState(() => currentTab = 0),
                       ),
                       const SizedBox(width: 8),
-                      if (myFollowers.isNotEmpty)
+                      // "Mes abonnés" uniquement pour groupes Société
+                      if (isGroupeFromSociete && myAbonnes.isNotEmpty)
                         _buildTabButton(
                           label: 'Mes abonnés',
                           icon: Icons.people,
+                          count: myAbonnes.length,
+                          isSelected: currentTab == 1,
+                          onTap: () => setDialogState(() => currentTab = 1),
+                        ),
+                      // "Mes followers" pour groupes User
+                      if (!isGroupeFromSociete && myFollowers.isNotEmpty)
+                        _buildTabButton(
+                          label: 'Mes followers',
+                          icon: Icons.people_outline,
                           count: myFollowers.length,
                           isSelected: currentTab == 1,
                           onTap: () => setDialogState(() => currentTab = 1),
@@ -395,12 +431,14 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
                     setDialogState: setDialogState,
                   )
                 else if (currentTab == 1)
-                  // Onglet "Mes abonnés" (utilisateurs qui me suivent)
+                  // Onglet "Mes abonnés" (Société) ou "Mes followers" (User)
                   _buildUserList(
-                    users: myFollowers,
+                    users: isGroupeFromSociete ? myAbonnes : myFollowers,
                     emptyIcon: Icons.people_outline,
-                    emptyTitle: 'Aucun abonné',
-                    emptySubtitle: 'Aucun utilisateur ne vous suit pour le moment',
+                    emptyTitle: isGroupeFromSociete ? 'Aucun abonné' : 'Aucun follower',
+                    emptySubtitle: isGroupeFromSociete
+                        ? 'Aucun utilisateur n\'est abonné à votre société'
+                        : 'Aucun utilisateur ne vous suit pour le moment',
                     setDialogState: setDialogState,
                   )
                 else if (currentTab == 2)

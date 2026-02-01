@@ -617,101 +617,80 @@ class GroupeAuthService {
   // ==========================================================================
 
   /// Récupérer les groupes auxquels je participe (créés + membre)
+  /// Fonctionne pour les Users ET les Sociétés via le token d'authentification
   static Future<List<GroupeModel>> getMyGroupes() async {
     print('📤 [GroupeService] Appel GET /groupes/me');
-    final response = await ApiService.get('/groupes/me');
-    print('📥 [GroupeService] Response status: ${response.statusCode}');
-    print('📥 [GroupeService] Response body: ${response.body}');
 
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      // Le backend peut retourner 'data' ou 'groupes'
-      final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
-      print('📥 [GroupeService] Nombre de groupes: ${groupesData.length}');
-      return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
-    } else {
-      print('❌ [GroupeService] Erreur: ${response.body}');
-      throw Exception('Erreur de récupération des groupes');
-    }
-  }
-
-  /// Récupérer les groupes pour une SOCIÉTÉ avec fallbacks multiples
-  /// Essaie plusieurs endpoints car /groupes/me peut ne pas fonctionner pour les sociétés
-  static Future<List<GroupeModel>> getMySocieteGroupes(int societeId) async {
-    print('📤 [GroupeService] Récupération groupes pour société #$societeId');
-
-    // Méthode 1: Essayer /groupes/me (peut fonctionner si le backend supporte les sociétés)
     try {
-      print('📤 [GroupeService] Essai 1: GET /groupes/me');
       final response = await ApiService.get('/groupes/me');
+      print('📥 [GroupeService] Response status: ${response.statusCode}');
+      print('📥 [GroupeService] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        // Le backend peut retourner 'data' ou 'groupes'
+        final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
+        print('📥 [GroupeService] Nombre de groupes via /groupes/me: ${groupesData.length}');
+
+        if (groupesData.isNotEmpty) {
+          return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
+        }
+
+        // Si 0 groupes retournés, essayer d'autres endpoints comme fallback
+        print('⚠️ [GroupeService] /groupes/me retourne 0 groupes, tentative fallbacks...');
+      }
+    } catch (e) {
+      print('⚠️ [GroupeService] Erreur /groupes/me: $e');
+    }
+
+    // Fallback 1: Essayer /users/me/groupes
+    try {
+      print('📤 [GroupeService] Fallback 1: GET /users/me/groupes');
+      final response = await ApiService.get('/users/me/groupes');
       print('📥 [GroupeService] Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
-        print('📥 [GroupeService] /groupes/me: ${groupesData.length} groupes');
+        print('📥 [GroupeService] Nombre de groupes via /users/me/groupes: ${groupesData.length}');
+
         if (groupesData.isNotEmpty) {
           return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
         }
       }
     } catch (e) {
-      print('⚠️ [GroupeService] /groupes/me échoué: $e');
+      print('⚠️ [GroupeService] Fallback 1 échoué: $e');
     }
 
-    // Méthode 2: Essayer /societes/me/groupes
+    // Fallback 2: Essayer /societes/me/groupes
     try {
-      print('📤 [GroupeService] Essai 2: GET /societes/me/groupes');
+      print('📤 [GroupeService] Fallback 2: GET /societes/me/groupes');
       final response = await ApiService.get('/societes/me/groupes');
       print('📥 [GroupeService] Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
-        print('📥 [GroupeService] /societes/me/groupes: ${groupesData.length} groupes');
+        print('📥 [GroupeService] Nombre de groupes via /societes/me/groupes: ${groupesData.length}');
+
         if (groupesData.isNotEmpty) {
           return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
         }
       }
     } catch (e) {
-      print('⚠️ [GroupeService] /societes/me/groupes échoué: $e');
+      print('⚠️ [GroupeService] Fallback 2 échoué: $e');
     }
 
-    // Méthode 3: Essayer /societes/{id}/groupes
-    try {
-      print('📤 [GroupeService] Essai 3: GET /societes/$societeId/groupes');
-      final response = await ApiService.get('/societes/$societeId/groupes');
-      print('📥 [GroupeService] Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
-        print('📥 [GroupeService] /societes/$societeId/groupes: ${groupesData.length} groupes');
-        if (groupesData.isNotEmpty) {
-          return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
-        }
-      }
-    } catch (e) {
-      print('⚠️ [GroupeService] /societes/$societeId/groupes échoué: $e');
-    }
-
-    // Méthode 4: Rechercher les groupes créés par la société
-    try {
-      print('📤 [GroupeService] Essai 4: Recherche groupes créés par Societe #$societeId');
-      final response = await ApiService.get('/groupes/search/query?created_by_id=$societeId&created_by_type=Societe');
-      print('📥 [GroupeService] Response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
-        print('📥 [GroupeService] Recherche: ${groupesData.length} groupes');
-        return groupesData.map((json) => GroupeModel.fromJson(json)).toList();
-      }
-    } catch (e) {
-      print('⚠️ [GroupeService] Recherche groupes échouée: $e');
-    }
-
-    print('❌ [GroupeService] Aucune méthode n\'a fonctionné, retour liste vide');
+    print('❌ [GroupeService] Aucun groupe trouvé avec tous les fallbacks');
     return [];
+  }
+
+  /// Récupérer les groupes pour une SOCIÉTÉ
+  /// DEPRECATED: Utilisez getMyGroupes() directement - fonctionne pour Users ET Sociétés
+  /// Cette méthode est maintenue pour compatibilité mais délègue à getMyGroupes()
+  static Future<List<GroupeModel>> getMySocieteGroupes(int societeId) async {
+    print('📤 [GroupeService] getMySocieteGroupes($societeId) - délégation à getMyGroupes()');
+    return getMyGroupes();
   }
 
   /// Récupérer uniquement les groupes que j'ai CRÉÉS

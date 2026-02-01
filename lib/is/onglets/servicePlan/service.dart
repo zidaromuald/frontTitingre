@@ -130,18 +130,15 @@ class _ServicePageState extends State<ServicePage> {
     }
   }
 
-  // Charger tous les groupes de la société (avec fallbacks multiples)
+  // Charger tous les groupes de la société (comme IU - via /groupes/me)
   Future<void> _loadMesGroupes() async {
     setState(() => _isLoadingGroupes = true);
 
     try {
-      // Récupérer l'ID de la société connectée
-      final maSociete = await SocieteAuthService.getMe();
-      final maSocieteId = maSociete.id;
-      debugPrint('📤 [IS-Service] Chargement groupes pour société #$maSocieteId');
+      debugPrint('📤 [IS-Service] Chargement groupes via getMyGroupes() (comme IU)');
 
-      // Utiliser la méthode spécifique pour les sociétés avec fallbacks
-      final groupes = await GroupeAuthService.getMySocieteGroupes(maSocieteId);
+      // Utiliser la même méthode que IU - le token d'auth identifie la société
+      final groupes = await GroupeAuthService.getMyGroupes();
 
       debugPrint('📤 [IS-Service] Groupes chargés: ${groupes.length}');
       for (var g in groupes) {

@@ -576,10 +576,14 @@ class GroupeAuthService {
     int? offset,
   }) async {
     final params = <String>[];
-    if (query != null && query.isNotEmpty) params.add('q=$query');
+    // Encoder les paramètres de recherche pour éviter les problèmes avec espaces et caractères spéciaux
+    if (query != null && query.isNotEmpty) {
+      params.add('q=${Uri.encodeQueryComponent(query)}');
+    }
     if (tags != null && tags.isNotEmpty) {
-      // Envoyer les tags sous forme de liste séparée par virgules
-      params.add('tags=${tags.join(',')}');
+      // Encoder chaque tag séparément puis joindre
+      final encodedTags = tags.map((t) => Uri.encodeQueryComponent(t)).join(',');
+      params.add('tags=$encodedTags');
     }
     if (type != null) params.add('type=$type');
     if (limit != null) params.add('limit=$limit');

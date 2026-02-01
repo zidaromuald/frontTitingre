@@ -261,13 +261,26 @@ class SuivreAuthService {
     if (type != null) params.add('type=${type.value}');
     if (includeDetails) params.add('include=followed');
     final queryParams = params.isNotEmpty ? '?${params.join('&')}' : '';
+
+    print('📤 [SuivreAuth] GET /suivis/my-following$queryParams');
     final response = await ApiService.get('/suivis/my-following$queryParams');
+
+    print('📥 [SuivreAuth] Response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> suivresData = jsonResponse['data'];
+      final List<dynamic> suivresData = jsonResponse['data'] ?? [];
+      print('📥 [SuivreAuth] ${suivresData.length} suivis récupérés');
+
+      // Debug: afficher les détails des suivis
+      for (var s in suivresData) {
+        final hasFollowed = s['followed'] != null || s['followedUser'] != null || s['followed_user'] != null;
+        print('   - Suivi followedId=${s['followed_id']}, hasDetails=$hasFollowed');
+      }
+
       return suivresData.map((json) => SuivreModel.fromJson(json)).toList();
     } else {
+      print('❌ [SuivreAuth] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des suivis');
     }
   }
@@ -278,14 +291,20 @@ class SuivreAuthService {
     required int entityId,
     required EntityType entityType,
   }) async {
-    final response = await ApiService.get(
-      '/suivis/${entityType.value}/$entityId/followers',
-    );
+    final endpoint = '/suivis/${entityType.value}/$entityId/followers';
+    print('📤 [SuivreAuth] GET $endpoint');
+
+    final response = await ApiService.get(endpoint);
+
+    print('📥 [SuivreAuth] Response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return List<Map<String, dynamic>>.from(jsonResponse['data']);
+      final data = List<Map<String, dynamic>>.from(jsonResponse['data'] ?? []);
+      print('📥 [SuivreAuth] ${data.length} followers récupérés');
+      return data;
     } else {
+      print('❌ [SuivreAuth] Erreur getFollowers: ${response.body}');
       throw Exception('Erreur de récupération des followers');
     }
   }

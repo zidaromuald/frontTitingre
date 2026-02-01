@@ -341,27 +341,38 @@ class UserAuthService {
     int? limit,
     int? offset,
   }) async {
+    // Encoder le terme de recherche pour éviter les problèmes avec espaces et caractères spéciaux
+    final encodedQuery = Uri.encodeQueryComponent(query);
+    print('🔍 [UserAuth] searchUsers: "$query" (encoded: "$encodedQuery")');
+
     final params = <String>[];
-    params.add('q=$query');
+    params.add('q=$encodedQuery');
     if (limit != null) params.add('limit=$limit');
     if (offset != null) params.add('offset=$offset');
 
     final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
+    print('🔍 [UserAuth] GET /users/search$queryString');
     final response = await ApiService.get('/users/search$queryString');
+
+    print('🔍 [UserAuth] Response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> usersData = jsonResponse['data'];
+      final List<dynamic> usersData = jsonResponse['data'] ?? [];
+      print('🔍 [UserAuth] searchUsers: ${usersData.length} résultats');
       return usersData.map((json) => UserModel.fromJson(json)).toList();
     } else {
-      throw Exception('Erreur de recherche');
+      print('❌ [UserAuth] searchUsers erreur: ${response.body}');
+      throw Exception('Erreur de recherche: ${response.statusCode}');
     }
   }
 
   /// Autocomplétion pour la recherche d'utilisateurs
   static Future<List<UserModel>> autocomplete(String term) async {
-    print('🔍 [UserAuth] Autocomplete users pour: "$term"');
-    final response = await ApiService.get('/users/autocomplete?term=$term');
+    // Encoder le terme pour éviter les problèmes avec espaces et caractères spéciaux
+    final encodedTerm = Uri.encodeQueryComponent(term);
+    print('🔍 [UserAuth] Autocomplete users pour: "$term" (encoded: "$encodedTerm")');
+    final response = await ApiService.get('/users/autocomplete?term=$encodedTerm');
 
     print('🔍 [UserAuth] Response status: ${response.statusCode}');
 

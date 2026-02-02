@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../api_service.dart';
+import '../AuthUS/auth_base_service.dart';
 
 // ============================================================================
 // ENUMS
@@ -719,14 +720,11 @@ class GroupeAuthService {
       final userData = jsonDecode(currentUser.body);
       final currentUserId = userData['data']?['id'] ?? userData['id'];
 
-      // Déterminer le type d'entité (User ou Societe)
-      // Le backend retourne le type dans 'type' ou on peut déduire par la présence de certains champs
-      String currentUserType = 'User';
-      final dataObj = userData['data'] ?? userData;
-      if (dataObj['nom_societe'] != null || dataObj['secteur_activite'] != null) {
-        currentUserType = 'Societe';
-      }
-      print('📤 [GroupeService] getMyCreatedGroupes - currentUserId: $currentUserId, type: $currentUserType');
+      // Utiliser le type stocké lors de la connexion (fiable)
+      final storedType = await AuthBaseService.getUserType();
+      // Convertir 'societe' -> 'Societe' et 'user' -> 'User' (format backend)
+      String currentUserType = storedType == 'societe' ? 'Societe' : 'User';
+      print('📤 [GroupeService] getMyCreatedGroupes - currentUserId: $currentUserId, storedType: $storedType, currentUserType: $currentUserType');
 
       // Récupérer tous mes groupes
       final allMyGroupes = await getMyGroupes();

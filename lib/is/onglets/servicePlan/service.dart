@@ -139,17 +139,17 @@ class _ServicePageState extends State<ServicePage> {
     }
   }
 
-  // Charger tous les groupes de la société (comme IU - via /groupes/me)
+  // Charger les groupes CRÉÉS par la société (comme IU fait pour les Users)
   Future<void> _loadMesGroupes() async {
     setState(() => _isLoadingGroupes = true);
 
     try {
-      debugPrint('📤 [IS-Service] Chargement groupes via getMyGroupes() (comme IU)');
+      debugPrint('📤 [IS-Service] Chargement groupes créés via getMyCreatedGroupes()');
 
-      // Utiliser la même méthode que IU - le token d'auth identifie la société
-      final groupes = await GroupeAuthService.getMyGroupes();
+      // Utiliser getMyCreatedGroupes pour ne récupérer que les groupes créés par la société
+      final groupes = await GroupeAuthService.getMyCreatedGroupes();
 
-      debugPrint('📤 [IS-Service] Groupes chargés: ${groupes.length}');
+      debugPrint('📥 [IS-Service] Groupes créés chargés: ${groupes.length}');
       for (var g in groupes) {
         debugPrint('   - ${g.nom} (id: ${g.id}, createdBy: ${g.createdByType} #${g.createdById})');
       }
@@ -161,7 +161,7 @@ class _ServicePageState extends State<ServicePage> {
         });
       }
     } catch (e) {
-      debugPrint('Erreur chargement groupes: $e');
+      debugPrint('❌ [IS-Service] Erreur chargement groupes: $e');
       if (mounted) {
         setState(() => _isLoadingGroupes = false);
         ScaffoldMessenger.of(context).showSnackBar(

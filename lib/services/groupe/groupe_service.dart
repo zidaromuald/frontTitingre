@@ -708,9 +708,10 @@ class GroupeAuthService {
 
   /// Récupérer uniquement les groupes que j'ai CRÉÉS
   /// Filtre les groupes où createdById == userId courant
+  /// Fonctionne pour les Users ET les Sociétés
   static Future<List<GroupeModel>> getMyCreatedGroupes() async {
     try {
-      // Récupérer l'utilisateur courant
+      // Récupérer l'utilisateur/société courant(e)
       final currentUser = await ApiService.get('/auth/me');
       if (currentUser.statusCode != 200) {
         throw Exception('Impossible de récupérer l\'utilisateur courant');
@@ -718,15 +719,31 @@ class GroupeAuthService {
       final userData = jsonDecode(currentUser.body);
       final currentUserId = userData['data']?['id'] ?? userData['id'];
 
+      // Déterminer le type d'entité (User ou Societe)
+      // Le backend retourne le type dans 'type' ou on peut déduire par la présence de certains champs
+      String currentUserType = 'User';
+      final dataObj = userData['data'] ?? userData;
+      if (dataObj['nom_societe'] != null || dataObj['secteur_activite'] != null) {
+        currentUserType = 'Societe';
+      }
+      print('📤 [GroupeService] getMyCreatedGroupes - currentUserId: $currentUserId, type: $currentUserType');
+
       // Récupérer tous mes groupes
       final allMyGroupes = await getMyGroupes();
+      print('📤 [GroupeService] getMyCreatedGroupes - total groupes: ${allMyGroupes.length}');
 
-      // Filtrer pour ne garder que ceux que j'ai créés
-      return allMyGroupes
-          .where((groupe) =>
-              groupe.createdById == currentUserId &&
-              groupe.createdByType == 'User')
+      // Filtrer pour ne garder que ceux que j'ai créés (selon mon type)
+      final filteredGroupes = allMyGroupes
+          .where((groupe) {
+            final match = groupe.createdById == currentUserId &&
+                groupe.createdByType == currentUserType;
+            print('   - ${groupe.nom}: createdBy=${groupe.createdByType} #${groupe.createdById}, match=$match');
+            return match;
+          })
           .toList();
+
+      print('📤 [GroupeService] getMyCreatedGroupes - filtered: ${filteredGroupes.length} groupes');
+      return filteredGroupes;
     } catch (e) {
       print('❌ Erreur getMyCreatedGroupes: $e');
       return [];

@@ -40,7 +40,8 @@ class _CategoriePageState extends State<CategoriePage> {
     }
   }
 
-  /// Charge les groupes de l'utilisateur/société connecté(e)
+  /// Charge les groupes CRÉÉS par la société connectée
+  /// Utilise getMyCreatedGroupes() pour ne récupérer que les groupes créés par la société
   Future<void> _loadMesGroupes() async {
     setState(() {
       _isLoadingGroupes = true;
@@ -48,9 +49,10 @@ class _CategoriePageState extends State<CategoriePage> {
     });
 
     try {
-      debugPrint('📤 [CategoriePage] Chargement groupes via getMyGroupes()...');
-      final groupes = await GroupeAuthService.getMyGroupes();
-      debugPrint('📥 [CategoriePage] ${groupes.length} groupes récupérés');
+      debugPrint('📤 [IS-CategoriePage] Chargement groupes créés via getMyCreatedGroupes()...');
+      // Utiliser getMyCreatedGroupes pour ne récupérer que les groupes créés par la société
+      final groupes = await GroupeAuthService.getMyCreatedGroupes();
+      debugPrint('📥 [IS-CategoriePage] ${groupes.length} groupes créés récupérés');
 
       if (mounted) {
         setState(() {
@@ -59,7 +61,7 @@ class _CategoriePageState extends State<CategoriePage> {
         });
       }
     } catch (e) {
-      debugPrint('❌ [CategoriePage] Erreur chargement groupes: $e');
+      debugPrint('❌ [IS-CategoriePage] Erreur chargement groupes: $e');
       if (mounted) {
         setState(() {
           _groupesError = e.toString();

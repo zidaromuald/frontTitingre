@@ -166,23 +166,39 @@ class AbonnementAuthService {
   // ==========================================================================
 
   /// Récupérer mes abonnements (utilisateur)
-  /// GET /abonnements/my-subscriptions?statut=actif
+  /// GET /abonnements/my-subscriptions?statut=actif&include=societe
   /// Réservé aux utilisateurs (userType: 'user')
   static Future<List<AbonnementModel>> getMySubscriptions({
     AbonnementStatut? statut,
+    bool includeSociete = true,
   }) async {
-    final queryString = statut != null ? '?statut=${statut.value}' : '';
+    final params = <String>[];
+    if (statut != null) params.add('statut=${statut.value}');
+    if (includeSociete) params.add('include=societe');
+    final queryString = params.isNotEmpty ? '?${params.join('&')}' : '';
+
+    print('📤 [AbonnementService] GET /abonnements/my-subscriptions$queryString');
     final response = await ApiService.get(
       '/abonnements/my-subscriptions$queryString',
     );
+    print('📥 [AbonnementService] Response status: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> abonnementsData = jsonResponse['data'];
+      final List<dynamic> abonnementsData = jsonResponse['data'] ?? [];
+      print('📥 [AbonnementService] ${abonnementsData.length} abonnements récupérés');
+
+      // Debug: afficher si les sociétés sont incluses
+      if (abonnementsData.isNotEmpty) {
+        final firstItem = abonnementsData.first;
+        print('📥 [AbonnementService] Exemple: societe=${firstItem['societe'] != null}');
+      }
+
       return abonnementsData
           .map((json) => AbonnementModel.fromJson(json))
           .toList();
     } else {
+      print('❌ [AbonnementService] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des abonnements');
     }
   }

@@ -145,13 +145,58 @@ class _HomePageState extends State<HomePage> {
     setState(() => _isLoadingMesSocietes = true);
 
     try {
+      debugPrint('📤 [HomePage] Chargement des abonnements...');
       final abonnements = await AbonnementAuthService.getMySubscriptions(
         statut: AbonnementStatut.actif,
+        includeSociete: true,
       );
+      debugPrint('📥 [HomePage] ${abonnements.length} abonnements récupérés');
+
+      // Enrichir les abonnements sans données de société
+      List<AbonnementModel> enrichedAbonnements = [];
+      for (var abonnement in abonnements) {
+        if (abonnement.societe == null) {
+          // Charger les données de la société séparément
+          debugPrint('🔄 [HomePage] Chargement société #${abonnement.societeId}...');
+          try {
+            final societe = await SocieteAuthService.getSocieteProfile(abonnement.societeId);
+            // Créer un nouvel AbonnementModel avec les données de la société
+            enrichedAbonnements.add(AbonnementModel(
+              id: abonnement.id,
+              userId: abonnement.userId,
+              societeId: abonnement.societeId,
+              statut: abonnement.statut,
+              dateDebut: abonnement.dateDebut,
+              dateFin: abonnement.dateFin,
+              planCollaboration: abonnement.planCollaboration,
+              permissions: abonnement.permissions,
+              createdAt: abonnement.createdAt,
+              updatedAt: abonnement.updatedAt,
+              user: abonnement.user,
+              societe: {
+                'id': societe.id,
+                'nom': societe.nom,
+                'profile': societe.profile != null
+                    ? {
+                        'logo': societe.profile!.logo,
+                        'description': societe.profile!.description,
+                      }
+                    : null,
+              },
+            ));
+            debugPrint('✅ [HomePage] Société #${abonnement.societeId} enrichie');
+          } catch (e) {
+            debugPrint('⚠️ [HomePage] Erreur enrichissement société #${abonnement.societeId}: $e');
+            enrichedAbonnements.add(abonnement); // Garder sans données
+          }
+        } else {
+          enrichedAbonnements.add(abonnement);
+        }
+      }
 
       if (mounted) {
         setState(() {
-          _mesSocietes = abonnements;
+          _mesSocietes = enrichedAbonnements;
           _isLoadingMesSocietes = false;
         });
       }
@@ -159,7 +204,7 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         setState(() => _isLoadingMesSocietes = false);
       }
-      debugPrint('Erreur chargement mes sociétés: $e');
+      debugPrint('❌ [HomePage] Erreur chargement mes sociétés: $e');
     }
   }
 

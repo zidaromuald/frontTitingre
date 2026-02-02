@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../groupe/create_groupe_page.dart';
+import '../../../groupe/groupe_detail_page.dart';
 import '../../../services/groupe/groupe_service.dart';
 
 class CategoriePage extends StatefulWidget {
@@ -316,7 +317,8 @@ class _CategoriePageState extends State<CategoriePage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (groupe.description != null && groupe.description!.isNotEmpty)
+                if (groupe.description != null &&
+                    groupe.description!.isNotEmpty)
                   Text(
                     groupe.description!,
                     style: const TextStyle(
@@ -338,7 +340,10 @@ class _CategoriePageState extends State<CategoriePage> {
                     if (groupe.myRole != null) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: groupe.myRole == 'admin'
                               ? mattermostGreen.withOpacity(0.1)
@@ -379,17 +384,7 @@ class _CategoriePageState extends State<CategoriePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            backgroundColor: widget.categorie['color'],
-            title: Text(
-              "#${groupe.nom}",
-              style: const TextStyle(color: Colors.white),
-            ),
-            iconTheme: const IconThemeData(color: Colors.white),
-          ),
-          body: Center(child: Text("Discussion dans ${groupe.nom}")),
-        ),
+        builder: (context) => GroupeDetailPage(groupeId: groupe.id),
       ),
     );
   }

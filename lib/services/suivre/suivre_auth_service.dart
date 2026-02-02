@@ -417,10 +417,21 @@ class SuivreAuthService {
           }
         }
 
-        if (userData != null && userData['id'] != null) {
-          followers.add(userData);
+        // Vérification robuste des données utilisateur
+        if (userData != null) {
+          // Vérifier que l'id est présent et valide (int ou string convertible)
+          final id = userData['id'];
+          if (id != null && (id is int || (id is String && int.tryParse(id) != null))) {
+            // Convertir l'id en int si c'est une string
+            if (id is String) {
+              userData['id'] = int.parse(id);
+            }
+            followers.add(userData);
+          } else {
+            print('   ⚠️ [SuivreAuth] Données utilisateur sans id valide: $userData');
+          }
         } else {
-          print('   ⚠️ [SuivreAuth] Données utilisateur invalides, ignoré');
+          print('   ⚠️ [SuivreAuth] Données utilisateur null, ignoré');
         }
       }
 

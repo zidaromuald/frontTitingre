@@ -100,12 +100,29 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    // Vérifier que l'id est présent et valide
+    final id = json['id'];
+    if (id == null) {
+      print('⚠️ [UserModel] JSON sans id valide: $json');
+      throw ArgumentError('UserModel.fromJson: id est requis mais est null');
+    }
+
+    // Convertir l'id en int de manière sécurisée
+    final int parsedId;
+    if (id is int) {
+      parsedId = id;
+    } else if (id is String) {
+      parsedId = int.tryParse(id) ?? 0;
+    } else {
+      parsedId = 0;
+    }
+
     return UserModel(
-      id: json['id'],
-      nom: json['nom'],
-      prenom: json['prenom'],
-      numero: json['numero'],
-      email: json['email'],
+      id: parsedId,
+      nom: json['nom']?.toString() ?? '',
+      prenom: json['prenom']?.toString() ?? '',
+      numero: json['numero']?.toString() ?? '',
+      email: json['email']?.toString(),
       profile: json['profile'] != null
           ? UserProfilModel.fromJson(json['profile'])
           : null,

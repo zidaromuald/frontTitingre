@@ -9,6 +9,7 @@ import 'package:gestauth_clean/iu/onglets/recherche/user_profile_page.dart';
 import 'package:gestauth_clean/iu/onglets/recherche/global_search_page.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
 import 'package:gestauth_clean/messagerie/conversation_detail_page.dart';
+import 'package:gestauth_clean/groupe/groupe_detail_page.dart';
 import 'user_transaction_page.dart';
 
 class ServicePage extends StatefulWidget {
@@ -92,8 +93,16 @@ class _ServicePageState extends State<ServicePage> {
       }
 
       // 3. Combiner les IDs des users (followers + abonnés)
+      // Extraire les user_id de manière sécurisée (peuvent être dans 'id' ou 'user_id')
       Set<int> allUserIds = {
-        ...followersData.map((f) => f['user_id'] as int),
+        ...followersData
+            .map((f) {
+              final userId = f['user_id'] ?? f['id'];
+              if (userId is int) return userId;
+              if (userId is String) return int.tryParse(userId);
+              return null;
+            })
+            .whereType<int>(),
         ...subscriberUserIds,
       };
 
@@ -892,7 +901,13 @@ class _ServicePageState extends State<ServicePage> {
           ],
         ),
         onTap: () {
-          // Navigation vers le groupe
+          // Navigation vers la page de détail du groupe
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => GroupeDetailPage(groupeId: groupe.id),
+            ),
+          );
         },
       ),
     );

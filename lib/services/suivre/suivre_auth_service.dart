@@ -253,6 +253,8 @@ class SuivreAuthService {
 
   /// Récupérer mes suivis (les entités que je suis)
   /// GET /suivis/my-following?type=User|Societe&include=followed
+  /// Si includeDetails=true et le backend ne retourne pas les détails,
+  /// on les charge séparément pour chaque utilisateur
   static Future<List<SuivreModel>> getMyFollowing({
     EntityType? type,
     bool includeDetails = false,
@@ -278,16 +280,82 @@ class SuivreAuthService {
         print('   - Suivi followedId=${s['followed_id']}, hasDetails=$hasFollowed');
       }
 
-      return suivresData.map((json) => SuivreModel.fromJson(json)).toList();
+      // Convertir en SuivreModel
+      List<SuivreModel> suivis = suivresData.map((json) => SuivreModel.fromJson(json)).toList();
+
+      // Si on veut les détails et qu'ils ne sont pas présents, les charger séparément
+      if (includeDetails) {
+        print('📤 [SuivreAuth] Chargement des détails utilisateurs manquants...');
+        suivis = await _enrichSuivisWithUserDetails(suivis, type);
+        print('📥 [SuivreAuth] ${suivis.where((s) => s.followedUser != null).length} suivis avec détails');
+      }
+
+      return suivis;
     } else {
       print('❌ [SuivreAuth] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des suivis');
     }
   }
 
+  /// Enrichit les suivis avec les détails utilisateur manquants
+  static Future<List<SuivreModel>> _enrichSuivisWithUserDetails(
+    List<SuivreModel> suivis,
+    EntityType? filterType,
+  ) async {
+    final enrichedSuivis = <SuivreModel>[];
+
+    for (var suivi in suivis) {
+      // Si on a déjà les détails, garder tel quel
+      if (suivi.followedUser != null) {
+        enrichedSuivis.add(suivi);
+        continue;
+      }
+
+      // Charger les détails de l'utilisateur suivi
+      try {
+        Map<String, dynamic>? userDetails;
+
+        if (suivi.followedType == 'User') {
+          final userResponse = await ApiService.get('/users/${suivi.followedId}');
+          if (userResponse.statusCode == 200) {
+            final userData = jsonDecode(userResponse.body);
+            userDetails = userData['data'] ?? userData;
+            print('   ✅ [SuivreAuth] Détails chargés pour User #${suivi.followedId}');
+          }
+        } else if (suivi.followedType == 'Societe') {
+          final societeResponse = await ApiService.get('/societes/${suivi.followedId}');
+          if (societeResponse.statusCode == 200) {
+            final societeData = jsonDecode(societeResponse.body);
+            userDetails = societeData['data'] ?? societeData;
+            print('   ✅ [SuivreAuth] Détails chargés pour Societe #${suivi.followedId}');
+          }
+        }
+
+        // Créer un nouveau SuivreModel avec les détails
+        enrichedSuivis.add(SuivreModel(
+          userId: suivi.userId,
+          userType: suivi.userType,
+          followedId: suivi.followedId,
+          followedType: suivi.followedType,
+          notificationsActives: suivi.notificationsActives,
+          frequenceInteraction: suivi.frequenceInteraction,
+          scoreEngagement: suivi.scoreEngagement,
+          createdAt: suivi.createdAt,
+          updatedAt: suivi.updatedAt,
+          followedUser: userDetails,
+        ));
+      } catch (e) {
+        print('   ⚠️ [SuivreAuth] Erreur chargement détails ${suivi.followedType} #${suivi.followedId}: $e');
+        enrichedSuivis.add(suivi); // Garder le suivi sans détails
+      }
+    }
+
+    return enrichedSuivis;
+  }
+
   /// Récupérer les followers d'une entité
   /// GET /suivis/:type/:id/followers
-  /// Retourne les données utilisateur extraites des relations de suivi
+  /// Retourne les données utilisateur complètes (charge les détails si nécessaire)
   static Future<List<Map<String, dynamic>>> getFollowers({
     required int entityId,
     required EntityType entityType,
@@ -304,7 +372,7 @@ class SuivreAuthService {
       final List<dynamic> rawData = jsonResponse['data'] ?? [];
       print('📥 [SuivreAuth] ${rawData.length} followers récupérés');
 
-      // Extraire les données utilisateur - peut être imbriqué dans 'user', 'follower', ou directement
+      // Extraire et enrichir les données utilisateur
       final List<Map<String, dynamic>> followers = [];
       for (var item in rawData) {
         print('   📦 [SuivreAuth] Follower item keys: ${item.keys.toList()}');
@@ -322,16 +390,41 @@ class SuivreAuthService {
           // Données utilisateur directement dans l'objet
           userData = Map<String, dynamic>.from(item);
           print('   ✅ [SuivreAuth] Données directes');
-        } else {
-          // Dernier recours: utiliser l'item tel quel
-          userData = Map<String, dynamic>.from(item);
-          print('   ⚠️ [SuivreAuth] Structure inconnue, utilisation brute');
+        } else if (item['user_id'] != null) {
+          // Seulement user_id disponible, charger les détails
+          final userId = item['user_id'];
+          final userType = item['user_type'] ?? 'User';
+          print('   🔄 [SuivreAuth] Chargement détails pour $userType #$userId...');
+
+          try {
+            if (userType == 'User') {
+              final userResponse = await ApiService.get('/users/$userId');
+              if (userResponse.statusCode == 200) {
+                final userJson = jsonDecode(userResponse.body);
+                userData = Map<String, dynamic>.from(userJson['data'] ?? userJson);
+                print('   ✅ [SuivreAuth] Détails User #$userId chargés');
+              }
+            } else if (userType == 'Societe') {
+              final societeResponse = await ApiService.get('/societes/$userId');
+              if (societeResponse.statusCode == 200) {
+                final societeJson = jsonDecode(societeResponse.body);
+                userData = Map<String, dynamic>.from(societeJson['data'] ?? societeJson);
+                print('   ✅ [SuivreAuth] Détails Societe #$userId chargés');
+              }
+            }
+          } catch (e) {
+            print('   ⚠️ [SuivreAuth] Erreur chargement détails $userType #$userId: $e');
+          }
         }
 
-        followers.add(userData);
+        if (userData != null && userData['id'] != null) {
+          followers.add(userData);
+        } else {
+          print('   ⚠️ [SuivreAuth] Données utilisateur invalides, ignoré');
+        }
       }
 
-      print('📥 [SuivreAuth] ${followers.length} followers extraits avec succès');
+      print('📥 [SuivreAuth] ${followers.length} followers avec détails extraits');
       return followers;
     } else {
       print('❌ [SuivreAuth] Erreur getFollowers: ${response.body}');

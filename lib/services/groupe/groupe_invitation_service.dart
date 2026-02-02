@@ -29,11 +29,17 @@ class GroupeInvitationService {
     required int groupeId,
     required int invitedUserId,
     String? message,
+    String invitedType = 'User', // Type de l'entité invitée (User ou Societe)
   }) async {
+    // Le backend attend: invitedId, invitedType (pas invited_user_id)
     final data = {
-      'invited_user_id': invitedUserId,
+      'invitedId': invitedUserId,
+      'invitedType': invitedType,
       if (message != null) 'message': message,
     };
+
+    print('📤 [InvitationService] POST /groupes/$groupeId/invite');
+    print('📤 [InvitationService] Body: $data');
 
     final response = await ApiService.post('/groupes/$groupeId/invite', data);
 

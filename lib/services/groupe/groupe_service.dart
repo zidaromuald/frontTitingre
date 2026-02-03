@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../api_service.dart';
 import '../AuthUS/auth_base_service.dart';
 
@@ -484,6 +485,30 @@ class GroupeModel {
 /// Service pour gérer les groupes (création, adhésion, invitations, etc.)
 class GroupeAuthService {
   // ==========================================================================
+  // STOCKAGE LOCAL DES GROUPES CRÉÉS
+  // ==========================================================================
+
+  static const String _createdGroupesKey = 'created_groupes_ids';
+
+  /// Stocker l'ID d'un groupe créé localement
+  static Future<void> _storeCreatedGroupeId(int groupeId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existingIds = prefs.getStringList(_createdGroupesKey) ?? [];
+    if (!existingIds.contains(groupeId.toString())) {
+      existingIds.add(groupeId.toString());
+      await prefs.setStringList(_createdGroupesKey, existingIds);
+      print('💾 [GroupeService] ID groupe $groupeId stocké localement');
+    }
+  }
+
+  /// Récupérer les IDs des groupes créés stockés localement
+  static Future<List<int>> _getStoredCreatedGroupeIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList(_createdGroupesKey) ?? [];
+    return ids.map((id) => int.parse(id)).toList();
+  }
+
+  // ==========================================================================
   // GESTION DES GROUPES
   // ==========================================================================
 
@@ -514,6 +539,11 @@ class GroupeAuthService {
       }
       final groupe = GroupeModel.fromJson(groupeData);
       print('✅ [GroupeService] Groupe créé: id=${groupe.id}, nom=${groupe.nom}');
+
+      // IMPORTANT: Stocker l'ID du groupe créé localement pour le récupérer plus tard
+      // Cela permet de contourner le problème où /groupes/me ne retourne pas les groupes
+      // créés si le créateur n'est pas automatiquement ajouté comme membre
+      await _storeCreatedGroupeId(groupe.id);
 
       // IMPORTANT: Rejoindre automatiquement le groupe créé pour apparaître dans /groupes/me
       // Le backend devrait le faire automatiquement mais ce n'est pas toujours le cas
@@ -802,7 +832,30 @@ class GroupeAuthService {
         }
       }
 
-      // 3. Fallback: Filtrer les groupes de /groupes/me (ancien comportement)
+      // 3. Récupérer les groupes stockés localement (créés par cette session/appareil)
+      // Cela permet de récupérer les groupes créés même si le backend n'a pas ajouté
+      // le créateur comme membre automatiquement
+      final storedIds = await _getStoredCreatedGroupeIds();
+      print('📤 [GroupeService] ${storedIds.length} IDs de groupes stockés localement');
+
+      for (var groupeId in storedIds) {
+        if (!groupesMap.containsKey(groupeId)) {
+          try {
+            print('📤 [GroupeService] Récupération groupe #$groupeId via /groupes/$groupeId');
+            final groupe = await getGroupe(groupeId);
+            // Vérifier que ce groupe a bien été créé par moi
+            if (groupe.createdById == currentUserId &&
+                groupe.createdByType == currentUserType) {
+              groupesMap[groupeId] = groupe;
+              print('   + Ajouté depuis stockage local: ${groupe.nom}');
+            }
+          } catch (e) {
+            print('   ⚠️ Groupe #$groupeId non trouvé ou erreur: $e');
+          }
+        }
+      }
+
+      // 4. Fallback: Filtrer les groupes de /groupes/me (ancien comportement)
       // Cela récupère les groupes où je suis membre ET que j'ai créés
       final allMyGroupes = await getMyGroupes();
       print('📤 [GroupeService] getMyGroupes retourne ${allMyGroupes.length} groupes');

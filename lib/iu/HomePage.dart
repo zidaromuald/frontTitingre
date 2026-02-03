@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gestauth_clean/iu/onglets/paramInfo/parametre.dart';
+import 'package:gestauth_clean/iu/onglets/paramInfo/profil.dart';
 import 'package:gestauth_clean/iu/onglets/postInfo/post.dart';
 import 'package:gestauth_clean/iu/onglets/postInfo/post_details_page.dart';
 import 'package:gestauth_clean/iu/onglets/postInfo/post_edit_page.dart';
@@ -879,6 +880,17 @@ class _HomePageState extends State<HomePage> {
                         _ProfileAvatar(
                           size: 70,
                           photoUrl: _currentUser?.photoUrl,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ProfilDetailPage(),
+                              ),
+                            ).then((_) {
+                              // Recharger le profil après retour de la page
+                              _loadUserProfile();
+                            });
+                          },
                         ), // Taille fixe au lieu de size.width * 0.18
                         const SizedBox(height: 8),
                         Column(
@@ -1030,38 +1042,42 @@ class _HomePageState extends State<HomePage> {
 
 // ————— Widgets —————
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.size, this.photoUrl});
+  const _ProfileAvatar({required this.size, this.photoUrl, this.onTap});
   final double size;
   final String? photoUrl;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: size,
-      height: size,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [cs.onPrimary.withOpacity(.2), Colors.white24],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.15),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [cs.onPrimary.withOpacity(.2), Colors.white24],
           ),
-        ],
-      ),
-      child: CircleAvatar(
-        backgroundColor: cs.surfaceContainerHighest,
-        backgroundImage: photoUrl != null ? NetworkImage(photoUrl!) : null,
-        child: photoUrl == null
-            ? Icon(Icons.person, size: size * 0.5, color: cs.onSurfaceVariant)
-            : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(.15),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: CircleAvatar(
+          backgroundColor: cs.surfaceContainerHighest,
+          backgroundImage: photoUrl != null ? NetworkImage(photoUrl!) : null,
+          child: photoUrl == null
+              ? Icon(Icons.person, size: size * 0.5, color: cs.onSurfaceVariant)
+              : null,
+        ),
       ),
     );
   }

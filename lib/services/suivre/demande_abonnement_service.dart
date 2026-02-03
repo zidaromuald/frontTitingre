@@ -129,7 +129,12 @@ class DemandeAbonnementService {
   /// Envoyer une demande d'abonnement à une société
   /// POST /demandes-abonnement
   /// Réservé aux utilisateurs (userType: 'user')
-  static Future<DemandeAbonnementModel> envoyerDemande({
+  ///
+  /// Retourne un objet avec 'success', 'data' et 'alreadyExists'
+  /// - success=true, data=demande : Demande créée avec succès
+  /// - success=true, alreadyExists=true : Demande déjà envoyée (409)
+  /// - success=false : Erreur
+  static Future<Map<String, dynamic>> envoyerDemande({
     required int societeId,
     String? message,
   }) async {
@@ -138,16 +143,32 @@ class DemandeAbonnementService {
       if (message != null) 'message': message,
     };
 
+    print('📤 [DemandeAbonnement] POST /demandes-abonnement pour societe $societeId');
     final response = await ApiService.post('/demandes-abonnement', data);
+    print('📥 [DemandeAbonnement] Response status: ${response.statusCode}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
-      return DemandeAbonnementModel.fromJson(jsonResponse['data']);
+      return {
+        'success': true,
+        'alreadyExists': false,
+        'data': DemandeAbonnementModel.fromJson(jsonResponse['data']),
+      };
+    } else if (response.statusCode == 409) {
+      // Conflit : demande déjà envoyée
+      print('⚠️ [DemandeAbonnement] Demande déjà existante (409)');
+      return {
+        'success': true,
+        'alreadyExists': true,
+        'message': 'Demande d\'abonnement déjà envoyée en attente de réponse',
+      };
     } else {
       final error = jsonDecode(response.body);
-      throw Exception(
-        error['message'] ?? 'Erreur lors de l\'envoi de la demande',
-      );
+      print('❌ [DemandeAbonnement] Erreur: ${error['message']}');
+      return {
+        'success': false,
+        'message': error['message'] ?? 'Erreur lors de l\'envoi de la demande',
+      };
     }
   }
 

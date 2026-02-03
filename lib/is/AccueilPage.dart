@@ -6,13 +6,13 @@ import '../services/posts/post_service.dart';
 import '../services/affichage/unread_content_service.dart';
 import '../services/suivre/suivre_auth_service.dart';
 import '../services/groupe/groupe_service.dart';
-import '../widgets/editable_societe_avatar.dart';
 import '../widgets/r2_network_image.dart';
 import '../iu/onglets/postInfo/post.dart';
 import '../iu/onglets/postInfo/post_details_page.dart';
 import '../iu/onglets/postInfo/post_edit_page.dart';
 //import '../iu/onglets/postInfo/post_search_page.dart';
 import 'onglets/paramInfo/parametre.dart';
+import 'onglets/paramInfo/profil.dart';
 import 'onglets/servicePlan/service.dart' as service_societe;
 
 class AccueilPage extends StatefulWidget {
@@ -499,39 +499,93 @@ class _AccueilPageState extends State<AccueilPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        EditableSocieteAvatar(
-                          size: 70,
-                          currentLogoUrl: _currentLogoUrl,
-                          onLogoUpdated: (newUrl) {
-                            setState(() {
-                              _currentLogoUrl = newUrl;
+                        // Avatar cliquable pour voir le profil (tap simple) ou éditer logo (tap long)
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ProfilDetailPage(),
+                              ),
+                            ).then((_) {
+                              // Recharger le profil après retour de la page
+                              _loadSocieteProfile();
                             });
                           },
+                          child: Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF3A5BA0),
+                              border: Border.all(color: Colors.white, width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                              image: _currentLogoUrl != null
+                                  ? DecorationImage(
+                                      image: NetworkImage(_currentLogoUrl!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: _currentLogoUrl == null
+                                ? const Icon(Icons.business, color: Colors.white, size: 35)
+                                : null,
+                          ),
                         ),
                         const SizedBox(height: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _isLoadingSociete
-                                ? const SizedBox(
-                                    width: 100,
-                                    child: LinearProgressIndicator(
-                                      color: Colors.white,
-                                      backgroundColor: Colors.white24,
+                        // Nom cliquable pour voir le profil
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ProfilDetailPage(),
+                              ),
+                            ).then((_) {
+                              _loadSocieteProfile();
+                            });
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _isLoadingSociete
+                                  ? const SizedBox(
+                                      width: 100,
+                                      child: LinearProgressIndicator(
+                                        color: Colors.white,
+                                        backgroundColor: Colors.white24,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _currentSociete != null
+                                              ? _currentSociete!.nom.toUpperCase()
+                                              : 'Société',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.arrow_forward_ios,
+                                          color: Colors.white70,
+                                          size: 12,
+                                        ),
+                                      ],
                                     ),
-                                  )
-                                : Text(
-                                    _currentSociete != null
-                                        ? _currentSociete!.nom.toUpperCase()
-                                        : 'Société',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),

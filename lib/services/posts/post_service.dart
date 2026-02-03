@@ -637,17 +637,17 @@ class PostService {
   }
 
   /// Récupérer les posts d'une société
-  /// GET /posts/societe/:societeId
+  /// Utilise GET /posts/author/Societe/:societeId (l'endpoint /posts/societe/:id n'existe pas encore)
   static Future<List<PostModel>> getPostsBySociete(int societeId) async {
-    final response = await ApiService.get('/posts/societe/$societeId');
+    print('📤 [PostService] getPostsBySociete($societeId) - utilise getPostsByAuthor');
 
-    if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> postsData = jsonResponse['data'];
-      return postsData.map((json) => PostModel.fromJson(json)).toList();
-    } else {
-      throw Exception('Erreur de récupération des posts de la société');
-    }
+    // L'endpoint /posts/societe/:id n'existe pas côté backend
+    // On utilise /posts/author/Societe/:id qui fonctionne
+    return getPostsByAuthor(
+      societeId,
+      AuthorType.societe,
+      includeGroupPosts: false, // Exclure les posts de groupe
+    );
   }
 
   /// Récupérer le feed personnalisé (posts des personnes/sociétés suivies)

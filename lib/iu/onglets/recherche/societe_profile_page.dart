@@ -293,25 +293,41 @@ class _SocieteProfilePageState extends State<SocieteProfilePage>
     setState(() => _isActionLoading = true);
 
     try {
-      await DemandeAbonnementService.envoyerDemande(
+      final result = await DemandeAbonnementService.envoyerDemande(
         societeId: widget.societeId,
         message: message.isEmpty ? null : message,
       );
 
       if (mounted) {
-        setState(() {
-          _demandeAbonnementEnvoyee = true;
-          _demandeAbonnementStatut = DemandeAbonnementStatus.pending;
-          _isActionLoading = false;
-        });
+        setState(() => _isActionLoading = false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Demande d\'abonnement envoyée avec succès'),
-            backgroundColor: Color(0xffFFA500),
-            duration: Duration(seconds: 3),
-          ),
-        );
+        if (result['success'] == true) {
+          setState(() {
+            _demandeAbonnementEnvoyee = true;
+            _demandeAbonnementStatut = DemandeAbonnementStatus.pending;
+          });
+
+          // Message différent si la demande existait déjà
+          final snackMessage = result['alreadyExists'] == true
+              ? 'Une demande d\'abonnement est déjà en attente'
+              : 'Demande d\'abonnement envoyée avec succès';
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(snackMessage),
+              backgroundColor: const Color(0xffFFA500),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          // Erreur
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Erreur lors de l\'envoi'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() => _isActionLoading = false);

@@ -712,13 +712,18 @@ class GroupeAuthService {
   /// Fonctionne pour les Users ET les Sociétés
   static Future<List<GroupeModel>> getMyCreatedGroupes() async {
     try {
-      // Récupérer l'utilisateur/société courant(e)
-      final currentUser = await ApiService.get('/auth/me');
-      if (currentUser.statusCode != 200) {
-        throw Exception('Impossible de récupérer l\'utilisateur courant');
+      // Récupérer l'utilisateur/société courant(e) depuis les données stockées localement
+      // (évite l'appel API /auth/me qui peut échouer avec 403)
+      final userData = await AuthBaseService.getUserData();
+      if (userData == null) {
+        print('❌ [GroupeService] Aucune donnée utilisateur stockée localement');
+        throw Exception('Utilisateur non connecté');
       }
-      final userData = jsonDecode(currentUser.body);
-      final currentUserId = userData['data']?['id'] ?? userData['id'];
+      final currentUserId = userData['id'];
+      if (currentUserId == null) {
+        print('❌ [GroupeService] ID utilisateur non trouvé dans les données stockées');
+        throw Exception('ID utilisateur non trouvé');
+      }
 
       // Utiliser le type stocké lors de la connexion (fiable)
       final storedType = await AuthBaseService.getUserType();

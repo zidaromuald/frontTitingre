@@ -91,12 +91,18 @@ class _ParametrePageState extends State<ParametrePage> {
 
   /// Charger les demandes d'abonnement reçues (pending)
   Future<void> _loadDemandesAbonnement() async {
+    print('📤 [Parametre] Chargement des demandes d\'abonnement...');
     setState(() => _isLoadingDemandesAbonnement = true);
 
     try {
       final demandes = await DemandeAbonnementService.getDemandesRecues(
         status: DemandeAbonnementStatus.pending,
       );
+
+      print('📥 [Parametre] ${demandes.length} demandes d\'abonnement reçues');
+      for (var d in demandes) {
+        print('   - Demande #${d.id}: user=${d.userId}, status=${d.status.value}');
+      }
 
       if (mounted) {
         setState(() {
@@ -105,10 +111,10 @@ class _ParametrePageState extends State<ParametrePage> {
         });
       }
     } catch (e) {
+      print('❌ [Parametre] Erreur chargement demandes abonnement: $e');
       if (mounted) {
         setState(() => _isLoadingDemandesAbonnement = false);
       }
-      // Gestion d'erreur silencieuse (peut afficher un message si nécessaire)
     }
   }
 

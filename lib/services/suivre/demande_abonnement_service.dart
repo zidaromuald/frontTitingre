@@ -254,17 +254,23 @@ class DemandeAbonnementService {
     DemandeAbonnementStatus? status,
   }) async {
     final queryString = status != null ? '?status=${status.value}' : '';
+    print('📤 [DemandeAbonnement] GET /demandes-abonnement/received$queryString');
     final response = await ApiService.get(
       '/demandes-abonnement/received$queryString',
     );
 
+    print('📥 [DemandeAbonnement] Response status: ${response.statusCode}');
+    print('📥 [DemandeAbonnement] Response body: ${response.body}');
+
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> demandesData = jsonResponse['data'];
+      final List<dynamic> demandesData = jsonResponse['data'] ?? [];
+      print('📥 [DemandeAbonnement] ${demandesData.length} demandes trouvées');
       return demandesData
           .map((json) => DemandeAbonnementModel.fromJson(json))
           .toList();
     } else {
+      print('❌ [DemandeAbonnement] Erreur: ${response.body}');
       throw Exception('Erreur de récupération des demandes reçues');
     }
   }

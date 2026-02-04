@@ -762,121 +762,100 @@ class GroupeAuthService {
   }
 
   /// Récupérer uniquement les groupes que j'ai CRÉÉS
-  /// Utilise /groupes/created ou /groupes?createdById=X pour récupérer directement les groupes créés
+  /// Stratégie : Utilise /groupes/search/query pour lister tous les groupes publics,
+  /// puis filtre côté frontend ceux créés par l'utilisateur/société connecté(e)
   /// Fonctionne pour les Users ET les Sociétés
   static Future<List<GroupeModel>> getMyCreatedGroupes() async {
     try {
-      // Récupérer l'utilisateur/société courant(e) depuis les données stockées localement
+      // Récupérer l'utilisateur/société courant(e)
       final userData = await AuthBaseService.getUserData();
       if (userData == null) {
-        print('❌ [GroupeService] Aucune donnée utilisateur stockée localement');
+        print('❌ [GroupeService] Aucune donnée utilisateur stockée');
         throw Exception('Utilisateur non connecté');
       }
       final currentUserId = userData['id'];
       if (currentUserId == null) {
-        print('❌ [GroupeService] ID utilisateur non trouvé dans les données stockées');
+        print('❌ [GroupeService] ID utilisateur non trouvé');
         throw Exception('ID utilisateur non trouvé');
       }
 
-      // Utiliser le type stocké lors de la connexion (fiable)
       final storedType = await AuthBaseService.getUserType();
-      // Convertir 'societe' -> 'Societe' et 'user' -> 'User' (format backend)
       String currentUserType = storedType == 'societe' ? 'Societe' : 'User';
-      print('📤 [GroupeService] getMyCreatedGroupes - currentUserId: $currentUserId, storedType: $storedType, currentUserType: $currentUserType');
-
-      // Stratégie: Combiner les groupes de /groupes/me avec un appel pour récupérer les groupes créés
-      // car /groupes/me ne retourne que les groupes où on est MEMBRE, pas ceux qu'on a CRÉÉS
+      print('📤 [GroupeService] getMyCreatedGroupes - id: $currentUserId, type: $currentUserType');
 
       final Map<int, GroupeModel> groupesMap = {};
 
-      // 1. Essayer de récupérer les groupes créés via /groupes/created
+      // 1. Utiliser /groupes/search/query pour récupérer tous les groupes publics
+      // puis filtrer ceux créés par moi côté frontend
       try {
-        print('📤 [GroupeService] Tentative GET /groupes/created');
-        final createdResponse = await ApiService.get('/groupes/created');
-        print('📥 [GroupeService] /groupes/created status: ${createdResponse.statusCode}');
+        print('📤 [GroupeService] GET /groupes/search/query?limit=200');
+        final searchResponse = await ApiService.get('/groupes/search/query?limit=200');
+        print('📥 [GroupeService] /groupes/search/query status: ${searchResponse.statusCode}');
 
-        if (createdResponse.statusCode == 200) {
-          final jsonResponse = jsonDecode(createdResponse.body);
+        if (searchResponse.statusCode == 200) {
+          final jsonResponse = jsonDecode(searchResponse.body);
           final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
-          print('📥 [GroupeService] ${groupesData.length} groupes créés via /groupes/created');
+          print('📥 [GroupeService] ${groupesData.length} groupes totaux via search');
 
           for (var json in groupesData) {
             final groupe = GroupeModel.fromJson(json);
-            groupesMap[groupe.id] = groupe;
-          }
-        }
-      } catch (e) {
-        print('⚠️ [GroupeService] /groupes/created non disponible: $e');
-      }
-
-      // 2. Récupérer TOUS les groupes publics et filtrer côté frontend
-      // Car le backend ne supporte pas le filtre createdById/createdByType
-      try {
-        print('📤 [GroupeService] GET /groupes (tous les groupes publics)');
-        final allGroupesResponse = await ApiService.get('/groupes?limit=100');
-        print('📥 [GroupeService] /groupes status: ${allGroupesResponse.statusCode}');
-
-        if (allGroupesResponse.statusCode == 200) {
-          final jsonResponse = jsonDecode(allGroupesResponse.body);
-          final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
-          print('📥 [GroupeService] ${groupesData.length} groupes totaux récupérés');
-
-          // Filtrer côté frontend les groupes créés par moi
-          for (var json in groupesData) {
-            final groupe = GroupeModel.fromJson(json);
-            final isCreatedByMe = groupe.createdById == currentUserId &&
-                groupe.createdByType == currentUserType;
-            if (isCreatedByMe) {
+            if (groupe.createdById == currentUserId &&
+                groupe.createdByType == currentUserType) {
               groupesMap[groupe.id] = groupe;
-              print('   + Trouvé groupe créé par moi: ${groupe.nom}');
+              print('   + Trouvé groupe créé par moi: ${groupe.nom} (id=${groupe.id})');
             }
           }
           print('📥 [GroupeService] ${groupesMap.length} groupes créés par moi après filtrage');
         }
       } catch (e) {
-        print('⚠️ [GroupeService] /groupes non disponible: $e');
+        print('⚠️ [GroupeService] /groupes/search/query non disponible: $e');
       }
 
-      // 3. Récupérer les groupes stockés localement (créés par cette session/appareil)
-      // Cela permet de récupérer les groupes créés même si le backend n'a pas ajouté
-      // le créateur comme membre automatiquement
-      final storedIds = await _getStoredCreatedGroupeIds();
-      print('📤 [GroupeService] ${storedIds.length} IDs de groupes stockés localement');
+      // 2. Compléter avec les groupes de /groupes/me (pour récupérer ceux où je suis aussi membre)
+      final allMyGroupes = await getMyGroupes();
+      for (var groupe in allMyGroupes) {
+        if (groupe.createdById == currentUserId &&
+            groupe.createdByType == currentUserType &&
+            !groupesMap.containsKey(groupe.id)) {
+          groupesMap[groupe.id] = groupe;
+          print('   + Ajouté depuis /groupes/me: ${groupe.nom}');
+        }
+      }
 
+      // 3. Compléter avec les groupes stockés localement (créés récemment)
+      final storedIds = await _getStoredCreatedGroupeIds();
       for (var groupeId in storedIds) {
         if (!groupesMap.containsKey(groupeId)) {
           try {
-            print('📤 [GroupeService] Récupération groupe #$groupeId via /groupes/$groupeId');
             final groupe = await getGroupe(groupeId);
-            // Vérifier que ce groupe a bien été créé par moi
             if (groupe.createdById == currentUserId &&
                 groupe.createdByType == currentUserType) {
               groupesMap[groupeId] = groupe;
               print('   + Ajouté depuis stockage local: ${groupe.nom}');
             }
           } catch (e) {
-            print('   ⚠️ Groupe #$groupeId non trouvé ou erreur: $e');
+            print('   ⚠️ Groupe #$groupeId non trouvé: $e');
           }
         }
       }
 
-      // 4. Fallback: Filtrer les groupes de /groupes/me (ancien comportement)
-      // Cela récupère les groupes où je suis membre ET que j'ai créés
-      final allMyGroupes = await getMyGroupes();
-      print('📤 [GroupeService] getMyGroupes retourne ${allMyGroupes.length} groupes');
-
-      for (var groupe in allMyGroupes) {
-        final isCreatedByMe = groupe.createdById == currentUserId &&
-            groupe.createdByType == currentUserType;
-        if (isCreatedByMe && !groupesMap.containsKey(groupe.id)) {
-          groupesMap[groupe.id] = groupe;
-          print('   + Ajouté depuis /groupes/me: ${groupe.nom}');
+      // 4. Auto-joindre les groupes créés par moi mais dont je ne suis pas encore membre
+      // Cela corrige le bug backend qui n'ajoute pas le créateur comme membre
+      final myGroupeIds = allMyGroupes.map((g) => g.id).toSet();
+      for (var groupe in groupesMap.values) {
+        if (!myGroupeIds.contains(groupe.id)) {
+          try {
+            print('📤 [GroupeService] Auto-join groupe créé #${groupe.id} (${groupe.nom})');
+            await ApiService.post('/groupes/${groupe.id}/membres/join', {});
+            print('✅ [GroupeService] Auto-join réussi pour ${groupe.nom}');
+          } catch (e) {
+            print('⚠️ [GroupeService] Auto-join échoué pour ${groupe.nom}: $e');
+          }
         }
       }
 
       final result = groupesMap.values.toList();
       print('📤 [GroupeService] getMyCreatedGroupes - total: ${result.length} groupes créés');
-
       for (var groupe in result) {
         print('   - ${groupe.nom}: createdBy=${groupe.createdByType} #${groupe.createdById}');
       }

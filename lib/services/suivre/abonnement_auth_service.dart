@@ -83,19 +83,19 @@ class AbonnementModel {
       id: json['id'],
       userId: json['user_id'],
       societeId: json['societe_id'],
-      statut: AbonnementStatut.fromString(json['statut'] ?? 'actif'),
+      statut: AbonnementStatut.fromString(json['statut'] ?? json['status'] ?? 'actif'),
       dateDebut: json['date_debut'] != null
-          ? DateTime.parse(json['date_debut'])
+          ? DateTime.tryParse(json['date_debut'])
           : null,
       dateFin: json['date_fin'] != null
-          ? DateTime.parse(json['date_fin'])
+          ? DateTime.tryParse(json['date_fin'])
           : null,
       planCollaboration: json['plan_collaboration'],
       permissions: json['permissions'] != null
           ? List<String>.from(json['permissions'])
           : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
       user: json['user'],
       societe: json['societe'],
     );
@@ -210,18 +210,24 @@ class AbonnementAuthService {
     AbonnementStatut? statut,
   }) async {
     final queryString = statut != null ? '?statut=${statut.value}' : '';
+    print('📤 [AbonnementService] GET /abonnements/my-subscribers$queryString');
     final response = await ApiService.get(
       '/abonnements/my-subscribers$queryString',
     );
 
+    print('📥 [AbonnementService] my-subscribers status: ${response.statusCode}');
+    print('📥 [AbonnementService] my-subscribers body: ${response.body}');
+
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> abonnementsData = jsonResponse['data'];
+      final List<dynamic> abonnementsData = jsonResponse['data'] ?? [];
+      print('📥 [AbonnementService] ${abonnementsData.length} abonnés trouvés');
       return abonnementsData
           .map((json) => AbonnementModel.fromJson(json))
           .toList();
     } else {
-      throw Exception('Erreur de récupération des abonnés');
+      print('❌ [AbonnementService] Erreur my-subscribers: ${response.body}');
+      throw Exception('Erreur de récupération des abonnés (${response.statusCode})');
     }
   }
 

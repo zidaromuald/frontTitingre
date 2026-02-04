@@ -35,8 +35,18 @@ class DemandeAbonnementModel {
   final DemandeAbonnementStatus status;
   final String? message;
   final DateTime? respondedAt;
+  final DateTime? expiresAt;
   final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
+
+  // Champs additionnels du backend
+  final String? planDemande;
+  final String? secteurCollaboration;
+  final String? roleUtilisateur;
+  final String? titrePartenariat;
+  final String? descriptionPartenariat;
+  final bool? canBeAccepted;
+  final bool? isExpired;
 
   // Relations optionnelles (peuvent être incluses selon l'endpoint)
   final Map<String, dynamic>? user;
@@ -49,8 +59,16 @@ class DemandeAbonnementModel {
     required this.status,
     this.message,
     this.respondedAt,
+    this.expiresAt,
     required this.createdAt,
-    required this.updatedAt,
+    this.updatedAt,
+    this.planDemande,
+    this.secteurCollaboration,
+    this.roleUtilisateur,
+    this.titrePartenariat,
+    this.descriptionPartenariat,
+    this.canBeAccepted,
+    this.isExpired,
     this.user,
     this.societe,
   });
@@ -63,10 +81,22 @@ class DemandeAbonnementModel {
       status: DemandeAbonnementStatus.fromString(json['status'] ?? 'pending'),
       message: json['message'],
       respondedAt: json['responded_at'] != null
-          ? DateTime.parse(json['responded_at'])
+          ? DateTime.tryParse(json['responded_at'])
           : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      expiresAt: json['expires_at'] != null
+          ? DateTime.tryParse(json['expires_at'])
+          : null,
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'])
+          : null,
+      planDemande: json['plan_demande'],
+      secteurCollaboration: json['secteur_collaboration'],
+      roleUtilisateur: json['role_utilisateur'],
+      titrePartenariat: json['titre_partenariat'],
+      descriptionPartenariat: json['description_partenariat'],
+      canBeAccepted: json['can_be_accepted'],
+      isExpired: json['is_expired'],
       user: json['user'],
       societe: json['societe'],
     );
@@ -80,8 +110,9 @@ class DemandeAbonnementModel {
       'status': status.value,
       if (message != null) 'message': message,
       if (respondedAt != null) 'responded_at': respondedAt!.toIso8601String(),
+      if (expiresAt != null) 'expires_at': expiresAt!.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
     };
   }
 

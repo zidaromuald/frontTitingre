@@ -139,20 +139,20 @@ class _ServicePageState extends State<ServicePage> {
     }
   }
 
-  // Charger les groupes dont la société est membre (comme IU fait pour les Users)
+  // Charger les groupes CRÉÉS par la société
   Future<void> _loadMesGroupes() async {
     setState(() => _isLoadingGroupes = true);
 
     try {
-      debugPrint('📤 [IS-Service] Chargement groupes via getMyGroupes()');
+      debugPrint('📤 [IS-Service] Chargement groupes via getMyCreatedGroupes()');
 
-      // Utiliser getMyGroupes pour récupérer tous les groupes dont la société est membre
-      // (inclut les groupes créés + les groupes rejoints)
-      final groupes = await GroupeAuthService.getMyGroupes();
+      // Utiliser getMyCreatedGroupes pour récupérer les groupes créés par la société
+      // Cette méthode récupère tous les groupes publics et filtre ceux créés par la société
+      final groupes = await GroupeAuthService.getMyCreatedGroupes();
 
-      debugPrint('📥 [IS-Service] Groupes chargés: ${groupes.length}');
+      debugPrint('📥 [IS-Service] Groupes créés chargés: ${groupes.length}');
       for (var g in groupes) {
-        debugPrint('   - ${g.nom} (id: ${g.id}, role: ${g.myRole})');
+        debugPrint('   - ${g.nom} (id: ${g.id}, createdBy: ${g.createdByType} #${g.createdById})');
       }
 
       if (mounted) {

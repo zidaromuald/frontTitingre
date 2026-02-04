@@ -40,8 +40,8 @@ class _CategoriePageState extends State<CategoriePage> {
     }
   }
 
-  /// Charge les groupes dont la société est membre
-  /// Utilise getMyGroupes() pour récupérer tous les groupes (créés + rejoints)
+  /// Charge les groupes CRÉÉS par la société
+  /// Utilise getMyCreatedGroupes() qui récupère tous les groupes publics et filtre ceux créés par la société
   Future<void> _loadMesGroupes() async {
     setState(() {
       _isLoadingGroupes = true;
@@ -49,13 +49,13 @@ class _CategoriePageState extends State<CategoriePage> {
     });
 
     try {
-      debugPrint('📤 [IS-CategoriePage] Chargement groupes via getMyGroupes()...');
-      // Utiliser getMyGroupes pour récupérer tous les groupes dont la société est membre
-      // (inclut les groupes créés + les groupes rejoints)
-      final groupes = await GroupeAuthService.getMyGroupes();
-      debugPrint('📥 [IS-CategoriePage] ${groupes.length} groupes récupérés');
+      debugPrint('📤 [IS-CategoriePage] Chargement groupes via getMyCreatedGroupes()...');
+      // Utiliser getMyCreatedGroupes pour récupérer les groupes créés par la société
+      // Cette méthode récupère tous les groupes publics et filtre ceux créés par la société
+      final groupes = await GroupeAuthService.getMyCreatedGroupes();
+      debugPrint('📥 [IS-CategoriePage] ${groupes.length} groupes créés récupérés');
       for (var g in groupes) {
-        debugPrint('   - Groupe: ${g.nom} (id=${g.id}, role=${g.myRole})');
+        debugPrint('   - Groupe: ${g.nom} (id=${g.id}, createdBy=${g.createdByType} #${g.createdById})');
       }
 
       if (mounted) {

@@ -809,27 +809,32 @@ class GroupeAuthService {
         print('⚠️ [GroupeService] /groupes/created non disponible: $e');
       }
 
-      // 2. Essayer de récupérer les groupes créés via /groupes?createdById=X&createdByType=Y
-      if (groupesMap.isEmpty) {
-        try {
-          final queryParams = 'createdById=$currentUserId&createdByType=$currentUserType';
-          print('📤 [GroupeService] Tentative GET /groupes?$queryParams');
-          final filteredResponse = await ApiService.get('/groupes?$queryParams');
-          print('📥 [GroupeService] /groupes?... status: ${filteredResponse.statusCode}');
+      // 2. Récupérer TOUS les groupes publics et filtrer côté frontend
+      // Car le backend ne supporte pas le filtre createdById/createdByType
+      try {
+        print('📤 [GroupeService] GET /groupes (tous les groupes publics)');
+        final allGroupesResponse = await ApiService.get('/groupes?limit=100');
+        print('📥 [GroupeService] /groupes status: ${allGroupesResponse.statusCode}');
 
-          if (filteredResponse.statusCode == 200) {
-            final jsonResponse = jsonDecode(filteredResponse.body);
-            final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
-            print('📥 [GroupeService] ${groupesData.length} groupes via /groupes filtré');
+        if (allGroupesResponse.statusCode == 200) {
+          final jsonResponse = jsonDecode(allGroupesResponse.body);
+          final List<dynamic> groupesData = jsonResponse['data'] ?? jsonResponse['groupes'] ?? [];
+          print('📥 [GroupeService] ${groupesData.length} groupes totaux récupérés');
 
-            for (var json in groupesData) {
-              final groupe = GroupeModel.fromJson(json);
+          // Filtrer côté frontend les groupes créés par moi
+          for (var json in groupesData) {
+            final groupe = GroupeModel.fromJson(json);
+            final isCreatedByMe = groupe.createdById == currentUserId &&
+                groupe.createdByType == currentUserType;
+            if (isCreatedByMe) {
               groupesMap[groupe.id] = groupe;
+              print('   + Trouvé groupe créé par moi: ${groupe.nom}');
             }
           }
-        } catch (e) {
-          print('⚠️ [GroupeService] /groupes?createdBy... non disponible: $e');
+          print('📥 [GroupeService] ${groupesMap.length} groupes créés par moi après filtrage');
         }
+      } catch (e) {
+        print('⚠️ [GroupeService] /groupes non disponible: $e');
       }
 
       // 3. Récupérer les groupes stockés localement (créés par cette session/appareil)

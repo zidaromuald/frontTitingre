@@ -84,7 +84,7 @@ class LastMessageModel {
       senderId: json['sender_id'],
       senderType: json['sender_type'],
       isRead: json['is_read'] ?? false,
-      createdAt: DateTime.parse(json['created_at']),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
     );
   }
 
@@ -134,8 +134,8 @@ class ConversationModel {
           : null,
       unreadCount: json['unread_count'] ?? 0,
       isArchived: json['is_archived'] ?? false,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] ?? '') ?? DateTime.now(),
     );
   }
 
@@ -186,8 +186,8 @@ class CreateConversationDto {
 
   Map<String, dynamic> toJson() {
     return {
-      'participant_id': participantId,
-      'participant_type': participantType,
+      'participant2_id': participantId,
+      'participant2_type': participantType,
     };
   }
 }

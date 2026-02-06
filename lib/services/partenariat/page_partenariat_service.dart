@@ -17,15 +17,19 @@ class PagePartenaritService {
     required int userId,
     required int societeId,
   }) async {
+    print('📤 [PagePartenariat] GET /pages-partenariat?userId=$userId&societeId=$societeId');
     final response = await ApiService.get(
       '/pages-partenariat?userId=$userId&societeId=$societeId',
     );
+
+    print('📥 [PagePartenariat] Response status: ${response.statusCode}');
+    print('📥 [PagePartenariat] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       return PagePartenaritModel.fromJson(jsonResponse['data']);
     } else {
-      throw Exception('Page partenariat introuvable');
+      throw Exception('Page partenariat introuvable (${response.statusCode})');
     }
   }
 
@@ -122,8 +126,8 @@ class PagePartenaritModel {
       societeId: json['societeId'] ?? json['societe_id'],
       titre: json['titre'],
       visibilite: json['visibilite'],
-      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] ?? json['updated_at'] ?? '') ?? DateTime.now(),
       user: json['user'],
       societe: json['societe'],
     );

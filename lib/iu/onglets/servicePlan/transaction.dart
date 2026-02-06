@@ -52,9 +52,17 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
   @override
   void initState() {
     super.initState();
-    _loadUserInfo();
-    _loadTransactions();
-    _loadInformations();
+    _initializeData();
+  }
+
+  /// Initialiser les données en chargeant d'abord les infos utilisateur
+  Future<void> _initializeData() async {
+    await _loadUserInfo();
+    // Charger transactions et informations en parallèle après avoir le userType
+    await Future.wait([
+      _loadTransactions(),
+      _loadInformations(),
+    ]);
   }
 
   /// Charger les informations de l'utilisateur connecté
@@ -78,6 +86,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
   }
 
   /// Charger les transactions depuis le backend
+  /// Note: Les Users utilisent getPendingTransactions(), les Sociétés utilisent getTransactionsForPage()
   Future<void> _loadTransactions() async {
     setState(() {
       _isLoadingTransactions = true;
@@ -85,15 +94,29 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
     });
 
     try {
-      final transactions = await TransactionPartenaritService.getTransactionsForPage(
-        widget.pagePartenaritId,
-      );
+      List<TransactionPartenaritModel> transactions;
+
+      // Utiliser la bonne méthode selon le type d'utilisateur
+      if (_userType == 'User') {
+        // Les Users récupèrent leurs transactions en attente
+        print('📤 [Transaction] User: GET /transactions-partenariat/pending');
+        transactions = await TransactionPartenaritService.getPendingTransactions();
+        // Filtrer par pagePartenaritId si nécessaire
+        transactions = transactions.where((t) => t.pageId == widget.pagePartenaritId).toList();
+      } else {
+        // Les Sociétés récupèrent toutes les transactions de la page
+        print('📤 [Transaction] Societe: GET /transactions-partenariat/page/${widget.pagePartenaritId}');
+        transactions = await TransactionPartenaritService.getTransactionsForPage(
+          widget.pagePartenaritId,
+        );
+      }
 
       setState(() {
         _transactions = transactions;
         _isLoadingTransactions = false;
       });
     } catch (e) {
+      print('❌ [Transaction] Erreur: $e');
       setState(() {
         _errorTransactions = e.toString();
         _isLoadingTransactions = false;

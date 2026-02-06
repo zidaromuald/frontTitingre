@@ -27,7 +27,11 @@ class InformationPartenaireService {
   static Future<List<InformationPartenaireModel>> getInformationsForPage(
     int pageId,
   ) async {
+    print('📤 [InformationPartenaire] GET $baseUrl/page/$pageId');
     final response = await ApiService.get('$baseUrl/page/$pageId');
+
+    print('📥 [InformationPartenaire] Response status: ${response.statusCode}');
+    print('📥 [InformationPartenaire] Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -35,9 +39,13 @@ class InformationPartenaireService {
       return informationsData
           .map((json) => InformationPartenaireModel.fromJson(json))
           .toList();
+    } else if (response.statusCode == 403) {
+      throw Exception(
+        'Accès refusé à cette page (403). Vérifiez que vous êtes bien un participant de cette page partenariat.',
+      );
     } else {
       throw Exception(
-        'Erreur lors du chargement des informations: ${response.body}',
+        'Erreur lors du chargement des informations (${response.statusCode}): ${response.body}',
       );
     }
   }
@@ -136,8 +144,8 @@ class InformationPartenaireModel {
       contenu: json['contenu'],
       typeInfo: json['typeInfo'] ?? json['type_info'],
       ordre: json['ordre'],
-      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] ?? json['updated_at'] ?? '') ?? DateTime.now(),
       createdByNom: json['createdBy']?['nom'] ?? json['created_by_nom'],
       createdByPrenom:
           json['createdBy']?['prenom'] ?? json['created_by_prenom'],

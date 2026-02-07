@@ -15,8 +15,8 @@ class SocieteProfilModel {
   final String? siteWeb;
   final int? nombreEmployes;
   final int? anneeCreation;
-  final String? chiffreAffaires;
-  final String? certifications;
+  final double? chiffreAffaires;
+  final List<String>? certifications;
 
   SocieteProfilModel({
     required this.id,
@@ -56,8 +56,10 @@ class SocieteProfilModel {
       siteWeb: json['site_web']?.toString(),
       nombreEmployes: json['nombre_employes'],
       anneeCreation: json['annee_creation'],
-      chiffreAffaires: json['chiffre_affaires']?.toString(),
-      certifications: json['certifications']?.toString(),
+      chiffreAffaires: json['chiffre_affaires'] != null
+          ? double.tryParse(json['chiffre_affaires'].toString())
+          : null,
+      certifications: parseStringList(json['certifications']),
     );
   }
 

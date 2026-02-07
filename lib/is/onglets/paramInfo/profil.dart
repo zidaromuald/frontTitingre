@@ -100,9 +100,9 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
           _anneeCreationController.text =
               societe.profile?.anneeCreation?.toString() ?? '';
           _chiffreAffairesController.text =
-              societe.profile?.chiffreAffaires ?? '';
+              societe.profile?.chiffreAffaires?.toString() ?? '';
           _certificationsController.text =
-              societe.profile?.certifications ?? '';
+              societe.profile?.certifications?.join(', ') ?? '';
 
           // Remplir les listes (filtrer les valeurs null potentielles)
           _produits = (societe.profile?.produits ?? []).whereType<String>().toList();
@@ -154,11 +154,23 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
       final anneeCreation = int.tryParse(_anneeCreationController.text.trim());
       if (anneeCreation != null) updates['annee_creation'] = anneeCreation;
 
-      final chiffreAffaires = _chiffreAffairesController.text.trim();
-      if (chiffreAffaires.isNotEmpty) updates['chiffre_affaires'] = chiffreAffaires;
+      final chiffreAffairesText = _chiffreAffairesController.text.trim();
+      if (chiffreAffairesText.isNotEmpty) {
+        final chiffreAffaires = double.tryParse(chiffreAffairesText);
+        if (chiffreAffaires != null && chiffreAffaires >= 0) {
+          updates['chiffre_affaires'] = chiffreAffaires;
+        }
+      }
 
-      final certifications = _certificationsController.text.trim();
-      if (certifications.isNotEmpty) updates['certifications'] = certifications;
+      final certificationsText = _certificationsController.text.trim();
+      if (certificationsText.isNotEmpty) {
+        // Convertir le texte en tableau (séparé par virgules)
+        updates['certifications'] = certificationsText
+            .split(',')
+            .map((c) => c.trim())
+            .where((c) => c.isNotEmpty)
+            .toList();
+      }
 
       if (_produits.isNotEmpty) updates['produits'] = _produits;
       if (_services.isNotEmpty) updates['services'] = _services;

@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:gestauth_clean/services/partenariat/transaction_partenariat_service.dart';
 import 'package:gestauth_clean/services/partenariat/information_partenaire_service.dart';
 import 'package:gestauth_clean/services/AuthUS/auth_base_service.dart';
@@ -1154,10 +1157,10 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
             ),
             ListTile(
               leading: Icon(Icons.download, color: _themeColor),
-              title: const Text('Exporter les données'),
+              title: const Text('Exporter les transactions (CSV)'),
               onTap: () {
                 Navigator.pop(context);
-                _showErrorSnackBar('Fonctionnalité en cours de développement');
+                _exportTransactionsCsv();
               },
             ),
           ],
@@ -1169,6 +1172,55 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
   // ========================================
   // Helpers
   // ========================================
+
+  Future<void> _exportTransactionsCsv() async {
+    if (_transactions.isEmpty) {
+      _showErrorSnackBar('Aucune transaction à exporter');
+      return;
+    }
+
+    try {
+      // En-têtes CSV
+      final buffer = StringBuffer();
+      buffer.writeln('Produit;Quantité;Unité;Prix Unitaire (CFA);Prix Total (CFA);Période;Catégorie;Statut;Société;Utilisateur;Date Création');
+
+      // Lignes de données
+      for (final t in _transactions) {
+        final produit = _escapeCsv(t.produit);
+        final unite = _escapeCsv(t.unite ?? '');
+        final categorie = _escapeCsv(t.categorie ?? '');
+        final statut = t.getStatusLabel();
+        final societe = _escapeCsv(t.societeNom ?? '');
+        final user = _escapeCsv(t.getUserName());
+        final periode = _escapeCsv(t.periodeFormatee);
+        final prixTotal = (t.quantite * t.prixUnitaire).toStringAsFixed(0);
+        final date = '${t.createdAt.day.toString().padLeft(2, '0')}/${t.createdAt.month.toString().padLeft(2, '0')}/${t.createdAt.year}';
+
+        buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
+      }
+
+      // Sauvegarder le fichier
+      final dir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final file = File('${dir.path}/transactions_$timestamp.csv');
+      await file.writeAsString(buffer.toString());
+
+      // Partager le fichier
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Transactions - ${widget.partenaireName}',
+      );
+    } catch (e) {
+      _showErrorSnackBar('Erreur lors de l\'export: $e');
+    }
+  }
+
+  String _escapeCsv(String value) {
+    if (value.contains(';') || value.contains('"') || value.contains('\n')) {
+      return '"${value.replaceAll('"', '""')}"';
+    }
+    return value;
+  }
 
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(

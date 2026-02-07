@@ -79,10 +79,17 @@ class _GlobalSearchPageState extends State<GlobalSearchPage>
     debugPrint('🔍 [Search] Recherche lancée pour: "$query"');
 
     try {
-      // Recherche en parallèle pour optimiser les performances
+      // Recherche en parallèle avec gestion individuelle des erreurs
+      // Si une recherche échoue (ex: groupe 500), les autres continuent
       final results = await Future.wait([
-        UserAuthService.autocomplete(query),
-        GroupeAuthService.searchGroupes(query: query, limit: 20),
+        UserAuthService.autocomplete(query).catchError((e) {
+          debugPrint('⚠️ [Search] Erreur recherche users: $e');
+          return <UserModel>[];
+        }),
+        GroupeAuthService.searchGroupes(query: query, limit: 20).catchError((e) {
+          debugPrint('⚠️ [Search] Erreur recherche groupes: $e');
+          return <GroupeModel>[];
+        }),
         _searchSocietesWithFallback(query),
       ]);
 

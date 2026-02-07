@@ -246,7 +246,7 @@ class TransactionPartenaritModel {
       produit: json['produit'],
       quantite: json['quantite'] is int
           ? json['quantite']
-          : int.parse(json['quantite'].toString()),
+          : double.parse(json['quantite'].toString()).toInt(),
       prixUnitaire: json['prixUnitaire'] is double
           ? json['prixUnitaire']
           : json['prix_unitaire'] is double

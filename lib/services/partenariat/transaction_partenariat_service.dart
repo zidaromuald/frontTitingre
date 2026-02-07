@@ -14,14 +14,19 @@ class TransactionPartenaritService {
   static Future<TransactionPartenaritModel> createTransaction(
     CreateTransactionPartenaritDto dto,
   ) async {
+    print('📤 [Transaction] POST $baseUrl');
+    print('📤 [Transaction] Body: ${dto.toJson()}');
     final response = await ApiService.post(baseUrl, dto.toJson());
+
+    print('📥 [Transaction] Response status: ${response.statusCode}');
+    print('📥 [Transaction] Response body: ${response.body}');
 
     if (response.statusCode == 201 || response.statusCode == 200) {
       final data = json.decode(response.body);
       return TransactionPartenaritModel.fromJson(data['data']);
     } else {
       throw Exception(
-        'Erreur lors de la création de la transaction: ${response.body}',
+        'Erreur lors de la création de la transaction (${response.statusCode}): ${response.body}',
       );
     }
   }
@@ -34,17 +39,22 @@ class TransactionPartenaritService {
   static Future<List<TransactionPartenaritModel>> getTransactionsForPage(
     int pageId,
   ) async {
+    print('📤 [Transaction] GET $baseUrl/page/$pageId');
     final response = await ApiService.get('$baseUrl/page/$pageId');
+
+    print('📥 [Transaction] GET Response status: ${response.statusCode}');
+    print('📥 [Transaction] GET Response body: ${response.body}');
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       final List<dynamic> transactionsData = data['data'];
+      print('📥 [Transaction] ${transactionsData.length} transactions trouvées');
       return transactionsData
           .map((json) => TransactionPartenaritModel.fromJson(json))
           .toList();
     } else {
       throw Exception(
-        'Erreur lors du chargement des transactions: ${response.body}',
+        'Erreur lors du chargement des transactions (${response.statusCode}): ${response.body}',
       );
     }
   }
@@ -244,18 +254,20 @@ class TransactionPartenaritModel {
           : double.parse(
               (json['prixUnitaire'] ?? json['prix_unitaire']).toString(),
             ),
-      dateDebut: DateTime.parse(json['dateDebut'] ?? json['date_debut']),
-      dateFin: DateTime.parse(json['dateFin'] ?? json['date_fin']),
+      dateDebut: DateTime.tryParse(json['dateDebut'] ?? json['date_debut'] ?? '') ?? DateTime.now(),
+      dateFin: DateTime.tryParse(json['dateFin'] ?? json['date_fin'] ?? '') ?? DateTime.now(),
       periodeLabel: json['periodeLabel'] ?? json['periode_label'],
       unite: json['unite'],
       categorie: json['categorie'],
-      statut: json['statut'],
+      statut: json['statut'] ?? 'en_attente',
       dateValidation: json['dateValidation'] != null
-          ? DateTime.parse(json['dateValidation'])
+          ? DateTime.tryParse(json['dateValidation'])
+          : json['date_validation'] != null
+          ? DateTime.tryParse(json['date_validation'])
           : null,
       commentaire: json['commentaire'],
-      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
+      createdAt: DateTime.tryParse(json['createdAt'] ?? json['created_at'] ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] ?? json['updated_at'] ?? '') ?? DateTime.now(),
       societeNom: json['societe']?['nom'] ?? json['societe_nom'],
       societeSecteur:
           json['societe']?['secteurActivite'] ?? json['societe_secteur'],

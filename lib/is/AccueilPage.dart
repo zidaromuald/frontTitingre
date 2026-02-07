@@ -1373,13 +1373,7 @@ class _PostCardState extends State<_PostCard> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.favorite_border, size: 20, color: cs.primary.withOpacity(.8)),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${widget.post.likesCount}',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface),
-                  ),
-                  const SizedBox(width: 20),
+                  // Commentaires (à gauche)
                   Icon(Icons.chat_bubble_outline, size: 20, color: cs.primary.withOpacity(.8)),
                   const SizedBox(width: 6),
                   Text(
@@ -1387,14 +1381,13 @@ class _PostCardState extends State<_PostCard> {
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface),
                   ),
                   const Spacer(),
-                  Icon(Icons.share_outlined, size: 20, color: cs.onSurface.withOpacity(.6)),
+                  // Like (à droite)
+                  Icon(Icons.thumb_up_outlined, size: 20, color: cs.primary.withOpacity(.8)),
                   const SizedBox(width: 6),
                   Text(
-                    '${widget.post.sharesCount}',
-                    style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(.7)),
+                    '${widget.post.likesCount}',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface),
                   ),
-                  const SizedBox(width: 12),
-                  Icon(Icons.touch_app, size: 16, color: cs.primary.withOpacity(.5)),
                 ],
               ),
             ),

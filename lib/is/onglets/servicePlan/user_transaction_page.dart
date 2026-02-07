@@ -58,11 +58,14 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   }
 
   Future<void> _loadData() async {
+    print('🔄 [UserTransactionPage] _loadData() userId=${widget.userId}');
     // 1. Charger le profil utilisateur et le pagePartenaritId en parallèle
     await Future.wait([
       _loadUserProfile(),
       _loadPagePartenaritId(),
     ]);
+
+    print('🔄 [UserTransactionPage] pagePartenaritId=$_pagePartenaritId');
 
     // 2. Une fois le pagePartenaritId chargé, charger les transactions et informations
     if (_pagePartenaritId != null) {
@@ -70,6 +73,12 @@ class _UserTransactionPageState extends State<UserTransactionPage>
         _loadTransactions(),
         _loadInformations(),
       ]);
+    } else {
+      print('⚠️ [UserTransactionPage] pagePartenaritId est null - transactions et informations non chargées');
+      setState(() {
+        _isLoadingTransactions = false;
+        _isLoadingInformations = false;
+      });
     }
   }
 
@@ -79,12 +88,15 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     try {
       // Récupérer l'ID de la société connectée
       final societe = await SocieteAuthService.getMe();
+      print('📤 [UserTransactionPage] getPageByUserAndSociete userId=${widget.userId}, societeId=${societe.id}');
 
       // Récupérer la page partenariat entre la société et l'utilisateur
       final page = await PagePartenaritService.getPageByUserAndSociete(
         userId: widget.userId,
         societeId: societe.id,
       );
+
+      print('✅ [UserTransactionPage] pagePartenaritId=${page.id}');
 
       if (mounted) {
         setState(() {
@@ -93,11 +105,12 @@ class _UserTransactionPageState extends State<UserTransactionPage>
         });
       }
     } catch (e) {
+      print('❌ [UserTransactionPage] Erreur chargement page partenariat: $e');
       if (mounted) {
         setState(() => _isLoadingPageId = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors du chargement de la page partenariat: $e'),
+            content: Text('Erreur page partenariat: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -132,14 +145,17 @@ class _UserTransactionPageState extends State<UserTransactionPage>
 
   Future<void> _loadTransactions() async {
     if (_pagePartenaritId == null) {
+      print('⚠️ [UserTransactionPage] _loadTransactions() skip: pagePartenaritId est null');
       setState(() => _isLoadingTransactions = false);
       return;
     }
 
     setState(() => _isLoadingTransactions = true);
+    print('📤 [UserTransactionPage] _loadTransactions() pageId=$_pagePartenaritId');
 
     try {
       final transactions = await TransactionPartenaritService.getTransactionsForPage(_pagePartenaritId!);
+      print('✅ [UserTransactionPage] ${transactions.length} transactions chargées');
 
       if (mounted) {
         setState(() {
@@ -148,9 +164,9 @@ class _UserTransactionPageState extends State<UserTransactionPage>
         });
       }
     } catch (e) {
+      print('❌ [UserTransactionPage] Erreur chargement transactions: $e');
       if (mounted) {
         setState(() => _isLoadingTransactions = false);
-        debugPrint('Erreur chargement transactions: $e');
       }
     }
   }
@@ -470,11 +486,14 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   }
 
   Future<void> _createTransaction() async {
+    print('📝 [UserTransactionPage] _createTransaction() pagePartenaritId=$_pagePartenaritId');
+
     // Vérifier que le pagePartenaritId est chargé
     if (_pagePartenaritId == null) {
+      print('⚠️ [UserTransactionPage] pagePartenaritId est null - impossible de créer');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Chargement de la page partenariat en cours...'),
+          content: Text('Page partenariat non trouvée. La demande d\'abonnement a-t-elle été acceptée ?'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -491,6 +510,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     );
 
     if (result != null) {
+      print('✅ [UserTransactionPage] Transaction créée: id=${result.id}, produit=${result.produit}');
       setState(() {
         _transactions.insert(0, result);
       });

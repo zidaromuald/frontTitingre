@@ -139,18 +139,32 @@ class _ProfilDetailPageState extends State<ProfilDetailPage> {
     setState(() => _isSaving = true);
 
     try {
-      // Préparer les données à envoyer
-      final updates = {
-        'description': _descriptionController.text.trim(),
-        'site_web': _siteWebController.text.trim(),
-        'nombre_employes': int.tryParse(_nombreEmployesController.text.trim()),
-        'annee_creation': int.tryParse(_anneeCreationController.text.trim()),
-        'chiffre_affaires': _chiffreAffairesController.text.trim(),
-        'certifications': _certificationsController.text.trim(),
-        'produits': _produits,
-        'services': _services,
-        'centres_interet': _centresInteret,
-      };
+      // Préparer les données à envoyer - uniquement les champs non vides
+      final updates = <String, dynamic>{};
+
+      final description = _descriptionController.text.trim();
+      if (description.isNotEmpty) updates['description'] = description;
+
+      final siteWeb = _siteWebController.text.trim();
+      if (siteWeb.isNotEmpty) updates['site_web'] = siteWeb;
+
+      final nombreEmployes = int.tryParse(_nombreEmployesController.text.trim());
+      if (nombreEmployes != null) updates['nombre_employes'] = nombreEmployes;
+
+      final anneeCreation = int.tryParse(_anneeCreationController.text.trim());
+      if (anneeCreation != null) updates['annee_creation'] = anneeCreation;
+
+      final chiffreAffaires = _chiffreAffairesController.text.trim();
+      if (chiffreAffaires.isNotEmpty) updates['chiffre_affaires'] = chiffreAffaires;
+
+      final certifications = _certificationsController.text.trim();
+      if (certifications.isNotEmpty) updates['certifications'] = certifications;
+
+      if (_produits.isNotEmpty) updates['produits'] = _produits;
+      if (_services.isNotEmpty) updates['services'] = _services;
+      if (_centresInteret.isNotEmpty) updates['centres_interet'] = _centresInteret;
+
+      print('📝 [Profil] Données à sauvegarder: $updates');
 
       // Appeler l'API
       await SocieteAuthService.updateMyProfile(updates);

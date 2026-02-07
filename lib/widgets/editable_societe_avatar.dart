@@ -82,11 +82,14 @@ class _EditableSocieteAvatarState extends State<EditableSocieteAvatar> {
 
       setState(() => _isUploading = true);
 
-      // Upload du logo avec SocieteAuthService
-      final response = await SocieteAuthService.uploadLogo(image.path);
+      // Lire les bytes de l'image (compatible web et mobile)
+      final bytes = await image.readAsBytes();
+      final filename = image.name;
+
+      // Upload du logo via bytes (compatible web)
+      final response = await SocieteAuthService.uploadLogoBytes(bytes, filename);
 
       // Mettre à jour l'URL du logo
-      // IMPORTANT: Convertir en String pour éviter BindingError sur Flutter Web
       final newLogoUrl = (response['logo'] ?? response['url'])?.toString();
 
       setState(() {

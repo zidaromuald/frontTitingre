@@ -99,6 +99,26 @@ class ApiService {
     }
   }
 
+  /// PATCH Request (pour les mises à jour partielles - NestJS utilise souvent PATCH)
+  static Future<http.Response> patch(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
+    final headers = await _authHeaders;
+    final uri = Uri.parse('$baseUrl$endpoint');
+
+    try {
+      final response = await http.patch(
+        uri,
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      return response;
+    } catch (e) {
+      throw Exception('Erreur de connexion: $e');
+    }
+  }
+
   /// DELETE Request
   /// Note: Ne pas envoyer de Content-Type pour éviter l'erreur "body cannot be empty"
   static Future<http.Response> delete(String endpoint) async {

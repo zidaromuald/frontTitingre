@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import '../api_service.dart';
 import 'auth_base_service.dart';
 
@@ -273,18 +274,41 @@ class SocieteAuthService {
   static Future<SocieteProfilModel> updateMyProfile(
     Map<String, dynamic> updates,
   ) async {
-    final response = await ApiService.put('/societes/me/profile', updates);
+    // Nettoyer les valeurs null pour éviter 400 Bad Request
+    final cleanUpdates = Map<String, dynamic>.from(updates)
+      ..removeWhere((key, value) => value == null);
+
+    print('📤 [SocieteAuth] PATCH /societes/me/profile');
+    print('📤 [SocieteAuth] Body: $cleanUpdates');
+
+    // NestJS utilise PATCH pour les mises à jour partielles
+    var response = await ApiService.patch('/societes/me/profile', cleanUpdates);
+
+    print('📥 [SocieteAuth] PATCH Response status: ${response.statusCode}');
+    print('📥 [SocieteAuth] PATCH Response body: ${response.body}');
+
+    // Fallback sur PUT si PATCH retourne 404 (endpoint non trouvé)
+    if (response.statusCode == 404 || response.statusCode == 405) {
+      print('📤 [SocieteAuth] PATCH non supporté, tentative PUT...');
+      response = await ApiService.put('/societes/me/profile', cleanUpdates);
+      print('📥 [SocieteAuth] PUT Response status: ${response.statusCode}');
+      print('📥 [SocieteAuth] PUT Response body: ${response.body}');
+    }
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
       return SocieteProfilModel.fromJson(jsonResponse['data']);
     } else {
-      throw Exception('Erreur de mise à jour du profil');
+      final error = jsonDecode(response.body);
+      throw Exception(
+        error['message'] ?? 'Erreur de mise à jour du profil (${response.statusCode})',
+      );
     }
   }
 
-  /// Upload logo de société
+  /// Upload logo de société (version fichier - NON compatible web)
   /// POST /societes/me/logo
+  /// @deprecated Utiliser uploadLogoBytes() pour le web
   static Future<Map<String, dynamic>> uploadLogo(String filePath) async {
     final response = await ApiService.uploadFileToEndpoint(
       filePath,
@@ -295,6 +319,30 @@ class SocieteAuthService {
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
       return jsonResponse['data']; // Retourne { logo: '...', url: '...' }
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Erreur lors de l\'upload du logo');
+    }
+  }
+
+  /// Upload logo de société via bytes (compatible WEB et mobile)
+  /// POST /societes/me/logo
+  static Future<Map<String, dynamic>> uploadLogoBytes(
+    Uint8List bytes,
+    String filename,
+  ) async {
+    final response = await ApiService.uploadBytesToEndpoint(
+      bytes,
+      filename,
+      '/societes/me/logo',
+      fieldName: 'file',
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final jsonResponse = jsonDecode(response.body);
+      // Le backend peut retourner 'data' ou directement les champs
+      final data = jsonResponse['data'] ?? jsonResponse;
+      return Map<String, dynamic>.from(data);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'Erreur lors de l\'upload du logo');

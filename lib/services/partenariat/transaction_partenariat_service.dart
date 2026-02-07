@@ -215,8 +215,8 @@ class TransactionPartenaritModel {
   TransactionPartenaritModel({
     required this.id,
     required this.pageId,
-    required this.societeId,
-    required this.userId,
+    this.societeId = 0,
+    this.userId = 0,
     required this.produit,
     required this.quantite,
     required this.prixUnitaire,
@@ -237,35 +237,58 @@ class TransactionPartenaritModel {
     this.userEmail,
   });
 
+  /// Normalise le statut backend vers les valeurs internes
+  static String _normalizeStatut(String? statut) {
+    switch (statut) {
+      case 'pending_validation':
+      case 'en_attente':
+        return 'en_attente';
+      case 'validated':
+      case 'validee':
+        return 'validee';
+      case 'rejected':
+      case 'rejetee':
+        return 'rejetee';
+      default:
+        return 'en_attente';
+    }
+  }
+
+  /// Parse un nombre (int ou String) en int
+  static int _parseQuantite(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return double.tryParse(value.toString())?.toInt() ?? 0;
+  }
+
+  /// Parse un nombre (int, double ou String) en double
+  static double _parsePrix(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0.0;
+  }
+
   factory TransactionPartenaritModel.fromJson(Map<String, dynamic> json) {
     return TransactionPartenaritModel(
       id: json['id'],
-      pageId: json['pageId'] ?? json['page_id'],
-      societeId: json['societeId'] ?? json['societe_id'],
-      userId: json['userId'] ?? json['user_id'],
-      produit: json['produit'],
-      quantite: json['quantite'] is int
-          ? json['quantite']
-          : double.parse(json['quantite'].toString()).toInt(),
-      prixUnitaire: json['prixUnitaire'] is double
-          ? json['prixUnitaire']
-          : json['prix_unitaire'] is double
-          ? json['prix_unitaire']
-          : double.parse(
-              (json['prixUnitaire'] ?? json['prix_unitaire']).toString(),
-            ),
+      pageId: json['page_partenariat_id'] ?? json['pageId'] ?? json['page_id'] ?? 0,
+      societeId: json['societeId'] ?? json['societe_id'] ?? 0,
+      userId: json['userId'] ?? json['user_id'] ?? 0,
+      produit: json['produit'] ?? '',
+      quantite: _parseQuantite(json['quantite']),
+      prixUnitaire: _parsePrix(json['prixUnitaire'] ?? json['prix_unitaire']),
       dateDebut: DateTime.tryParse(json['dateDebut'] ?? json['date_debut'] ?? '') ?? DateTime.now(),
       dateFin: DateTime.tryParse(json['dateFin'] ?? json['date_fin'] ?? '') ?? DateTime.now(),
       periodeLabel: json['periodeLabel'] ?? json['periode_label'],
       unite: json['unite'],
       categorie: json['categorie'],
-      statut: json['statut'] ?? 'en_attente',
-      dateValidation: json['dateValidation'] != null
-          ? DateTime.tryParse(json['dateValidation'])
-          : json['date_validation'] != null
-          ? DateTime.tryParse(json['date_validation'])
-          : null,
-      commentaire: json['commentaire'],
+      statut: _normalizeStatut(json['statut']),
+      dateValidation: DateTime.tryParse(
+        json['dateValidation'] ?? json['date_validation'] ?? json['date_validation_user'] ?? '',
+      ),
+      commentaire: json['commentaire'] ?? json['commentaire_user'],
       createdAt: DateTime.tryParse(json['createdAt'] ?? json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] ?? json['updated_at'] ?? '') ?? DateTime.now(),
       societeNom: json['societe']?['nom'] ?? json['societe_nom'],

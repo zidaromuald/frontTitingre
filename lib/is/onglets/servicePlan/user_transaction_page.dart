@@ -323,7 +323,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  transaction.statut.toUpperCase(),
+                  transaction.getStatusLabel(),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

@@ -110,14 +110,39 @@ class _CategoriePageState extends State<CategoriePage> {
     });
 
     try {
-      print('🔍 [CategoriePage] Recherche societes par secteur: $keyword');
-      // Rechercher par secteur d'activite
-      var societes = await SocieteAuthService.searchSocietes(secteur: keyword);
+      print('🔍 [CategoriePage] Recherche societes pour categorie: ${widget.categorie['nom']} -> keyword: $keyword');
+      List<SocieteModel> societes = [];
 
-      // Si pas de resultats, essayer avec le query general
+      // 1. Essayer advancedSearch (endpoint /societes/advanced-search) qui supporte secteur et centres_interet
+      try {
+        societes = await SocieteAuthService.advancedSearch(
+          centresInteret: [keyword],
+          secteur: keyword,
+        );
+        print('🔍 [CategoriePage] advancedSearch: ${societes.length} resultats');
+      } catch (e) {
+        print('⚠️ [CategoriePage] advancedSearch echoue: $e, fallback sur query...');
+      }
+
+      // 2. Si pas de resultats, essayer searchSocietes avec query (pas secteur)
       if (societes.isEmpty) {
-        print('🔍 [CategoriePage] Aucun resultat par secteur, recherche par query: $keyword');
-        societes = await SocieteAuthService.searchSocietes(query: keyword);
+        try {
+          societes = await SocieteAuthService.searchSocietes(query: keyword);
+          print('🔍 [CategoriePage] searchSocietes(query: $keyword): ${societes.length} resultats');
+        } catch (e) {
+          print('⚠️ [CategoriePage] searchSocietes query echoue: $e');
+        }
+      }
+
+      // 3. Si toujours vide, essayer avec le nom de la categorie
+      if (societes.isEmpty) {
+        final categoryName = widget.categorie['nom'] as String;
+        try {
+          societes = await SocieteAuthService.searchSocietes(query: categoryName);
+          print('🔍 [CategoriePage] searchSocietes(query: $categoryName): ${societes.length} resultats');
+        } catch (e) {
+          print('⚠️ [CategoriePage] searchSocietes nom echoue: $e');
+        }
       }
 
       print('✅ [CategoriePage] ${societes.length} societes trouvees pour "$keyword"');

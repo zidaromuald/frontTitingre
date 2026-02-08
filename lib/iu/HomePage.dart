@@ -7,6 +7,8 @@ import 'package:gestauth_clean/iu/onglets/postInfo/post_edit_page.dart';
 //import 'package:gestauth_clean/iu/onglets/postInfo/post_search_page.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/service.dart';
 import 'package:gestauth_clean/services/posts/post_service.dart';
+import 'package:gestauth_clean/services/posts/like_service.dart';
+import 'package:gestauth_clean/services/posts/comment_service.dart';
 import 'package:gestauth_clean/services/affichage/unread_content_service.dart';
 import 'package:gestauth_clean/services/AuthUS/auth_base_service.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
@@ -1157,20 +1159,27 @@ class _PostCardState extends State<_PostCard> {
   int? _currentUserId;
   AuthorType? _currentUserType;
 
+  // Etat Like
+  bool _hasLiked = false;
+  int _likesCount = 0;
+  bool _isLikeLoading = false;
+
+  // Etat Commentaires
+  int _commentsCount = 0;
+
   @override
   void initState() {
     super.initState();
+    _likesCount = widget.post.likesCount;
+    _commentsCount = widget.post.commentsCount;
     _loadCurrentUser();
+    _loadLikeStatus();
   }
 
   Future<void> _loadCurrentUser() async {
     if (!mounted) return;
 
-    print('🔄 [PostCard-Home] _loadCurrentUser() démarré...');
-
-    // Vérifier le type stocké dans SharedPreferences
     final storedType = await AuthBaseService.getUserType();
-    print('🔍 [PostCard-Home] Type stocké: $storedType');
 
     if (storedType == 'societe') {
       try {
@@ -1180,12 +1189,9 @@ class _PostCardState extends State<_PostCard> {
             _currentUserId = societe.id;
             _currentUserType = AuthorType.societe;
           });
-          print('✅ [PostCard-Home] SOCIETE id=${societe.id}');
           return;
         }
-      } catch (e) {
-        print('⚠️ [PostCard-Home] Erreur Societe: $e');
-      }
+      } catch (_) {}
     } else if (storedType == 'user') {
       try {
         final user = await UserAuthService.getMyProfile();
@@ -1194,15 +1200,75 @@ class _PostCardState extends State<_PostCard> {
             _currentUserId = user.id;
             _currentUserType = AuthorType.user;
           });
-          print('✅ [PostCard-Home] USER id=${user.id}');
           return;
         }
-      } catch (e) {
-        print('⚠️ [PostCard-Home] Erreur User: $e');
+      } catch (_) {}
+    }
+  }
+
+  /// Charger l'etat du like pour ce post
+  Future<void> _loadLikeStatus() async {
+    try {
+      final results = await Future.wait([
+        LikeService.checkLike(widget.post.id),
+        LikeService.countPostLikes(widget.post.id),
+      ]);
+      if (mounted) {
+        setState(() {
+          _hasLiked = results[0] as bool;
+          _likesCount = results[1] as int;
+        });
+      }
+    } catch (_) {}
+  }
+
+  /// Toggle like directement depuis la carte
+  Future<void> _toggleLike() async {
+    if (_isLikeLoading) return;
+    setState(() => _isLikeLoading = true);
+
+    // Optimistic update
+    final previousLiked = _hasLiked;
+    final previousCount = _likesCount;
+    setState(() {
+      _hasLiked = !_hasLiked;
+      _likesCount += _hasLiked ? 1 : -1;
+    });
+
+    try {
+      await LikeService.toggleLike(widget.post.id);
+      final exactCount = await LikeService.countPostLikes(widget.post.id);
+      if (mounted) {
+        setState(() {
+          _likesCount = exactCount;
+          _isLikeLoading = false;
+        });
+      }
+    } catch (e) {
+      // Revert on error
+      if (mounted) {
+        setState(() {
+          _hasLiked = previousLiked;
+          _likesCount = previousCount;
+          _isLikeLoading = false;
+        });
       }
     }
+  }
 
-    print('❌ [PostCard-Home] Impossible de charger l\'utilisateur');
+  /// Ouvrir le bottom sheet des commentaires
+  void _showCommentsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _CommentsBottomSheet(
+        postId: widget.post.id,
+        onCommentAdded: () {
+          setState(() => _commentsCount++);
+        },
+      ),
+    );
   }
 
   String _formatTimestamp(DateTime dateTime) {
@@ -1224,22 +1290,17 @@ class _PostCardState extends State<_PostCard> {
 
   /// Afficher les options du post (voir détails, modifier, supprimer)
   Future<void> _showPostOptions(BuildContext context) async {
-    // Sauvegarder le context parent avant d'ouvrir le bottomsheet
     final parentContext = context;
     final cs = Theme.of(context).colorScheme;
 
-    // S'assurer que l'utilisateur est chargé
     if (_currentUserId == null || _currentUserType == null) {
       await _loadCurrentUser();
     }
 
-    // Vérifier si l'utilisateur est l'auteur
     final isOwner = _currentUserId != null &&
         _currentUserType != null &&
         _currentUserId == widget.post.authorId &&
         _currentUserType == widget.post.authorType;
-
-    print('🔍 [PostCard-Home] isOwner=$isOwner (userId=$_currentUserId, postAuthorId=${widget.post.authorId})');
 
     showModalBottomSheet(
       context: context,
@@ -1262,7 +1323,6 @@ class _PostCardState extends State<_PostCard> {
               ),
             ),
             const SizedBox(height: 16),
-            // Option: Voir le post
             ListTile(
               leading: Icon(Icons.visibility, color: cs.primary),
               title: const Text('Voir le post'),
@@ -1273,13 +1333,14 @@ class _PostCardState extends State<_PostCard> {
                   MaterialPageRoute(
                     builder: (context) => PostDetailsPage(postId: widget.post.id),
                   ),
-                );
+                ).then((_) {
+                  // Recharger les likes/commentaires apres retour
+                  _loadLikeStatus();
+                });
               },
             ),
-            // Options pour l'auteur uniquement
             if (isOwner) ...[
               Divider(height: 1, color: cs.outlineVariant),
-              // Option: Modifier
               ListTile(
                 leading: Icon(Icons.edit, color: cs.primary),
                 title: const Text('Modifier'),
@@ -1296,7 +1357,6 @@ class _PostCardState extends State<_PostCard> {
                   }
                 },
               ),
-              // Option: Supprimer
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
                 title: const Text('Supprimer', style: TextStyle(color: Colors.red)),
@@ -1365,7 +1425,6 @@ class _PostCardState extends State<_PostCard> {
     final authorPhoto = widget.post.getAuthorPhoto();
     final hasMedia = widget.post.hasMedia();
 
-    // Card sans InkWell - seul le bouton trois points est cliquable
     return Container(
       decoration: BoxDecoration(
         color: cs.surface,
@@ -1384,7 +1443,7 @@ class _PostCardState extends State<_PostCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // En-tête avec avatar et nom
+            // En-tete avec avatar et nom
             Row(
               children: [
                 CircleAvatar(
@@ -1424,7 +1483,7 @@ class _PostCardState extends State<_PostCard> {
                     ],
                   ),
                 ),
-                // Bouton trois points - SEUL élément cliquable
+                // Bouton trois points pour options (voir post, modifier, supprimer)
                 IconButton(
                   icon: Icon(
                     Icons.more_horiz,
@@ -1451,13 +1510,13 @@ class _PostCardState extends State<_PostCard> {
                   height: 1.4,
                   color: cs.onSurface.withOpacity(.8),
                 ),
-                maxLines: hasMedia ? 2 : null,
+                maxLines: hasMedia ? 3 : null,
                 overflow: hasMedia ? TextOverflow.ellipsis : null,
               ),
               const SizedBox(height: 12),
             ],
 
-            // Média (image ou vidéo)
+            // Media (image ou video)
             if (hasMedia) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
@@ -1466,48 +1525,140 @@ class _PostCardState extends State<_PostCard> {
               const SizedBox(height: 12),
             ],
 
-            // Statistiques et actions (cliquer sur la carte pour interagir)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
+            // Ligne de compteurs (style Facebook: "X J'aime   X commentaires")
+            if (_likesCount > 0 || _commentsCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    if (_likesCount > 0) ...[
+                      Icon(
+                        Icons.thumb_up,
+                        size: 14,
+                        color: _hasLiked ? const Color(0xFF1877F2) : Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$_likesCount',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (_commentsCount > 0)
+                      Text(
+                        '$_commentsCount commentaire${_commentsCount > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-              child: Row(
-                children: [
-                  // Commentaires (à gauche)
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 20,
-                    color: cs.primary.withOpacity(.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${widget.post.commentsCount}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
+
+            // Separateur
+            Divider(height: 1, color: cs.outlineVariant.withOpacity(0.5)),
+            const SizedBox(height: 4),
+
+            // Boutons d'action style Facebook (J'aime, Commenter, Partager)
+            Row(
+              children: [
+                // Bouton J'aime
+                Expanded(
+                  child: InkWell(
+                    onTap: _toggleLike,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _hasLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                            size: 20,
+                            color: _hasLiked ? const Color(0xFF1877F2) : cs.onSurface.withOpacity(0.6),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'J\'aime',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _hasLiked ? FontWeight.w600 : FontWeight.normal,
+                              color: _hasLiked ? const Color(0xFF1877F2) : cs.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  // Like (à droite avec pouce)
-                  Icon(
-                    Icons.thumb_up_outlined,
-                    size: 20,
-                    color: cs.primary.withOpacity(.8),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${widget.post.likesCount}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
+                ),
+                // Bouton Commenter
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _showCommentsSheet(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 20,
+                            color: cs.onSurface.withOpacity(0.6),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Commenter',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                // Bouton Partager (ouvre la page details)
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostDetailsPage(postId: widget.post.id),
+                        ),
+                      ).then((_) => _loadLikeStatus());
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.share_outlined,
+                            size: 20,
+                            color: cs.onSurface.withOpacity(0.6),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Partager',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1515,17 +1666,13 @@ class _PostCardState extends State<_PostCard> {
     );
   }
 
-  /// Transformer l'URL du média en URL complète si nécessaire
   String _getMediaUrl(String url) {
-    // Si l'URL est déjà complète (commence par http), la retourner telle quelle
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
-    // Sinon, c'est un chemin relatif - utiliser l'URL de l'API
     return 'https://api.titingre.com/storage/$url';
   }
 
-  /// Détecter si c'est une vidéo basé sur l'extension
   bool _isVideo(String url) {
     final lowercaseUrl = url.toLowerCase();
     return lowercaseUrl.endsWith('.mp4') ||
@@ -1535,7 +1682,6 @@ class _PostCardState extends State<_PostCard> {
         lowercaseUrl.endsWith('.webm');
   }
 
-  /// Détecter si c'est un audio basé sur l'extension
   bool _isAudio(String url) {
     final lowercaseUrl = url.toLowerCase();
     return lowercaseUrl.endsWith('.mp3') ||
@@ -1545,12 +1691,10 @@ class _PostCardState extends State<_PostCard> {
         lowercaseUrl.endsWith('.ogg');
   }
 
-  /// Construire le widget média approprié (image, vidéo ou audio)
   Widget _buildMediaWidget(String url, ColorScheme cs) {
     final fullUrl = _getMediaUrl(url);
 
     if (_isVideo(url)) {
-      // Afficher un placeholder pour les vidéos avec bouton play
       return Container(
         height: 200,
         width: double.infinity,
@@ -1561,9 +1705,7 @@ class _PostCardState extends State<_PostCard> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Icône de vidéo en arrière-plan
             Icon(Icons.movie, size: 60, color: Colors.white.withOpacity(0.3)),
-            // Bouton play au centre
             Container(
               width: 60,
               height: 60,
@@ -1571,13 +1713,8 @@ class _PostCardState extends State<_PostCard> {
                 color: cs.primary.withOpacity(0.9),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.play_arrow,
-                color: Colors.white,
-                size: 36,
-              ),
+              child: const Icon(Icons.play_arrow, color: Colors.white, size: 36),
             ),
-            // Badge "Vidéo" en haut à gauche
             Positioned(
               top: 8,
               left: 8,
@@ -1592,10 +1729,7 @@ class _PostCardState extends State<_PostCard> {
                   children: [
                     Icon(Icons.videocam, color: Colors.white, size: 14),
                     SizedBox(width: 4),
-                    Text(
-                      'Vidéo',
-                      style: TextStyle(color: Colors.white, fontSize: 11),
-                    ),
+                    Text('Vidéo', style: TextStyle(color: Colors.white, fontSize: 11)),
                   ],
                 ),
               ),
@@ -1604,7 +1738,6 @@ class _PostCardState extends State<_PostCard> {
         ),
       );
     } else if (_isAudio(url)) {
-      // Afficher un placeholder pour les audios
       return Container(
         height: 80,
         width: double.infinity,
@@ -1621,27 +1754,14 @@ class _PostCardState extends State<_PostCard> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Fichier audio',
-                  style: TextStyle(
-                    color: cs.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'Appuyez pour écouter',
-                  style: TextStyle(
-                    color: cs.onPrimaryContainer.withOpacity(0.7),
-                    fontSize: 12,
-                  ),
-                ),
+                Text('Fichier audio', style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.w600)),
+                Text('Appuyez pour écouter', style: TextStyle(color: cs.onPrimaryContainer.withOpacity(0.7), fontSize: 12)),
               ],
             ),
           ],
         ),
       );
     } else {
-      // Image normale
       return R2NetworkImage(
         imageUrl: fullUrl,
         height: 200,
@@ -1649,6 +1769,258 @@ class _PostCardState extends State<_PostCard> {
         fit: BoxFit.cover,
       );
     }
+  }
+}
+
+/// Bottom sheet pour afficher et ajouter des commentaires
+class _CommentsBottomSheet extends StatefulWidget {
+  final int postId;
+  final VoidCallback onCommentAdded;
+
+  const _CommentsBottomSheet({
+    required this.postId,
+    required this.onCommentAdded,
+  });
+
+  @override
+  State<_CommentsBottomSheet> createState() => _CommentsBottomSheetState();
+}
+
+class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
+  List<CommentModel> _comments = [];
+  bool _isLoading = true;
+  bool _isAdding = false;
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    try {
+      final comments = await CommentService.getPostComments(widget.postId);
+      if (mounted) {
+        setState(() {
+          _comments = comments;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _addComment() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _isAdding) return;
+
+    setState(() => _isAdding = true);
+
+    try {
+      await CommentService.createComment(
+        CreateCommentDto(postId: widget.postId, contenu: text),
+      );
+      _controller.clear();
+      widget.onCommentAdded();
+      await _loadComments();
+      if (mounted) setState(() => _isAdding = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isAdding = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  String _formatTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'À l\'instant';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}min';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}j';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Barre
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: cs.onSurface.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Titre
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.chat_bubble, size: 20, color: cs.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Commentaires (${_comments.length})',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: cs.outlineVariant),
+
+          // Liste des commentaires
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _comments.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey[400]),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Aucun commentaire',
+                              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Soyez le premier à commenter !',
+                              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _comments.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) {
+                          final comment = _comments[index];
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: cs.primaryContainer,
+                                child: Icon(
+                                  comment.authorType == 'Societe' ? Icons.business : Icons.person,
+                                  size: 16,
+                                  color: cs.onPrimaryContainer,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Bulle de commentaire
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: cs.surfaceContainerHighest.withOpacity(0.5),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            comment.getAuthorName(),
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            comment.contenu,
+                                            style: const TextStyle(fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Heure
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 12, top: 4),
+                                      child: Text(
+                                        _formatTime(comment.createdAt),
+                                        style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.5)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+          ),
+
+          // Champ de saisie en bas
+          Padding(
+            padding: EdgeInsets.only(
+              left: 12, right: 12, top: 8,
+              bottom: bottomInset > 0 ? bottomInset : 16,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _addComment(),
+                    decoration: InputDecoration(
+                      hintText: 'Écrire un commentaire...',
+                      hintStyle: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.4)),
+                      filled: true,
+                      fillColor: cs.surfaceContainerHighest.withOpacity(0.4),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _isAdding
+                    ? const SizedBox(
+                        width: 36, height: 36,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : IconButton(
+                        onPressed: _addComment,
+                        icon: Icon(Icons.send, color: cs.primary),
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

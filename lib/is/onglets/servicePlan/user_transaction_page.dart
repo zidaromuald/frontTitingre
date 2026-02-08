@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
@@ -34,6 +33,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
 
   UserModel? _user;
   int? _pagePartenaritId; // ID de la page partenariat
+  String _societeNom = ''; // Nom de la societe connectee
   List<TransactionPartenaritModel> _transactions = [];
   List<InformationPartenaireModel> _informations = [];
 
@@ -104,6 +104,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
       if (mounted) {
         setState(() {
           _pagePartenaritId = page.id;
+          _societeNom = societe.nom;
           _isLoadingPageId = false;
         });
       }
@@ -411,6 +412,58 @@ class _UserTransactionPageState extends State<UserTransactionPage>
                 _buildTransactionDetail('Prix unitaire', '${transaction.prixUnitaire} CFA'),
                 _buildTransactionDetail('Prix total', '${transaction.quantite * transaction.prixUnitaire} CFA',
                     bold: true),
+
+                // Noms User et Societe
+                const Divider(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(Icons.person, size: 16, color: widget.themeColor),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Utilisateur', style: TextStyle(fontSize: 10, color: mattermostDarkGray)),
+                                Text(
+                                  transaction.userNom != null
+                                      ? '${transaction.userNom} ${transaction.userPrenom ?? ''}'.trim()
+                                      : widget.userName,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.business, size: 16, color: mattermostGreen),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Societe', style: TextStyle(fontSize: 10, color: mattermostDarkGray)),
+                                Text(
+                                  transaction.societeNom ?? _societeNom,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
 
                 // Boutons d'action pour transactions en attente
                 if (isEnAttente) ...[
@@ -740,14 +793,9 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     }
   }
 
-  /// Recuperer un repertoire temporaire (avec fallback si path_provider echoue)
-  Future<Directory> _getSafeTemporaryDirectory() async {
-    try {
-      return await getTemporaryDirectory();
-    } catch (e) {
-      debugPrint('path_provider fallback: $e');
-      return Directory.systemTemp;
-    }
+  /// Recuperer un repertoire temporaire pour l'export CSV
+  Directory _getExportDirectory() {
+    return Directory.systemTemp;
   }
 
   /// Exporter une seule transaction en CSV
@@ -766,7 +814,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
 
       buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$date');
 
-      final dir = await _getSafeTemporaryDirectory();
+      final dir = _getExportDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final safeProduit = t.produit.replaceAll(RegExp(r'[^\w]'), '_');
       final file = File('${dir.path}/transaction_${safeProduit}_$timestamp.csv');
@@ -816,7 +864,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
         buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$date');
       }
 
-      final dir = await _getSafeTemporaryDirectory();
+      final dir = _getExportDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final file = File('${dir.path}/transactions_${widget.userName.replaceAll(' ', '_')}_$timestamp.csv');
       await file.writeAsString(buffer.toString());

@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:gestauth_clean/services/partenariat/transaction_partenariat_service.dart';
 import 'package:gestauth_clean/services/partenariat/information_partenaire_service.dart';
@@ -89,7 +88,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
   }
 
   /// Charger les transactions depuis le backend
-  /// Note: Les Users utilisent getPendingTransactions(), les Sociétés utilisent getTransactionsForPage()
+  /// Recupere toutes les transactions (en_attente + validee + rejetee) pour cette page
   Future<void> _loadTransactions() async {
     setState(() {
       _isLoadingTransactions = true;
@@ -99,19 +98,21 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
     try {
       List<TransactionPartenaritModel> transactions;
 
-      // Utiliser la bonne méthode selon le type d'utilisateur
-      if (_userType == 'User') {
-        // Les Users récupèrent leurs transactions en attente
-        print('📤 [Transaction] User: GET /transactions-partenariat/pending');
-        transactions = await TransactionPartenaritService.getPendingTransactions();
-        // Filtrer par pagePartenaritId si nécessaire
-        transactions = transactions.where((t) => t.pageId == widget.pagePartenaritId).toList();
-      } else {
-        // Les Sociétés récupèrent toutes les transactions de la page
-        print('📤 [Transaction] Societe: GET /transactions-partenariat/page/${widget.pagePartenaritId}');
+      // Essayer de recuperer toutes les transactions de la page
+      try {
+        print('📤 [Transaction] GET /transactions-partenariat/page/${widget.pagePartenaritId}');
         transactions = await TransactionPartenaritService.getTransactionsForPage(
           widget.pagePartenaritId,
         );
+      } catch (e) {
+        // Fallback pour User si l'endpoint page est restreint a Societe
+        if (_userType == 'User') {
+          print('⚠️ [Transaction] Fallback User: GET /transactions-partenariat/pending');
+          transactions = await TransactionPartenaritService.getPendingTransactions();
+          transactions = transactions.where((t) => t.pageId == widget.pagePartenaritId).toList();
+        } else {
+          rethrow;
+        }
       }
 
       setState(() {
@@ -600,38 +601,37 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
             ),
           ),
 
-          // Informations additionnelles
-          if (transaction.userNom != null || transaction.societeNom != null) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Divider(height: 24),
+          // Informations User et Societe (toujours affichees)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Divider(height: 24),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildInfoChip(
+                    Icons.business,
+                    'Societe',
+                    transaction.societeNom ?? widget.partenaireName,
+                    mattermostBlue,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildInfoChip(
+                    Icons.person,
+                    'Utilisateur',
+                    transaction.userNom != null
+                        ? '${transaction.userNom} ${transaction.userPrenom ?? ''}'.trim()
+                        : 'Moi',
+                    mattermostGreen,
+                  ),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  if (transaction.societeNom != null)
-                    Expanded(
-                      child: _buildInfoChip(
-                        Icons.business,
-                        'Societe',
-                        transaction.societeNom!,
-                        mattermostBlue,
-                      ),
-                    ),
-                  if (transaction.userNom != null)
-                    Expanded(
-                      child: _buildInfoChip(
-                        Icons.person,
-                        'User',
-                        transaction.getUserName(),
-                        mattermostGreen,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+          ),
 
           // Info validation pour transactions validees
           if (isValidee) ...[
@@ -1312,14 +1312,9 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
   // Helpers
   // ========================================
 
-  /// Recuperer un repertoire temporaire (avec fallback si path_provider echoue)
-  Future<Directory> _getSafeTemporaryDirectory() async {
-    try {
-      return await getTemporaryDirectory();
-    } catch (e) {
-      debugPrint('path_provider fallback: $e');
-      return Directory.systemTemp;
-    }
+  /// Recuperer un repertoire temporaire pour l'export CSV
+  Directory _getExportDirectory() {
+    return Directory.systemTemp;
   }
 
   /// Exporter une seule transaction en CSV
@@ -1340,7 +1335,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
 
       buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
 
-      final dir = await _getSafeTemporaryDirectory();
+      final dir = _getExportDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final safeProduit = t.produit.replaceAll(RegExp(r'[^\w]'), '_');
       final file = File('${dir.path}/transaction_${safeProduit}_$timestamp.csv');
@@ -1379,7 +1374,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
         buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
       }
 
-      final dir = await _getSafeTemporaryDirectory();
+      final dir = _getExportDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final file = File('${dir.path}/transactions_$timestamp.csv');
       await file.writeAsString(buffer.toString());

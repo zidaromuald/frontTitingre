@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../groupe/create_groupe_page.dart';
 import '../../../groupe/groupe_detail_page.dart';
 import '../../../services/groupe/groupe_service.dart';
+import '../../../services/AuthUS/societe_auth_service.dart';
 
 class CategoriePage extends StatefulWidget {
   final Map<String, dynamic> categorie;
@@ -31,12 +32,34 @@ class _CategoriePageState extends State<CategoriePage> {
   bool _isLoadingGroupes = false;
   String? _groupesError;
 
+  // État pour les societes et groupes chargés par categorie
+  List<SocieteModel> _societes = [];
+  List<GroupeModel> _groupesDynamiques = [];
+  bool _isLoadingSocietes = false;
+  bool _isLoadingGroupesDynamiques = false;
+  String? _societesError;
+  String? _groupesDynamiquesError;
+  String _searchQuery = '';
+
+  // Mapping categorie -> mot-cle de recherche secteur/centre d'interet
+  static const Map<String, String> _categorieKeywords = {
+    'Agriculteur': 'agriculture',
+    'Élevage': 'elevage',
+    'Bâtiment': 'batiment',
+    'Distribution': 'distribution',
+  };
+
   @override
   void initState() {
     super.initState();
-    // Charger les groupes dynamiquement si c'est la catégorie Canaux
-    if (widget.categorie['nom'] == 'Canaux') {
+    final categoryName = widget.categorie['nom'];
+    if (categoryName == 'Canaux') {
+      // Charger les groupes dynamiquement si c'est la catégorie Canaux
       _loadMesGroupes();
+    } else {
+      // Charger societes et groupes par centre d'interet pour les categories standard
+      _loadSocietesByCategorie();
+      _loadGroupesByCategorie();
     }
   }
 
@@ -71,6 +94,88 @@ class _CategoriePageState extends State<CategoriePage> {
         setState(() {
           _groupesError = e.toString();
           _isLoadingGroupes = false;
+        });
+      }
+    }
+  }
+
+  /// Charger les societes dont le secteur/centre d'interet correspond a la categorie
+  Future<void> _loadSocietesByCategorie() async {
+    final keyword = _categorieKeywords[widget.categorie['nom']];
+    if (keyword == null) return;
+
+    setState(() {
+      _isLoadingSocietes = true;
+      _societesError = null;
+    });
+
+    try {
+      print('🔍 [CategoriePage] Recherche societes par secteur: $keyword');
+      // Rechercher par secteur d'activite
+      var societes = await SocieteAuthService.searchSocietes(secteur: keyword);
+
+      // Si pas de resultats, essayer avec le query general
+      if (societes.isEmpty) {
+        print('🔍 [CategoriePage] Aucun resultat par secteur, recherche par query: $keyword');
+        societes = await SocieteAuthService.searchSocietes(query: keyword);
+      }
+
+      print('✅ [CategoriePage] ${societes.length} societes trouvees pour "$keyword"');
+
+      if (mounted) {
+        setState(() {
+          _societes = societes;
+          _isLoadingSocietes = false;
+        });
+      }
+    } catch (e) {
+      print('❌ [CategoriePage] Erreur recherche societes: $e');
+      if (mounted) {
+        setState(() {
+          _societesError = e.toString();
+          _isLoadingSocietes = false;
+        });
+      }
+    }
+  }
+
+  /// Charger les groupes dont les tags correspondent a la categorie
+  Future<void> _loadGroupesByCategorie() async {
+    final keyword = _categorieKeywords[widget.categorie['nom']];
+    if (keyword == null) return;
+
+    setState(() {
+      _isLoadingGroupesDynamiques = true;
+      _groupesDynamiquesError = null;
+    });
+
+    try {
+      print('🔍 [CategoriePage] Recherche groupes par tag: $keyword');
+      final groupes = await GroupeAuthService.searchGroupes(
+        tags: [keyword],
+      );
+
+      // Si pas de resultats par tags, essayer par query
+      List<GroupeModel> result = groupes;
+      if (result.isEmpty) {
+        print('🔍 [CategoriePage] Aucun resultat par tags, recherche par query: $keyword');
+        result = await GroupeAuthService.searchGroupes(query: keyword);
+      }
+
+      print('✅ [CategoriePage] ${result.length} groupes trouves pour "$keyword"');
+
+      if (mounted) {
+        setState(() {
+          _groupesDynamiques = result;
+          _isLoadingGroupesDynamiques = false;
+        });
+      }
+    } catch (e) {
+      print('❌ [CategoriePage] Erreur recherche groupes: $e');
+      if (mounted) {
+        setState(() {
+          _groupesDynamiquesError = e.toString();
+          _isLoadingGroupesDynamiques = false;
         });
       }
     }
@@ -465,144 +570,208 @@ class _CategoriePageState extends State<CategoriePage> {
     );
   }
 
-  // Méthodes existantes pour sociétés et groupes
+  // Liste des societes chargees dynamiquement par centre d'interet
   Widget _buildSocietesList() {
-    if (widget.societes.isEmpty) {
+    if (_isLoadingSocietes) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_societesError != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Aucune société dans cette catégorie',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
+            const SizedBox(height: 12),
+            const Text('Erreur de chargement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _loadSocietesByCategorie,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
             ),
           ],
         ),
       );
     }
 
-    return ListView.builder(
+    // Filtrer par la recherche locale
+    final filtered = _searchQuery.isEmpty
+        ? _societes
+        : _societes.where((s) {
+            final q = _searchQuery.toLowerCase();
+            return s.nom.toLowerCase().contains(q) ||
+                (s.secteurActivite?.toLowerCase().contains(q) ?? false) ||
+                (s.description?.toLowerCase().contains(q) ?? false);
+          }).toList();
+
+    return Column(
+      children: [
+        // Barre de recherche
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: TextField(
+            onChanged: (value) => setState(() => _searchQuery = value),
+            decoration: InputDecoration(
+              hintText: 'Rechercher une société...',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Liste ou message vide
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        _searchQuery.isNotEmpty
+                            ? 'Aucune société trouvée pour "$_searchQuery"'
+                            : 'Aucune société dans cette catégorie',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadSocietesByCategorie,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      return _buildSocieteCard(filtered[index]);
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSocieteCard(SocieteModel societe) {
+    final Color catColor = widget.categorie['color'];
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
-      itemCount: widget.societes.length,
-      itemBuilder: (context, index) {
-        final societe = widget.societes[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 2),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: widget.categorie['color'].withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.business,
-                      color: widget.categorie['color'],
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          societe['nom'],
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+              // Logo ou icone
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: catColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: societe.logoUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          societe.logoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(Icons.business, color: catColor, size: 24),
                         ),
-                        Text(
-                          societe['type'] ?? 'Société',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: widget.categorie['color'],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: mattermostGreen.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${societe['membres']} membres',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: mattermostGreen,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
+                      )
+                    : Icon(Icons.business, color: catColor, size: 24),
               ),
-              const SizedBox(height: 8),
-              Text(
-                societe['description'],
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _joinSociete(societe),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.categorie['color'],
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: const Icon(Icons.add, size: 16),
-                      label: const Text('Rejoindre'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      societe.nom,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () => _showSocieteDetails(societe),
-                    icon: const Icon(Icons.info_outline),
-                    color: Colors.grey[600],
-                  ),
-                ],
+                    if (societe.secteurActivite != null)
+                      Text(
+                        societe.secteurActivite!,
+                        style: TextStyle(fontSize: 12, color: catColor, fontWeight: FontWeight.w500),
+                      ),
+                  ],
+                ),
               ),
             ],
           ),
-        );
-      },
+          if (societe.description != null && societe.description!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              societe.description!,
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (societe.adresse != null && societe.adresse!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Text(
+                  societe.adresse!,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
   Widget _buildGroupesList() {
-    if (widget.groupes.isEmpty) {
+    if (_isLoadingGroupesDynamiques) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_groupesDynamiquesError != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
+            const SizedBox(height: 12),
+            const Text('Erreur de chargement', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _loadGroupesByCategorie,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_groupesDynamiques.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -618,108 +787,75 @@ class _CategoriePageState extends State<CategoriePage> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: widget.groupes.length,
-      itemBuilder: (context, index) {
-        final groupe = widget.groupes[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
+    return RefreshIndicator(
+      onRefresh: _loadGroupesByCategorie,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _groupesDynamiques.length,
+        itemBuilder: (context, index) {
+          final groupe = _groupesDynamiques[index];
+          return _buildGroupeCardFromModel(groupe);
+        },
+      ),
+    );
+  }
+
+  Widget _buildGroupeCardFromModel(GroupeModel groupe) {
+    final Color catColor = widget.categorie['color'];
+    return GestureDetector(
+      onTap: () => _openChannelFromModel(groupe),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: catColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+              child: Icon(Icons.group, color: catColor, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: widget.categorie['color'].withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.group,
-                      color: widget.categorie['color'],
-                      size: 20,
-                    ),
+                  Text(
+                    groupe.nom,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      groupe['nom'],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  if (groupe.description != null && groupe.description!.isNotEmpty)
+                    Text(
+                      groupe.description!,
+                      style: const TextStyle(fontSize: 12, color: mattermostDarkGray),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: mattermostBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${groupe['membres']} membres',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: mattermostBlue,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                  Text(
+                    '${groupe.membresCount ?? 0} membres',
+                    style: TextStyle(fontSize: 11, color: catColor),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                groupe['description'],
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _joinGroupe(groupe),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.categorie['color'],
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      icon: const Icon(Icons.add, size: 16),
-                      label: const Text('Rejoindre'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () => _showGroupeDetails(groupe),
-                    icon: const Icon(Icons.info_outline),
-                    color: Colors.grey[600],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+            Icon(Icons.arrow_forward_ios, color: catColor, size: 16),
+          ],
+        ),
+      ),
     );
   }
 
@@ -762,31 +898,6 @@ class _CategoriePageState extends State<CategoriePage> {
     );
   }
 
-  void _joinSociete(Map<String, dynamic> societe) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Demande envoyée à ${societe['nom']}'),
-        backgroundColor: mattermostGreen,
-      ),
-    );
-  }
-
-  void _joinGroupe(Map<String, dynamic> groupe) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Vous avez rejoint ${groupe['nom']}'),
-        backgroundColor: mattermostGreen,
-      ),
-    );
-  }
-
-  void _showSocieteDetails(Map<String, dynamic> societe) {
-    // Modale détails société
-  }
-
-  void _showGroupeDetails(Map<String, dynamic> groupe) {
-    // Modale détails groupe
-  }
 }
 
 // SEARCH DELEGATE pour les catégories standard

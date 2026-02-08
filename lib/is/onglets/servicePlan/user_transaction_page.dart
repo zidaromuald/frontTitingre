@@ -213,13 +213,6 @@ class _UserTransactionPageState extends State<UserTransactionPage>
             fontWeight: FontWeight.w700,
           ),
         ),
-        actions: [
-          IconButton(
-            onPressed: _exportTransactionsCsv,
-            icon: const Icon(Icons.download),
-            tooltip: 'Exporter les transactions (CSV)',
-          ),
-        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -286,87 +279,220 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   }
 
   Widget _buildTransactionCard(TransactionPartenaritModel transaction) {
-    final Color statusColor = transaction.statut == 'validee'
+    final bool isValidee = transaction.statut == 'validee';
+    final bool isRejetee = transaction.statut == 'rejetee';
+    final bool isEnAttente = transaction.statut == 'en_attente';
+
+    final Color statusColor = isValidee
         ? mattermostGreen
-        : transaction.statut == 'rejetee'
+        : isRejetee
             ? Colors.red
             : Colors.orange;
 
+    final Color bgColor = isValidee
+        ? const Color(0xFFF0FFF4)
+        : isRejetee
+            ? const Color(0xFFFFF5F5)
+            : Colors.white;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withValues(alpha: 0.3), width: 1.5),
+        border: Border(
+          left: BorderSide(color: statusColor, width: 4),
+          top: BorderSide(color: statusColor.withValues(alpha: 0.2)),
+          right: BorderSide(color: statusColor.withValues(alpha: 0.2)),
+          bottom: BorderSide(color: statusColor.withValues(alpha: 0.2)),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  transaction.produit,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  transaction.getStatusLabel(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: statusColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Détails
-          _buildTransactionDetail('Période', transaction.periodeLabel ??
-              '${_formatDate(transaction.dateDebut)} - ${_formatDate(transaction.dateFin)}'),
-          _buildTransactionDetail('Quantité', '${transaction.quantite} ${transaction.unite ?? ''}'),
-          _buildTransactionDetail('Prix unitaire', '${transaction.prixUnitaire} CFA'),
-          _buildTransactionDetail('Prix total', '${transaction.quantite * transaction.prixUnitaire} CFA',
-              bold: true),
-
-          // Actions pour transactions en attente
-          if (transaction.statut == 'en_attente') ...[
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+          // En-tête avec statut et menu 3 points
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 4, 0),
+            child: Row(
               children: [
-                TextButton.icon(
-                  onPressed: () => _deleteTransaction(transaction),
-                  icon: const Icon(Icons.delete, size: 18),
-                  label: const Text('Supprimer'),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                Icon(
+                  isValidee ? Icons.check_circle : isRejetee ? Icons.cancel : Icons.hourglass_empty,
+                  color: statusColor,
+                  size: 20,
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () => _editTransaction(transaction),
-                  icon: const Icon(Icons.edit, size: 18),
-                  label: const Text('Modifier'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.themeColor,
+                Expanded(
+                  child: Text(
+                    transaction.produit,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    transaction.getStatusLabel(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'download':
+                        _exportSingleTransactionCsv(transaction);
+                        break;
+                      case 'edit':
+                        _editTransaction(transaction);
+                        break;
+                      case 'delete':
+                        _deleteTransaction(transaction);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'download',
+                      child: Row(
+                        children: [
+                          Icon(Icons.download, size: 18),
+                          SizedBox(width: 8),
+                          Text('Telecharger'),
+                        ],
+                      ),
+                    ),
+                    if (isEnAttente) ...[
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 18),
+                            SizedBox(width: 8),
+                            Text('Modifier'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 18, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Supprimer', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
+
+          // Détails
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTransactionDetail('Periode', transaction.periodeLabel ??
+                    '${_formatDate(transaction.dateDebut)} - ${_formatDate(transaction.dateFin)}'),
+                _buildTransactionDetail('Quantite', '${transaction.quantite} ${transaction.unite ?? ''}'),
+                _buildTransactionDetail('Prix unitaire', '${transaction.prixUnitaire} CFA'),
+                _buildTransactionDetail('Prix total', '${transaction.quantite * transaction.prixUnitaire} CFA',
+                    bold: true),
+
+                // Boutons d'action pour transactions en attente
+                if (isEnAttente) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _deleteTransaction(transaction),
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text('Supprimer'),
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () => _editTransaction(transaction),
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Modifier'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: widget.themeColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                // Info validation pour transactions validees/rejetees
+                if (isValidee) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: mattermostGreen.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.verified, color: mattermostGreen, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Transaction validee${transaction.dateValidation != null ? ' le ${_formatDate(transaction.dateValidation!)}' : ''}',
+                          style: const TextStyle(fontSize: 12, color: mattermostGreen, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (isRejetee) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.cancel, color: Colors.red, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Transaction rejetee',
+                              style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        if (transaction.commentaire != null && transaction.commentaire!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Raison: ${transaction.commentaire}',
+                            style: const TextStyle(fontSize: 11, color: Colors.red),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -614,11 +740,60 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     }
   }
 
+  /// Recuperer un repertoire temporaire (avec fallback si path_provider echoue)
+  Future<Directory> _getSafeTemporaryDirectory() async {
+    try {
+      return await getTemporaryDirectory();
+    } catch (e) {
+      debugPrint('path_provider fallback: $e');
+      return Directory.systemTemp;
+    }
+  }
+
+  /// Exporter une seule transaction en CSV
+  Future<void> _exportSingleTransactionCsv(TransactionPartenaritModel t) async {
+    try {
+      final buffer = StringBuffer();
+      buffer.writeln('Produit;Quantite;Unite;Prix Unitaire (CFA);Prix Total (CFA);Periode;Categorie;Statut;Date Creation');
+
+      final produit = _escapeCsv(t.produit);
+      final unite = _escapeCsv(t.unite ?? '');
+      final categorie = _escapeCsv(t.categorie ?? '');
+      final statut = t.getStatusLabel();
+      final periode = _escapeCsv(t.periodeFormatee);
+      final prixTotal = (t.quantite * t.prixUnitaire).toStringAsFixed(0);
+      final date = _formatDate(t.createdAt);
+
+      buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$date');
+
+      final dir = await _getSafeTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final safeProduit = t.produit.replaceAll(RegExp(r'[^\w]'), '_');
+      final file = File('${dir.path}/transaction_${safeProduit}_$timestamp.csv');
+      await file.writeAsString(buffer.toString());
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Transaction - ${t.produit}',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Exporter toutes les transactions en CSV
   Future<void> _exportTransactionsCsv() async {
     if (_transactions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Aucune transaction à exporter'),
+          content: Text('Aucune transaction a exporter'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -627,7 +802,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
 
     try {
       final buffer = StringBuffer();
-      buffer.writeln('Produit;Quantité;Unité;Prix Unitaire (CFA);Prix Total (CFA);Période;Catégorie;Statut;Date Création');
+      buffer.writeln('Produit;Quantite;Unite;Prix Unitaire (CFA);Prix Total (CFA);Periode;Categorie;Statut;Date Creation');
 
       for (final t in _transactions) {
         final produit = _escapeCsv(t.produit);
@@ -641,7 +816,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
         buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$date');
       }
 
-      final dir = await getTemporaryDirectory();
+      final dir = await _getSafeTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final file = File('${dir.path}/transactions_${widget.userName.replaceAll(' ', '_')}_$timestamp.csv');
       await file.writeAsString(buffer.toString());

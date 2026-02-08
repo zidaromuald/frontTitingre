@@ -389,7 +389,7 @@ class _ServicePageState extends State<ServicePage> {
               user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
           child: user.photoUrl == null
               ? Text(
-                  user.nom.substring(0, 1).toUpperCase(),
+                  '${user.nom[0]}${user.prenom.isNotEmpty ? user.prenom[0] : ''}'.toUpperCase(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -398,7 +398,7 @@ class _ServicePageState extends State<ServicePage> {
               : null,
         ),
         title: Text(
-          user.nom,
+          '${user.nom} ${user.prenom}',
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
         subtitle: Text(

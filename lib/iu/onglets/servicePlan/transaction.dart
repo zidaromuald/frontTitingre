@@ -459,17 +459,30 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
     final statusColor = Color(transaction.getStatusColor());
     final canEdit = _isSociete && transaction.isEnAttente();
     final canValidate = _isUser && transaction.isEnAttente();
+    final bool isValidee = transaction.isValidee();
+    final bool isRejetee = transaction.statut == 'rejetee';
+    final bool isEnAttente = transaction.isEnAttente();
+
+    final Color bgColor = isValidee
+        ? const Color(0xFFF0FFF4)
+        : isRejetee
+            ? const Color(0xFFFFF5F5)
+            : Colors.white;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.3), width: 2),
+        border: Border(
+          left: BorderSide(color: statusColor, width: 4),
+          top: BorderSide(color: statusColor.withValues(alpha: 0.2)),
+          right: BorderSide(color: statusColor.withValues(alpha: 0.2)),
+          bottom: BorderSide(color: statusColor.withValues(alpha: 0.2)),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -478,177 +491,303 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête avec période et statut
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
+          // En-tete avec periode, statut et menu 3 points
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 4, 0),
+            child: Row(
+              children: [
+                Icon(
+                  isValidee ? Icons.check_circle : isRejetee ? Icons.cancel : Icons.hourglass_empty,
+                  color: statusColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    transaction.periodeFormatee,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: _themeColor,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: statusColor, width: 1),
+                  ),
+                  child: Text(
+                    transaction.getStatusLabel(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'download':
+                        _exportSingleTransactionCsv(transaction);
+                        break;
+                      case 'edit':
+                        _showEditTransactionDialog(transaction);
+                        break;
+                      case 'delete':
+                        _deleteTransaction(transaction);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'download',
+                      child: Row(
+                        children: [
+                          Icon(Icons.download, size: 18),
+                          SizedBox(width: 8),
+                          Text('Telecharger'),
+                        ],
+                      ),
+                    ),
+                    if (canEdit) ...[
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 18),
+                            SizedBox(width: 8),
+                            Text('Modifier'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 18, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Supprimer', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Details de la transaction
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildTransactionField('Quantite', transaction.quantiteFormatee),
+                ),
+                Expanded(
+                  child: _buildTransactionField('Prix Unitaire', transaction.prixUnitaireFormate),
+                ),
+                Expanded(
+                  child: _buildTransactionField('Prix Total', transaction.prixTotalFormate),
+                ),
+              ],
+            ),
+          ),
+
+          // Informations additionnelles
+          if (transaction.userNom != null || transaction.societeNom != null) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(height: 24),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  if (transaction.societeNom != null)
+                    Expanded(
+                      child: _buildInfoChip(
+                        Icons.business,
+                        'Societe',
+                        transaction.societeNom!,
+                        mattermostBlue,
+                      ),
+                    ),
+                  if (transaction.userNom != null)
+                    Expanded(
+                      child: _buildInfoChip(
+                        Icons.person,
+                        'User',
+                        transaction.getUserName(),
+                        mattermostGreen,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+
+          // Info validation pour transactions validees
+          if (isValidee) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: mattermostGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Row(
                   children: [
-                    Icon(Icons.calendar_today, color: _themeColor, size: 18),
+                    const Icon(Icons.verified, color: mattermostGreen, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        transaction.periodeFormatee,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: _themeColor,
+                        'Transaction validee${transaction.dateValidation != null ? ' le ${transaction.dateValidation!.day}/${transaction.dateValidation!.month}/${transaction.dateValidation!.year}' : ''}',
+                        style: const TextStyle(fontSize: 12, color: mattermostGreen, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          // Info rejet pour transactions rejetees
+          if (isRejetee) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: mattermostRed.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.cancel, color: mattermostRed, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Transaction rejetee',
+                          style: TextStyle(fontSize: 12, color: mattermostRed, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    if (transaction.commentaire != null && transaction.commentaire!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Raison: ${transaction.commentaire}',
+                        style: const TextStyle(fontSize: 11, color: mattermostRed),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          // Commentaire si present (seulement pour en_attente, sinon deja affiche dans le bloc rejet)
+          if (isEnAttente && transaction.commentaire != null && transaction.commentaire!.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: mattermostGray,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.comment, size: 16, color: mattermostDarkGray),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        transaction.commentaire!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: mattermostDarkGray,
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: statusColor, width: 1),
-                ),
-                child: Text(
-                  transaction.getStatusLabel(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Détails de la transaction
-          Row(
-            children: [
-              Expanded(
-                child: _buildTransactionField('Quantité', transaction.quantiteFormatee),
-              ),
-              Expanded(
-                child: _buildTransactionField('Prix Unitaire', transaction.prixUnitaireFormate),
-              ),
-              Expanded(
-                child: _buildTransactionField('Prix Total', transaction.prixTotalFormate),
-              ),
-            ],
-          ),
-
-          // Informations additionnelles
-          if (transaction.userNom != null || transaction.societeNom != null) ...[
-            const Divider(height: 24),
-            Row(
-              children: [
-                if (transaction.societeNom != null)
-                  Expanded(
-                    child: _buildInfoChip(
-                      Icons.business,
-                      'Société',
-                      transaction.societeNom!,
-                      mattermostBlue,
-                    ),
-                  ),
-                if (transaction.userNom != null)
-                  Expanded(
-                    child: _buildInfoChip(
-                      Icons.person,
-                      'User',
-                      transaction.getUserName(),
-                      mattermostGreen,
-                    ),
-                  ),
-              ],
-            ),
-          ],
-
-          // Commentaire si présent
-          if (transaction.commentaire != null && transaction.commentaire!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: mattermostGray,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.comment, size: 16, color: mattermostDarkGray),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      transaction.commentaire!,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: mattermostDarkGray,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
 
           // Boutons d'action
           if (canEdit || canValidate) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (canEdit) ...[
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showEditTransactionDialog(transaction),
-                      icon: const Icon(Icons.edit, size: 16),
-                      label: const Text('Modifier'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _themeColor,
-                        side: BorderSide(color: _themeColor),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                children: [
+                  if (canEdit) ...[
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showEditTransactionDialog(transaction),
+                        icon: const Icon(Icons.edit, size: 16),
+                        label: const Text('Modifier'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _themeColor,
+                          side: BorderSide(color: _themeColor),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _deleteTransaction(transaction),
-                      icon: const Icon(Icons.delete, size: 16),
-                      label: const Text('Supprimer'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: mattermostRed,
-                        side: const BorderSide(color: mattermostRed),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _deleteTransaction(transaction),
+                        icon: const Icon(Icons.delete, size: 16),
+                        label: const Text('Supprimer'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: mattermostRed,
+                          side: const BorderSide(color: mattermostRed),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
+                  if (canValidate) ...[
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _validateTransaction(transaction, true),
+                        icon: const Icon(Icons.check, size: 16),
+                        label: const Text('Valider'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: mattermostGreen,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _validateTransaction(transaction, false),
+                        icon: const Icon(Icons.close, size: 16),
+                        label: const Text('Rejeter'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: mattermostRed,
+                          side: const BorderSide(color: mattermostRed),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-                if (canValidate) ...[
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _validateTransaction(transaction, true),
-                      icon: const Icon(Icons.check, size: 16),
-                      label: const Text('Valider'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: mattermostGreen,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _validateTransaction(transaction, false),
-                      icon: const Icon(Icons.close, size: 16),
-                      label: const Text('Rejeter'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: mattermostRed,
-                        side: const BorderSide(color: mattermostRed),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ],
+
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -1173,18 +1312,59 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
   // Helpers
   // ========================================
 
+  /// Recuperer un repertoire temporaire (avec fallback si path_provider echoue)
+  Future<Directory> _getSafeTemporaryDirectory() async {
+    try {
+      return await getTemporaryDirectory();
+    } catch (e) {
+      debugPrint('path_provider fallback: $e');
+      return Directory.systemTemp;
+    }
+  }
+
+  /// Exporter une seule transaction en CSV
+  Future<void> _exportSingleTransactionCsv(TransactionPartenaritModel t) async {
+    try {
+      final buffer = StringBuffer();
+      buffer.writeln('Produit;Quantite;Unite;Prix Unitaire (CFA);Prix Total (CFA);Periode;Categorie;Statut;Societe;Utilisateur;Date Creation');
+
+      final produit = _escapeCsv(t.produit);
+      final unite = _escapeCsv(t.unite ?? '');
+      final categorie = _escapeCsv(t.categorie ?? '');
+      final statut = t.getStatusLabel();
+      final societe = _escapeCsv(t.societeNom ?? '');
+      final user = _escapeCsv(t.getUserName());
+      final periode = _escapeCsv(t.periodeFormatee);
+      final prixTotal = (t.quantite * t.prixUnitaire).toStringAsFixed(0);
+      final date = '${t.createdAt.day.toString().padLeft(2, '0')}/${t.createdAt.month.toString().padLeft(2, '0')}/${t.createdAt.year}';
+
+      buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
+
+      final dir = await _getSafeTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final safeProduit = t.produit.replaceAll(RegExp(r'[^\w]'), '_');
+      final file = File('${dir.path}/transaction_${safeProduit}_$timestamp.csv');
+      await file.writeAsString(buffer.toString());
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Transaction - ${t.produit}',
+      );
+    } catch (e) {
+      _showErrorSnackBar('Erreur lors de l\'export: $e');
+    }
+  }
+
   Future<void> _exportTransactionsCsv() async {
     if (_transactions.isEmpty) {
-      _showErrorSnackBar('Aucune transaction à exporter');
+      _showErrorSnackBar('Aucune transaction a exporter');
       return;
     }
 
     try {
-      // En-têtes CSV
       final buffer = StringBuffer();
-      buffer.writeln('Produit;Quantité;Unité;Prix Unitaire (CFA);Prix Total (CFA);Période;Catégorie;Statut;Société;Utilisateur;Date Création');
+      buffer.writeln('Produit;Quantite;Unite;Prix Unitaire (CFA);Prix Total (CFA);Periode;Categorie;Statut;Societe;Utilisateur;Date Creation');
 
-      // Lignes de données
       for (final t in _transactions) {
         final produit = _escapeCsv(t.produit);
         final unite = _escapeCsv(t.unite ?? '');
@@ -1199,13 +1379,11 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
         buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
       }
 
-      // Sauvegarder le fichier
-      final dir = await getTemporaryDirectory();
+      final dir = await _getSafeTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final file = File('${dir.path}/transactions_$timestamp.csv');
       await file.writeAsString(buffer.toString());
 
-      // Partager le fichier
       await Share.shareXFiles(
         [XFile(file.path)],
         subject: 'Transactions - ${widget.partenaireName}',

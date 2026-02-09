@@ -26,39 +26,70 @@ class _CategoriePageState extends State<CategoriePage> {
   bool _isLoadingSocietes = false;
   bool _isLoadingGroupes = false;
 
+  // Mapping categorie -> mot-cle de recherche secteur/centre d'interet
+  static const Map<String, String> _categorieKeywords = {
+    'Agriculteur': 'agriculture',
+    'Élevage': 'elevage',
+    'Bâtiment': 'batiment',
+    'Distribution': 'distribution',
+  };
+
   @override
   void initState() {
     super.initState();
-    // Charger les données selon la catégorie
-    if (widget.categorie['nom'] == 'Canaux') {
+    final categoryName = widget.categorie['nom'];
+    if (categoryName == 'Canaux') {
       // Pour Canaux, charger MES groupes créés
       _loadMyGroupes();
     } else {
-      // Pour les autres catégories, charger les données filtrées
-      _loadCategoryData();
+      // Pour les autres catégories, charger sociétés et groupes par centre d'intérêt
+      _loadSocietesByCategorie();
+      _loadGroupesByCategorie();
     }
   }
 
-  /// Charge les sociétés et groupes filtrés par catégorie
-  Future<void> _loadCategoryData() async {
-    final categoryName = widget.categorie['nom'];
+  /// Charge les sociétés dont le secteur/centre d'intérêt correspond à la catégorie
+  /// Utilise 3 fallbacks: advancedSearch -> searchSocietes(query: keyword) -> searchSocietes(query: categoryName)
+  Future<void> _loadSocietesByCategorie() async {
+    final categoryName = widget.categorie['nom'] as String;
+    final keyword = _categorieKeywords[categoryName];
+    if (keyword == null) return;
 
-    // Charger sociétés et groupes en parallèle
-    await Future.wait([
-      _loadSocietes(categoryName),
-      _loadGroupes(categoryName),
-    ]);
-  }
-
-  /// Charge les sociétés filtrées par secteur d'activité
-  Future<void> _loadSocietes(String secteur) async {
     setState(() => _isLoadingSocietes = true);
 
     try {
-      final societes = await SocieteAuthService.searchSocietes(
-        secteur: secteur, // Filtre par secteur (Agriculture, Élevage, etc.)
-        limit: 50,
-      );
+      List<SocieteModel> societes = [];
+
+      // 1. Essayer advancedSearch (endpoint /societes/advanced-search) qui supporte secteur et centres_interet
+      try {
+        societes = await SocieteAuthService.advancedSearch(
+          centresInteret: [keyword],
+          secteur: keyword,
+        );
+        debugPrint('[IU-CategoriePage] advancedSearch: ${societes.length} resultats');
+      } catch (e) {
+        debugPrint('[IU-CategoriePage] advancedSearch echoue: $e, fallback sur query...');
+      }
+
+      // 2. Si pas de résultats, essayer searchSocietes avec query (PAS secteur)
+      if (societes.isEmpty) {
+        try {
+          societes = await SocieteAuthService.searchSocietes(query: keyword);
+          debugPrint('[IU-CategoriePage] searchSocietes(query: $keyword): ${societes.length} resultats');
+        } catch (e) {
+          debugPrint('[IU-CategoriePage] searchSocietes query echoue: $e');
+        }
+      }
+
+      // 3. Si toujours vide, essayer avec le nom de la catégorie
+      if (societes.isEmpty) {
+        try {
+          societes = await SocieteAuthService.searchSocietes(query: categoryName);
+          debugPrint('[IU-CategoriePage] searchSocietes(query: $categoryName): ${societes.length} resultats');
+        } catch (e) {
+          debugPrint('[IU-CategoriePage] searchSocietes nom echoue: $e');
+        }
+      }
 
       if (mounted) {
         setState(() {
@@ -79,19 +110,30 @@ class _CategoriePageState extends State<CategoriePage> {
     }
   }
 
-  /// Charge les groupes filtrés par tags/catégorie
-  Future<void> _loadGroupes(String categorie) async {
+  /// Charge les groupes dont les tags correspondent à la catégorie
+  Future<void> _loadGroupesByCategorie() async {
+    final keyword = _categorieKeywords[widget.categorie['nom']];
+    if (keyword == null) return;
+
     setState(() => _isLoadingGroupes = true);
 
     try {
+      debugPrint('[IU-CategoriePage] Recherche groupes par tag: $keyword');
       final groupes = await GroupeAuthService.searchGroupes(
-        tags: [categorie], // Filtre par tags (Agriculture, Élevage, etc.)
+        tags: [keyword],
         limit: 50,
       );
 
+      // Si pas de résultats par tags, essayer par query
+      List<GroupeModel> result = groupes;
+      if (result.isEmpty) {
+        debugPrint('[IU-CategoriePage] Aucun resultat par tags, recherche par query: $keyword');
+        result = await GroupeAuthService.searchGroupes(query: keyword);
+      }
+
       if (mounted) {
         setState(() {
-          _groupes = groupes;
+          _groupes = result;
           _isLoadingGroupes = false;
         });
       }
@@ -399,7 +441,7 @@ class _CategoriePageState extends State<CategoriePage> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: () => _loadSocietes(widget.categorie['nom']),
+              onPressed: () => _loadSocietesByCategorie(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.categorie['color'],
                 foregroundColor: Colors.white,
@@ -413,7 +455,7 @@ class _CategoriePageState extends State<CategoriePage> {
     }
 
     return RefreshIndicator(
-      onRefresh: () => _loadSocietes(widget.categorie['nom']),
+      onRefresh: () => _loadSocietesByCategorie(),
       color: widget.categorie['color'],
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
@@ -535,7 +577,7 @@ class _CategoriePageState extends State<CategoriePage> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: () => _loadGroupes(widget.categorie['nom']),
+              onPressed: () => _loadGroupesByCategorie(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.categorie['color'],
                 foregroundColor: Colors.white,
@@ -549,7 +591,7 @@ class _CategoriePageState extends State<CategoriePage> {
     }
 
     return RefreshIndicator(
-      onRefresh: () => _loadGroupes(widget.categorie['nom']),
+      onRefresh: () => _loadGroupesByCategorie(),
       color: widget.categorie['color'],
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
@@ -930,22 +972,54 @@ class CategorySearchDelegate extends SearchDelegate<String> {
     String query,
     String categoryName,
   ) async {
-    try {
-      // Recherche en parallèle avec filtrage par catégorie
-      final results = await Future.wait([
-        SocieteAuthService.searchSocietes(
-          query: query,
-          secteur: categoryName, // Filtre par secteur
-          limit: 20,
-        ),
-        GroupeAuthService.searchGroupes(
-          query: query,
-          tags: [categoryName], // Filtre par tags
-          limit: 20,
-        ),
-      ]);
+    // Convertir le nom de catégorie en mot-clé de recherche
+    const categorieKeywords = {
+      'Agriculteur': 'agriculture',
+      'Élevage': 'elevage',
+      'Bâtiment': 'batiment',
+      'Distribution': 'distribution',
+    };
+    final keyword = categorieKeywords[categoryName] ?? categoryName.toLowerCase();
 
-      return {'societes': results[0], 'groupes': results[1]};
+    try {
+      List<SocieteModel> societes = [];
+
+      // 1. Essayer advancedSearch qui supporte secteur et centres_interet
+      try {
+        societes = await SocieteAuthService.advancedSearch(
+          centresInteret: [keyword],
+          secteur: keyword,
+          nom: query,
+        );
+      } catch (e) {
+        debugPrint('[IU-Search] advancedSearch echoue: $e');
+      }
+
+      // 2. Fallback sur searchSocietes avec query uniquement (PAS secteur)
+      if (societes.isEmpty) {
+        try {
+          societes = await SocieteAuthService.searchSocietes(
+            query: query,
+            limit: 20,
+          );
+        } catch (e) {
+          debugPrint('[IU-Search] searchSocietes echoue: $e');
+        }
+      }
+
+      // Recherche des groupes par tags + query
+      List<GroupeModel> groupes = [];
+      try {
+        groupes = await GroupeAuthService.searchGroupes(
+          query: query,
+          tags: [keyword],
+          limit: 20,
+        );
+      } catch (e) {
+        debugPrint('[IU-Search] searchGroupes echoue: $e');
+      }
+
+      return {'societes': societes, 'groupes': groupes};
     } catch (e) {
       return {'societes': [], 'groupes': []};
     }

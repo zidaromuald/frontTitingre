@@ -449,18 +449,16 @@ class SocieteAuthService {
   }
 
   /// Rechercher des sociétés
+  /// Recherche de sociétés via /societes/search
+  /// Note: Le backend n'accepte que q, limit, offset (pas secteur ni produit)
+  /// Pour filtrer par secteur/centres d'intérêt, utiliser advancedSearch()
   static Future<List<SocieteModel>> searchSocietes({
     String? query,
-    String? secteur,
-    String? produit,
     int? limit,
     int? offset,
   }) async {
     final params = <String>[];
-    // Encoder les paramètres de recherche
     if (query != null) params.add('q=${Uri.encodeQueryComponent(query)}');
-    if (secteur != null) params.add('secteur=${Uri.encodeQueryComponent(secteur)}');
-    if (produit != null) params.add('produit=${Uri.encodeQueryComponent(produit)}');
     if (limit != null) params.add('limit=$limit');
     if (offset != null) params.add('offset=$offset');
 

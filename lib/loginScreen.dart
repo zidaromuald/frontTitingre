@@ -194,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 vertical: 14,
               ),
               prefixIcon: Icon(Icons.person, color: Color(0xff5ac18e)),
-              hintText: 'exemple@email.com ou +226 01 02 03 04', // CORRIGÉ
+              hintText: 'exemple@email.com ou +226 01 02 03 04',
               hintStyle: TextStyle(color: Colors.black38),
               errorStyle: TextStyle(color: Colors.red, fontSize: 12),
             ),
@@ -239,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 return 'Le mot de passe est requis';
               }
               if (value.length < 8) {
-                return 'Le mot de passe doit contenir au moins 8 caractères';
+                return 'Le mot de passe doit contenir au moins 8 caractères(Chiffres, lettres majuscules et minuscules)';
               }
               return null;
             },

@@ -322,18 +322,31 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
     );
   }
 
-  // Widget pour le champ Email
+  // Widget pour le champ Email (optionnel)
   Widget _buildEmailField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Email',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+        const Row(
+          children: [
+            Text(
+              'Email',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 8),
+            Text(
+              '(optionnel)',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Container(
@@ -353,10 +366,8 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
             keyboardType: TextInputType.emailAddress,
             style: const TextStyle(color: Colors.black87),
             validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'L\'email est requis';
-              }
-              if (!_isValidEmail(value.trim())) {
+              // Email optionnel : valider le format seulement si renseigné
+              if (value != null && value.trim().isNotEmpty && !_isValidEmail(value.trim())) {
                 return 'Format d\'email invalide';
               }
               return null;
@@ -529,7 +540,7 @@ class _InscriptionUPageState extends State<InscriptionUPage> {
                 return 'Le mot de passe est requis';
               }
               if (value.length < 8) {
-                return 'Le mot de passe doit contenir au moins 6 caractères';
+                return 'Le mot de passe doit contenir au moins 8 caractères (Chiffres, lettres majuscules et minuscules)';
               }
               return null;
             },

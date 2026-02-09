@@ -541,9 +541,17 @@ class PostService {
     Map<String, dynamic>? authorData,
   }) async {
     final typeString = authorType.value;
-    final includeParam = includeGroupPosts ? '?includeGroupPosts=true' : '';
+    final params = <String, String>{
+      'include': 'author', // Inclure les données de l'auteur (nom, photo, etc.)
+    };
+    if (includeGroupPosts) {
+      params['includeGroupPosts'] = 'true';
+    }
+    final queryString = params.entries
+        .map((e) => '${e.key}=${e.value}')
+        .join('&');
     final response = await ApiService.get(
-      '/posts/author/$typeString/$authorId$includeParam',
+      '/posts/author/$typeString/$authorId?$queryString',
     );
 
     if (response.statusCode == 200) {
@@ -663,6 +671,7 @@ class PostService {
       'limit': limit.toString(),
       'offset': offset.toString(),
       'onlyWithMedia': onlyWithMedia.toString(),
+      'include': 'author', // Inclure les données de l'auteur (nom, photo, etc.)
     };
 
     final queryString = params.entries
@@ -742,7 +751,7 @@ class PostService {
 
       print('📤 [PostService] authorData préparé: $authorData');
 
-      // Charger en parallèle : mes posts + feed des suivis
+      // Charger en parallèle : mes posts + feed des suivis + feed public
       final results = await Future.wait([
         // Mes propres posts (avec données d'auteur injectées)
         getPostsByAuthor(
@@ -752,12 +761,15 @@ class PostService {
         ),
         // Feed des personnes que je suis
         getMyFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia),
+        // Feed public (pour garantir la visibilité des posts publics des sociétés)
+        getPublicFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia),
       ]);
 
       final myPosts = results[0];
       final followingFeed = results[1];
+      final publicFeed = results[2];
 
-      print('📥 [PostService] Mes posts: ${myPosts.length}, Feed suivis: ${followingFeed.length}');
+      print('📥 [PostService] Mes posts: ${myPosts.length}, Feed suivis: ${followingFeed.length}, Public: ${publicFeed.length}');
 
       // Combiner et dédupliquer par ID
       final Map<int, PostModel> postsMap = {};
@@ -769,6 +781,13 @@ class PostService {
 
       // Ajouter les posts des suivis (sans écraser mes posts)
       for (final post in followingFeed) {
+        if (!postsMap.containsKey(post.id)) {
+          postsMap[post.id] = post;
+        }
+      }
+
+      // Ajouter les posts publics (sans écraser ceux déjà présents)
+      for (final post in publicFeed) {
         if (!postsMap.containsKey(post.id)) {
           postsMap[post.id] = post;
         }

@@ -239,7 +239,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 return 'Le mot de passe est requis';
               }
               if (value.length < 8) {
-                return 'Le mot de passe doit contenir au moins 6 caractères';
+                return 'Le mot de passe doit contenir au moins 8 caractères';
               }
               return null;
             },

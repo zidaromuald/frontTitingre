@@ -67,7 +67,9 @@ class _AccueilPageState extends State<AccueilPage> {
       List<GroupeModel> groupes = [];
       try {
         groupes = await GroupeAuthService.getMyGroupes();
-        print('📊 [Stats] Groupes chargés via getMyGroupes(): ${groupes.length}');
+        print(
+          '📊 [Stats] Groupes chargés via getMyGroupes(): ${groupes.length}',
+        );
       } catch (e) {
         print('⚠️ [Stats] Erreur chargement groupes: $e');
       }
@@ -81,14 +83,22 @@ class _AccueilPageState extends State<AccueilPage> {
         print('📊 [Stats] Stats result: $statsResult');
 
         if (statsResult is Map) {
-          abonnes = statsResult['abonnes_count'] ?? statsResult['followers_count'] ?? 0;
-          suivis = statsResult['suivis_count'] ?? statsResult['following_count'] ?? 0;
+          abonnes =
+              statsResult['abonnes_count'] ??
+              statsResult['followers_count'] ??
+              0;
+          suivis =
+              statsResult['suivis_count'] ??
+              statsResult['following_count'] ??
+              0;
         }
       } catch (e) {
         print('⚠️ [Stats] Erreur chargement stats suivis: $e');
       }
 
-      print('📊 [Stats] Final: abonnes=$abonnes, suivis=$suivis, groupes=${groupes.length}');
+      print(
+        '📊 [Stats] Final: abonnes=$abonnes, suivis=$suivis, groupes=${groupes.length}',
+      );
 
       if (mounted) {
         setState(() {
@@ -162,9 +172,14 @@ class _AccueilPageState extends State<AccueilPage> {
     });
 
     try {
-      print('📝 [Posts] Chargement du feed personnalisé (mes posts + suivis)...');
+      print(
+        '📝 [Posts] Chargement du feed personnalisé (mes posts + suivis)...',
+      );
       // Utiliser getPersonalizedFeed pour voir uniquement ses posts + ceux des personnes suivies
-      final posts = await PostService.getPersonalizedFeed(limit: 20, offset: 0);
+      final posts = await PostService.getPersonalizedFeed(
+        limit: 100,
+        offset: 0,
+      );
       print('📝 [Posts] ${posts.length} posts chargés');
 
       if (mounted) {
@@ -434,10 +449,7 @@ class _AccueilPageState extends State<AccueilPage> {
         _posts.length,
         (index) => Padding(
           padding: EdgeInsets.only(bottom: index < _posts.length - 1 ? 12 : 0),
-          child: _PostCard(
-            post: _posts[index],
-            onPostDeleted: _refreshPosts,
-          ),
+          child: _PostCard(post: _posts[index], onPostDeleted: _refreshPosts),
         ),
       ),
     );
@@ -536,7 +548,11 @@ class _AccueilPageState extends State<AccueilPage> {
                                   : null,
                             ),
                             child: _currentLogoUrl == null
-                                ? const Icon(Icons.business, color: Colors.white, size: 35)
+                                ? const Icon(
+                                    Icons.business,
+                                    color: Colors.white,
+                                    size: 35,
+                                  )
                                 : null,
                           ),
                         ),
@@ -570,7 +586,8 @@ class _AccueilPageState extends State<AccueilPage> {
                                       children: [
                                         Text(
                                           _currentSociete != null
-                                              ? _currentSociete!.nom.toUpperCase()
+                                              ? _currentSociete!.nom
+                                                    .toUpperCase()
                                               : 'Société',
                                           style: const TextStyle(
                                             color: Colors.white,
@@ -991,12 +1008,20 @@ class _PostCardState extends State<_PostCard> {
 
   bool _isVideo(String url) {
     final l = url.toLowerCase();
-    return l.endsWith('.mp4') || l.endsWith('.mov') || l.endsWith('.avi') || l.endsWith('.mkv') || l.endsWith('.webm');
+    return l.endsWith('.mp4') ||
+        l.endsWith('.mov') ||
+        l.endsWith('.avi') ||
+        l.endsWith('.mkv') ||
+        l.endsWith('.webm');
   }
 
   bool _isAudio(String url) {
     final l = url.toLowerCase();
-    return l.endsWith('.mp3') || l.endsWith('.wav') || l.endsWith('.aac') || l.endsWith('.m4a') || l.endsWith('.ogg');
+    return l.endsWith('.mp3') ||
+        l.endsWith('.wav') ||
+        l.endsWith('.aac') ||
+        l.endsWith('.m4a') ||
+        l.endsWith('.ogg');
   }
 
   Widget _buildMediaWidget(String url, ColorScheme cs) {
@@ -1006,27 +1031,45 @@ class _PostCardState extends State<_PostCard> {
       return Container(
         height: 140,
         width: double.infinity,
-        decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Stack(
           alignment: Alignment.center,
           children: [
             Icon(Icons.movie, size: 50, color: Colors.white.withOpacity(0.3)),
             Container(
-              width: 50, height: 50,
-              decoration: BoxDecoration(color: cs.primary.withOpacity(0.9), shape: BoxShape.circle),
-              child: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(0.9),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 30,
+              ),
             ),
             Positioned(
-              top: 8, left: 8,
+              top: 8,
+              left: 8,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(4)),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.videocam, color: Colors.white, size: 14),
                     SizedBox(width: 4),
-                    Text('Vidéo', style: TextStyle(color: Colors.white, fontSize: 11)),
+                    Text(
+                      'Vidéo',
+                      style: TextStyle(color: Colors.white, fontSize: 11),
+                    ),
                   ],
                 ),
               ),
@@ -1038,7 +1081,10 @@ class _PostCardState extends State<_PostCard> {
       return Container(
         height: 70,
         width: double.infinity,
-        decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+          color: cs.primaryContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1048,8 +1094,20 @@ class _PostCardState extends State<_PostCard> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Fichier audio', style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.w600)),
-                Text('Appuyez pour écouter', style: TextStyle(color: cs.onPrimaryContainer.withOpacity(0.7), fontSize: 12)),
+                Text(
+                  'Fichier audio',
+                  style: TextStyle(
+                    color: cs.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Appuyez pour écouter',
+                  style: TextStyle(
+                    color: cs.onPrimaryContainer.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ],
@@ -1058,7 +1116,12 @@ class _PostCardState extends State<_PostCard> {
     } else {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: R2NetworkImage(imageUrl: fullUrl, height: 140, width: double.infinity, fit: BoxFit.cover),
+        child: R2NetworkImage(
+          imageUrl: fullUrl,
+          height: 140,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
       );
     }
   }
@@ -1071,7 +1134,8 @@ class _PostCardState extends State<_PostCard> {
       await _loadCurrentUser();
     }
 
-    final isOwner = _currentUserId != null &&
+    final isOwner =
+        _currentUserId != null &&
         _currentUserType != null &&
         _currentUserId == widget.post.authorId &&
         _currentUserType == widget.post.authorType;
@@ -1093,19 +1157,29 @@ class _PostCardState extends State<_PostCard> {
               children: [
                 Container(
                   margin: const EdgeInsets.only(bottom: 8),
-                  width: 36, height: 4,
-                  decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.onSurface.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
                 ListTile(
                   dense: true,
                   visualDensity: VisualDensity.compact,
                   leading: Icon(Icons.visibility, color: cs.primary, size: 22),
-                  title: const Text('Voir le post', style: TextStyle(fontSize: 14)),
+                  title: const Text(
+                    'Voir le post',
+                    style: TextStyle(fontSize: 14),
+                  ),
                   onTap: () {
                     Navigator.pop(bottomSheetContext);
                     Navigator.push(
                       parentContext,
-                      MaterialPageRoute(builder: (context) => PostDetailsPage(postId: widget.post.id)),
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            PostDetailsPage(postId: widget.post.id),
+                      ),
                     ).then((_) => _loadLikeStatus());
                   },
                 ),
@@ -1115,12 +1189,17 @@ class _PostCardState extends State<_PostCard> {
                     dense: true,
                     visualDensity: VisualDensity.compact,
                     leading: Icon(Icons.edit, color: cs.primary, size: 22),
-                    title: const Text('Modifier', style: TextStyle(fontSize: 14)),
+                    title: const Text(
+                      'Modifier',
+                      style: TextStyle(fontSize: 14),
+                    ),
                     onTap: () async {
                       Navigator.pop(bottomSheetContext);
                       final result = await Navigator.push(
                         parentContext,
-                        MaterialPageRoute(builder: (context) => PostEditPage(post: widget.post)),
+                        MaterialPageRoute(
+                          builder: (context) => PostEditPage(post: widget.post),
+                        ),
                       );
                       if (result == true && mounted) widget.onPostDeleted();
                     },
@@ -1128,8 +1207,15 @@ class _PostCardState extends State<_PostCard> {
                   ListTile(
                     dense: true,
                     visualDensity: VisualDensity.compact,
-                    leading: const Icon(Icons.delete, color: Colors.red, size: 22),
-                    title: const Text('Supprimer', style: TextStyle(color: Colors.red, fontSize: 14)),
+                    leading: const Icon(
+                      Icons.delete,
+                      color: Colors.red,
+                      size: 22,
+                    ),
+                    title: const Text(
+                      'Supprimer',
+                      style: TextStyle(color: Colors.red, fontSize: 14),
+                    ),
                     onTap: () {
                       Navigator.pop(bottomSheetContext);
                       _confirmDeletePost(parentContext);
@@ -1150,9 +1236,14 @@ class _PostCardState extends State<_PostCard> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Supprimer le post'),
-        content: const Text('Êtes-vous sûr de vouloir supprimer ce post ? Cette action est irréversible.'),
+        content: const Text(
+          'Êtes-vous sûr de vouloir supprimer ce post ? Cette action est irréversible.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -1167,7 +1258,10 @@ class _PostCardState extends State<_PostCard> {
         await PostService.deletePost(widget.post.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Post supprimé avec succès'), backgroundColor: Colors.green),
+            const SnackBar(
+              content: Text('Post supprimé avec succès'),
+              backgroundColor: Colors.green,
+            ),
           );
           widget.onPostDeleted();
         }
@@ -1185,7 +1279,8 @@ class _PostCardState extends State<_PostCard> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final authorPhoto = widget.post.getAuthorPhoto();
-    final hasMedia = widget.post.hasMedia() && widget.post.mediaUrls!.isNotEmpty;
+    final hasMedia =
+        widget.post.hasMedia() && widget.post.mediaUrls!.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -1193,7 +1288,11 @@ class _PostCardState extends State<_PostCard> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: cs.outlineVariant.withOpacity(.5)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(.06), blurRadius: 15, offset: const Offset(0, 6)),
+          BoxShadow(
+            color: Colors.black.withOpacity(.06),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Padding(
@@ -1207,11 +1306,16 @@ class _PostCardState extends State<_PostCard> {
                 CircleAvatar(
                   radius: 18,
                   backgroundColor: cs.primaryContainer,
-                  backgroundImage: authorPhoto != null ? NetworkImage(authorPhoto) : null,
+                  backgroundImage: authorPhoto != null
+                      ? NetworkImage(authorPhoto)
+                      : null,
                   child: authorPhoto == null
                       ? Icon(
-                          widget.post.authorType == AuthorType.societe ? Icons.business : Icons.person,
-                          size: 18, color: cs.onPrimaryContainer,
+                          widget.post.authorType == AuthorType.societe
+                              ? Icons.business
+                              : Icons.person,
+                          size: 18,
+                          color: cs.onPrimaryContainer,
                         )
                       : null,
                 ),
@@ -1220,17 +1324,35 @@ class _PostCardState extends State<_PostCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.post.getAuthorName(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                      Text(_formatTimestamp(widget.post.createdAt), style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(.6))),
+                      Text(
+                        widget.post.getAuthorName(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        _formatTimestamp(widget.post.createdAt),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurface.withOpacity(.6),
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: Icon(Icons.more_horiz, color: cs.onSurface.withOpacity(.7)),
+                  icon: Icon(
+                    Icons.more_horiz,
+                    color: cs.onSurface.withOpacity(.7),
+                  ),
                   onPressed: () => _showPostOptions(context),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                   splashRadius: 20,
                 ),
               ],
@@ -1246,7 +1368,11 @@ class _PostCardState extends State<_PostCard> {
             // Contenu texte
             Text(
               widget.post.contenu,
-              style: TextStyle(fontSize: 13, height: 1.4, color: cs.onSurface.withOpacity(.8)),
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: cs.onSurface.withOpacity(.8),
+              ),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1259,15 +1385,30 @@ class _PostCardState extends State<_PostCard> {
                 child: Row(
                   children: [
                     if (_likesCount > 0) ...[
-                      Icon(Icons.thumb_up, size: 14, color: _hasLiked ? const Color(0xFF1877F2) : Colors.grey),
+                      Icon(
+                        Icons.thumb_up,
+                        size: 14,
+                        color: _hasLiked
+                            ? const Color(0xFF1877F2)
+                            : Colors.grey,
+                      ),
                       const SizedBox(width: 4),
-                      Text('$_likesCount', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6))),
+                      Text(
+                        '$_likesCount',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withOpacity(0.6),
+                        ),
+                      ),
                     ],
                     const Spacer(),
                     if (_commentsCount > 0)
                       Text(
                         '$_commentsCount commentaire${_commentsCount > 1 ? 's' : ''}',
-                        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withOpacity(0.6),
+                        ),
                       ),
                   ],
                 ),
@@ -1291,17 +1432,25 @@ class _PostCardState extends State<_PostCard> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            _hasLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                            _hasLiked
+                                ? Icons.thumb_up
+                                : Icons.thumb_up_outlined,
                             size: 20,
-                            color: _hasLiked ? const Color(0xFF1877F2) : cs.onSurface.withOpacity(0.6),
+                            color: _hasLiked
+                                ? const Color(0xFF1877F2)
+                                : cs.onSurface.withOpacity(0.6),
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'J\'aime',
                             style: TextStyle(
                               fontSize: 13,
-                              fontWeight: _hasLiked ? FontWeight.w600 : FontWeight.normal,
-                              color: _hasLiked ? const Color(0xFF1877F2) : cs.onSurface.withOpacity(0.6),
+                              fontWeight: _hasLiked
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              color: _hasLiked
+                                  ? const Color(0xFF1877F2)
+                                  : cs.onSurface.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -1319,9 +1468,19 @@ class _PostCardState extends State<_PostCard> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.chat_bubble_outline, size: 20, color: cs.onSurface.withOpacity(0.6)),
+                          Icon(
+                            Icons.chat_bubble_outline,
+                            size: 20,
+                            color: cs.onSurface.withOpacity(0.6),
+                          ),
                           const SizedBox(width: 6),
-                          Text('Commenter', style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
+                          Text(
+                            'Commenter',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withOpacity(0.6),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1333,7 +1492,10 @@ class _PostCardState extends State<_PostCard> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => PostDetailsPage(postId: widget.post.id)),
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              PostDetailsPage(postId: widget.post.id),
+                        ),
                       ).then((_) => _loadLikeStatus());
                     },
                     borderRadius: BorderRadius.circular(8),
@@ -1342,9 +1504,19 @@ class _PostCardState extends State<_PostCard> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.share_outlined, size: 20, color: cs.onSurface.withOpacity(0.6)),
+                          Icon(
+                            Icons.share_outlined,
+                            size: 20,
+                            color: cs.onSurface.withOpacity(0.6),
+                          ),
                           const SizedBox(width: 6),
-                          Text('Partager', style: TextStyle(fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
+                          Text(
+                            'Partager',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withOpacity(0.6),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1455,8 +1627,12 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
         children: [
           Container(
             margin: const EdgeInsets.only(top: 8),
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: cs.onSurface.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: cs.onSurface.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -1464,7 +1640,13 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
               children: [
                 Icon(Icons.chat_bubble, size: 20, color: cs.primary),
                 const SizedBox(width: 8),
-                Text('Commentaires (${_comments.length})', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  'Commentaires (${_comments.length})',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1473,69 +1655,116 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _comments.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey[400]),
-                            const SizedBox(height: 12),
-                            Text('Aucun commentaire', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                            const SizedBox(height: 4),
-                            Text('Soyez le premier à commenter !', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 48,
+                          color: Colors.grey[400],
                         ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _comments.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final comment = _comments[index];
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: cs.primaryContainer,
-                                child: Icon(
-                                  comment.authorType == 'Societe' ? Icons.business : Icons.person,
-                                  size: 16, color: cs.onPrimaryContainer,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: cs.surfaceContainerHighest.withOpacity(0.5),
-                                        borderRadius: BorderRadius.circular(16),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Aucun commentaire',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Soyez le premier à commenter !',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _comments.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final comment = _comments[index];
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: cs.primaryContainer,
+                            child: Icon(
+                              comment.authorType == 'Societe'
+                                  ? Icons.business
+                                  : Icons.person,
+                              size: 16,
+                              color: cs.onPrimaryContainer,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cs.surfaceContainerHighest
+                                        .withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        comment.getAuthorName(),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(comment.getAuthorName(), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                          const SizedBox(height: 2),
-                                          Text(comment.contenu, style: const TextStyle(fontSize: 13)),
-                                        ],
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        comment.contenu,
+                                        style: const TextStyle(fontSize: 13),
                                       ),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 12, top: 4),
-                                      child: Text(_formatTime(comment.createdAt), style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(0.5))),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 12,
+                                    top: 4,
+                                  ),
+                                  child: Text(
+                                    _formatTime(comment.createdAt),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: cs.onSurface.withOpacity(0.5),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
           ),
           Padding(
-            padding: EdgeInsets.only(left: 12, right: 12, top: 8, bottom: bottomInset > 0 ? bottomInset : 16),
+            padding: EdgeInsets.only(
+              left: 12,
+              right: 12,
+              top: 8,
+              bottom: bottomInset > 0 ? bottomInset : 16,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -1546,21 +1775,37 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
                     onSubmitted: (_) => _addComment(),
                     decoration: InputDecoration(
                       hintText: 'Écrire un commentaire...',
-                      hintStyle: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.4)),
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: cs.onSurface.withOpacity(0.4),
+                      ),
                       filled: true,
                       fillColor: cs.surfaceContainerHighest.withOpacity(0.4),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 _isAdding
-                    ? const SizedBox(width: 36, height: 36, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : IconButton(
                         onPressed: _addComment,
                         icon: Icon(Icons.send, color: cs.primary),
-                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
                       ),
               ],
             ),

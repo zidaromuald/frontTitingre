@@ -17,6 +17,7 @@ import 'onglets/paramInfo/parametre.dart';
 import 'onglets/paramInfo/profil.dart';
 import 'onglets/servicePlan/service.dart' as service_societe;
 import '../groupe/groupe_detail_page.dart';
+import '../widgets/video_player_widget.dart';
 
 class AccueilPage extends StatefulWidget {
   const AccueilPage({super.key});
@@ -1051,53 +1052,16 @@ class _PostCardState extends State<_PostCard> {
     final fullUrl = _getMediaUrl(url);
 
     if (_isVideo(url)) {
-      return Container(
-        height: 140,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.black87,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Icon(Icons.movie, size: 50, color: Colors.white.withOpacity(0.3)),
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.9),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.play_arrow,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            Positioned(
-              top: 8,
-              left: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.videocam, color: Colors.white, size: 14),
-                    SizedBox(width: 4),
-                    Text(
-                      'Vidéo',
-                      style: TextStyle(color: Colors.white, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 220,
+          width: double.infinity,
+          child: VideoPlayerWidget(
+            videoUrl: fullUrl,
+            autoPlay: false,
+            looping: false,
+          ),
         ),
       );
     } else if (_isAudio(url)) {

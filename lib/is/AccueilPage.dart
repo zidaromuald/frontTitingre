@@ -16,6 +16,7 @@ import '../iu/onglets/postInfo/post_edit_page.dart';
 import 'onglets/paramInfo/parametre.dart';
 import 'onglets/paramInfo/profil.dart';
 import 'onglets/servicePlan/service.dart' as service_societe;
+import '../groupe/groupe_detail_page.dart';
 
 class AccueilPage extends StatefulWidget {
   const AccueilPage({super.key});
@@ -86,14 +87,32 @@ class _AccueilPageState extends State<AccueilPage> {
           abonnes =
               statsResult['abonnes_count'] ??
               statsResult['followers_count'] ??
+              statsResult['abonnes'] ??
+              statsResult['followers'] ??
+              statsResult['subscribersCount'] ??
               0;
           suivis =
               statsResult['suivis_count'] ??
               statsResult['following_count'] ??
+              statsResult['suivis'] ??
+              statsResult['following'] ??
+              statsResult['followingCount'] ??
               0;
         }
       } catch (e) {
-        print('⚠️ [Stats] Erreur chargement stats suivis: $e');
+        print('⚠️ [Stats] Erreur chargement stats via endpoint, fallback via followers...');
+        // Fallback: compter directement les followers
+        try {
+          final followers = await SuivreAuthService.getFollowers(
+            entityId: societe.id,
+            entityType: EntityType.societe,
+          );
+          abonnes = followers.length;
+        } catch (_) {}
+        try {
+          final following = await SuivreAuthService.getMyFollowing();
+          suivis = following.length;
+        } catch (_) {}
       }
 
       print(
@@ -311,8 +330,12 @@ class _AccueilPageState extends State<AccueilPage> {
   Widget _buildDynamicGroupCard(GroupeWithUnreadContent groupe) {
     return GestureDetector(
       onTap: () {
-        // TODO: Naviguer vers la page du groupe
-        print('Navigation vers groupe: ${groupe.nom}');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GroupeDetailPage(groupeId: groupe.id),
+          ),
+        );
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

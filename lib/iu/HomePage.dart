@@ -15,6 +15,8 @@ import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/suivre/abonnement_auth_service.dart';
 import 'package:gestauth_clean/widgets/r2_network_image.dart';
+import 'package:gestauth_clean/groupe/groupe_detail_page.dart';
+import 'package:gestauth_clean/iu/onglets/recherche/societe_profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -375,8 +377,12 @@ class _HomePageState extends State<HomePage> {
   Widget _buildDynamicGroupCard(GroupeWithUnreadContent groupe) {
     return GestureDetector(
       onTap: () {
-        // TODO: Naviguer vers la page du groupe
-        print('Navigation vers groupe: ${groupe.nom}');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GroupeDetailPage(groupeId: groupe.id),
+          ),
+        );
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -450,8 +456,12 @@ class _HomePageState extends State<HomePage> {
   Widget _buildDynamicSocieteCard(SocieteWithUnreadContent societe) {
     return GestureDetector(
       onTap: () {
-        // TODO: Naviguer vers la conversation avec la société
-        print('Navigation vers société: ${societe.nom}');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SocieteProfilePage(societeId: societe.id),
+          ),
+        );
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -689,9 +699,15 @@ class _HomePageState extends State<HomePage> {
 
     return GestureDetector(
       onTap: () {
-        // TODO: Naviguer vers la page de la société
         final societeId = societeData['id'] as int?;
-        print('Navigation vers société: $nom (ID: $societeId)');
+        if (societeId != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SocieteProfilePage(societeId: societeId),
+            ),
+          );
+        }
       },
       child: Container(
         height: 100,

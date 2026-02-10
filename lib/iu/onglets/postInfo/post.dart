@@ -1,5 +1,11 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_sound/flutter_sound.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:gestauth_clean/services/groupe/groupe_service.dart';
 import 'package:gestauth_clean/services/groupe/groupe_membre_service.dart';
 import 'package:gestauth_clean/services/suivre/suivre_auth_service.dart';
@@ -25,6 +31,14 @@ class _CreerPostPageState extends State<CreerPostPage> {
   // Fichiers sélectionnés pour upload
   List<PlatformFile> _selectedFiles = [];
   bool _isPublishing = false;
+
+  // Enregistrement audio (mobile uniquement)
+  static const Duration _maxRecordDuration = Duration(minutes: 1);
+  FlutterSoundRecorder? _audioRecorder;
+  bool _isRecorderInitialized = false;
+  String? _audioFilePath;
+  Duration _recordDuration = Duration.zero;
+  Timer? _recordTimer;
 
   // Couleurs Mattermost
   static const Color mattermostBlue = Color(0xFF1E4A8C);
@@ -702,43 +716,126 @@ class _CreerPostPageState extends State<CreerPostPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Icône micro animée pendant l'enregistrement
               Icon(
-                _isRecording ? Icons.mic : Icons.mic_none,
-                size: 40, // Réduit
-                color: _isRecording ? Colors.red : mattermostDarkGray,
+                _isRecording ? Icons.mic : (_hasSelectedMedia ? Icons.check_circle : Icons.mic_none),
+                size: 40,
+                color: _isRecording ? Colors.red : (_hasSelectedMedia ? mattermostGreen : mattermostDarkGray),
               ),
               const SizedBox(height: 8),
-              Text(
-                _isRecording
-                    ? "Enregistrement..."
-                    : (_hasSelectedMedia
-                          ? "Audio enregistré"
-                          : "Appuyez pour enregistrer"),
-                style: TextStyle(
-                  color: _isRecording
-                      ? const Color.fromARGB(255, 192, 180, 179)
-                      : mattermostDarkGray,
-                  fontSize: 12, // Réduit
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton.icon(
-                onPressed: _isRecording ? _stopRecording : _startRecording,
-                icon: Icon(_isRecording ? Icons.stop : Icons.mic, size: 16),
-                label: Text(
-                  _isRecording ? "Arrêter" : "Enregistrer",
-                  style: const TextStyle(fontSize: 12),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isRecording ? Colors.red : mattermostBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+
+              // Durée et barre de progression pendant l'enregistrement
+              if (_isRecording) ...[
+                Text(
+                  _formatRecordDuration(_recordDuration),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
                   ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: LinearProgressIndicator(
+                    value: _recordDuration.inSeconds / _maxRecordDuration.inSeconds,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _recordDuration.inSeconds > 50 ? Colors.orange : mattermostBlue,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Max ${_maxRecordDuration.inMinutes} min",
+                  style: const TextStyle(fontSize: 10, color: mattermostDarkGray),
+                ),
+              ] else ...[
+                Text(
+                  _hasSelectedMedia
+                      ? "Audio enregistré (${_formatRecordDuration(_recordDuration)})"
+                      : "Appuyez pour enregistrer (max 1 min)",
+                  style: const TextStyle(
+                    color: mattermostDarkGray,
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 10),
+
+              // Boutons d'action
+              if (_isRecording)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _cancelRecording,
+                      icon: const Icon(Icons.close, size: 16),
+                      label: const Text("Annuler", style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _stopRecording,
+                      icon: const Icon(Icons.stop, size: 16),
+                      label: const Text("Arrêter", style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                    ),
+                  ],
+                )
+              else if (_hasSelectedMedia)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _hasSelectedMedia = false;
+                          _selectedFiles = [];
+                          _recordDuration = Duration.zero;
+                        });
+                      },
+                      icon: const Icon(Icons.delete, size: 16),
+                      label: const Text("Supprimer", style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _startRecording,
+                      icon: const Icon(Icons.mic, size: 16),
+                      label: const Text("Ré-enregistrer", style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mattermostBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                ElevatedButton.icon(
+                  onPressed: _startRecording,
+                  icon: const Icon(Icons.mic, size: 16),
+                  label: const Text("Enregistrer", style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: mattermostBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                ),
             ],
           ),
         );
@@ -1066,31 +1163,174 @@ class _CreerPostPageState extends State<CreerPostPage> {
     }
   }
 
-  void _startRecording() {
-    setState(() {
-      _isRecording = true;
-    });
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (_isRecording) {
-        _stopRecording();
+  /// Initialiser le recorder audio (mobile uniquement)
+  Future<bool> _initRecorder() async {
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("L'enregistrement vocal n'est disponible que sur mobile"),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
+      return false;
+    }
+
+    _audioRecorder ??= FlutterSoundRecorder();
+
+    // Demander la permission microphone
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Permission microphone requise pour enregistrer"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+
+    if (!_isRecorderInitialized) {
+      await _audioRecorder!.openRecorder();
+      _isRecorderInitialized = true;
+    }
+    return true;
+  }
+
+  /// Démarrer l'enregistrement audio réel
+  Future<void> _startRecording() async {
+    final ready = await _initRecorder();
+    if (!ready) return;
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      _audioFilePath = '${tempDir.path}/post_vocal_$timestamp.aac';
+
+      await _audioRecorder!.startRecorder(
+        toFile: _audioFilePath,
+        codec: Codec.aacADTS,
+      );
+
+      setState(() {
+        _isRecording = true;
+        _recordDuration = Duration.zero;
+      });
+
+      // Timer pour afficher la durée et respecter la limite de 1 minute
+      _recordTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        setState(() {
+          _recordDuration = Duration(seconds: timer.tick);
+        });
+
+        // Arrêt automatique à 1 minute
+        if (_recordDuration >= _maxRecordDuration) {
+          _stopRecording();
+        }
+      });
+    } catch (e) {
+      debugPrint('Erreur démarrage enregistrement: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur micro: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  /// Arrêter l'enregistrement et convertir en PlatformFile
+  Future<void> _stopRecording() async {
+    if (!_isRecording || _audioRecorder == null) return;
+
+    try {
+      await _audioRecorder!.stopRecorder();
+      _recordTimer?.cancel();
+
+      if (_audioFilePath != null && _recordDuration.inSeconds > 0) {
+        final audioFile = File(_audioFilePath!);
+        if (await audioFile.exists()) {
+          // Convertir le fichier audio en PlatformFile pour l'upload
+          final bytes = await audioFile.readAsBytes();
+          final platformFile = PlatformFile.fromBytes(
+            name: 'vocal_${DateTime.now().millisecondsSinceEpoch}.aac',
+            bytes: bytes,
+            mimeType: 'audio/aac',
+          );
+
+          setState(() {
+            _isRecording = false;
+            _hasSelectedMedia = true;
+            _selectedFiles = [platformFile];
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Enregistrement terminé (${_formatRecordDuration(_recordDuration)})"),
+                backgroundColor: mattermostGreen,
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      // Si le fichier n'existe pas ou durée = 0
+      setState(() {
+        _isRecording = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Enregistrement trop court ou échoué"),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Erreur arrêt enregistrement: $e');
+      setState(() => _isRecording = false);
+    }
+  }
+
+  /// Annuler l'enregistrement en cours
+  Future<void> _cancelRecording() async {
+    if (_audioRecorder != null && _isRecording) {
+      try {
+        await _audioRecorder!.stopRecorder();
+      } catch (_) {}
+    }
+    _recordTimer?.cancel();
+
+    // Supprimer le fichier temporaire
+    if (_audioFilePath != null) {
+      try {
+        final file = File(_audioFilePath!);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
+
+    setState(() {
+      _isRecording = false;
+      _audioFilePath = null;
+      _recordDuration = Duration.zero;
     });
   }
 
-  void _stopRecording() {
-    setState(() {
-      _isRecording = false;
-      _hasSelectedMedia = true;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Enregistrement terminé"),
-        backgroundColor: mattermostGreen,
-        duration: Duration(seconds: 1),
-      ),
-    );
+  /// Formater la durée en mm:ss
+  String _formatRecordDuration(Duration duration) {
+    final minutes = duration.inMinutes.toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 
   /// Extrait le chemin relatif d'une URL de média
@@ -1301,6 +1541,10 @@ class _CreerPostPageState extends State<CreerPostPage> {
   @override
   void dispose() {
     _textController.dispose();
+    _recordTimer?.cancel();
+    if (_isRecorderInitialized) {
+      _audioRecorder?.closeRecorder();
+    }
     super.dispose();
   }
 }

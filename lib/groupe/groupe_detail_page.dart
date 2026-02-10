@@ -39,6 +39,12 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
   bool _postsLoaded = false; // Flag pour éviter les appels répétés
   String? _postsError;
 
+  // Membres du groupe
+  List<Map<String, dynamic>> _membres = [];
+  bool _isLoadingMembres = false;
+  bool _membresLoaded = false;
+  String? _membresError;
+
   // Couleurs
   static const Color primaryColor = Color(0xff5ac18e);
   static const Color darkGray = Color(0xFF8D8D8D);
@@ -999,23 +1005,190 @@ class _GroupeDetailPageState extends State<GroupeDetailPage>
     );
   }
 
+  /// Charger les membres du groupe
+  Future<void> _loadMembres() async {
+    if (_isLoadingMembres) return;
+
+    setState(() {
+      _isLoadingMembres = true;
+      _membresError = null;
+    });
+
+    try {
+      final membres = await GroupeMembreService.getMembres(widget.groupeId);
+      if (mounted) {
+        setState(() {
+          _membres = membres;
+          _isLoadingMembres = false;
+          _membresLoaded = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _membresError = e.toString();
+          _isLoadingMembres = false;
+          _membresLoaded = true;
+        });
+      }
+    }
+  }
+
+  String _getRoleLabel(String? role) {
+    switch (role) {
+      case 'admin':
+        return 'Admin';
+      case 'moderateur':
+        return 'Modérateur';
+      default:
+        return 'Membre';
+    }
+  }
+
+  Color _getRoleColor(String? role) {
+    switch (role) {
+      case 'admin':
+        return Colors.orange;
+      case 'moderateur':
+        return Colors.blue;
+      default:
+        return primaryColor;
+    }
+  }
+
   Widget _buildMembresTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.people, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text(
-            'Liste des membres',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Fonctionnalité à implémenter',
-            style: TextStyle(fontSize: 14, color: darkGray),
-          ),
-        ],
+    // Charger les membres au premier affichage
+    if (!_membresLoaded && !_isLoadingMembres) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadMembres();
+      });
+    }
+
+    if (_isLoadingMembres) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Chargement des membres...'),
+          ],
+        ),
+      );
+    }
+
+    if (_membresError != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text(
+              'Erreur de chargement',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _membresError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: darkGray, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadMembres,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
+              style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_membres.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Aucun membre',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadMembres,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _membres.length,
+        itemBuilder: (context, index) {
+          final membre = _membres[index];
+          final user = membre['user'] as Map<String, dynamic>?;
+          final nom = user?['nom'] ?? '';
+          final prenom = user?['prenom'] ?? '';
+          final photo = user?['photo'] ?? user?['profile']?['photo'];
+          final role = membre['role'] as String?;
+          final displayName = '$prenom $nom'.trim();
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: primaryColor.withOpacity(0.2),
+                backgroundImage: photo != null ? NetworkImage(photo) : null,
+                child: photo == null
+                    ? Text(
+                        displayName.isNotEmpty
+                            ? displayName.substring(0, 1).toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
+              ),
+              title: Text(
+                displayName.isNotEmpty ? displayName : 'Membre',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                user?['email'] ?? user?['numero'] ?? '',
+                style: const TextStyle(fontSize: 12, color: darkGray),
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: _getRoleColor(role).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _getRoleLabel(role),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _getRoleColor(role),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -65,60 +65,68 @@ class _AccueilPageState extends State<AccueilPage> {
       final societe = await SocieteAuthService.getMyProfile();
       print('📊 [Stats] Societe chargée: id=${societe.id}');
 
-      // Charger les groupes avec la même méthode que IU (via /groupes/me)
-      List<GroupeModel> groupes = [];
-      try {
-        groupes = await GroupeAuthService.getMyGroupes();
-        print(
-          '📊 [Stats] Groupes chargés via getMyGroupes(): ${groupes.length}',
-        );
-      } catch (e) {
-        print('⚠️ [Stats] Erreur chargement groupes: $e');
-      }
-
-      // Charger les stats séparément
+      // Charger tout en parallèle : groupes, followers, following
       int abonnes = 0;
       int suivis = 0;
-      try {
-        final statsResult = await SuivreAuthService.getSocieteStats(societe.id);
-        print('📊 [Stats] Stats result type: ${statsResult.runtimeType}');
-        print('📊 [Stats] Stats result: $statsResult');
+      List<GroupeModel> groupes = [];
 
-        if (statsResult is Map) {
-          abonnes =
-              statsResult['abonnes_count'] ??
-              statsResult['followers_count'] ??
-              statsResult['abonnes'] ??
-              statsResult['followers'] ??
-              statsResult['subscribersCount'] ??
-              0;
-          suivis =
-              statsResult['suivis_count'] ??
-              statsResult['following_count'] ??
-              statsResult['suivis'] ??
-              statsResult['following'] ??
-              statsResult['followingCount'] ??
-              0;
+      final results = await Future.wait([
+        // 1. Groupes
+        GroupeAuthService.getMyGroupes().then<Object>((g) => g).catchError((e) {
+          print('⚠️ [Stats] Erreur chargement groupes: $e');
+          return <GroupeModel>[];
+        }),
+        // 2. Followers (abonnés) - comptage direct via la liste
+        SuivreAuthService.getFollowers(
+          entityId: societe.id,
+          entityType: EntityType.societe,
+        ).then<Object>((f) => f).catchError((e) {
+          print('⚠️ [Stats] Erreur chargement followers: $e');
+          return <Map<String, dynamic>>[];
+        }),
+        // 3. Following (suivis) - comptage direct via la liste
+        SuivreAuthService.getMyFollowing().then<Object>((f) => f).catchError((e) {
+          print('⚠️ [Stats] Erreur chargement following: $e');
+          return <SuivreModel>[];
+        }),
+      ]);
+
+      groupes = results[0] as List<GroupeModel>;
+      final followers = results[1] as List<Map<String, dynamic>>;
+      final following = results[2] as List<SuivreModel>;
+      abonnes = followers.length;
+      suivis = following.length;
+
+      print('📊 [Stats] Followers: $abonnes, Following: $suivis, Groupes: ${groupes.length}');
+
+      // Si les comptages directs sont à 0, essayer l'endpoint stats en dernier recours
+      if (abonnes == 0 && suivis == 0) {
+        try {
+          final statsResult = await SuivreAuthService.getSocieteStats(societe.id);
+          print('📊 [Stats] Stats endpoint result: $statsResult');
+
+          // Essayer toutes les clés possibles pour les abonnés
+          for (final key in ['abonnes_count', 'followers_count', 'abonnes', 'followers', 'subscribersCount']) {
+            final val = statsResult[key];
+            if (val != null && val is int && val > 0) {
+              abonnes = val;
+              break;
+            }
+          }
+          // Essayer toutes les clés possibles pour les suivis
+          for (final key in ['suivis_count', 'following_count', 'suivis', 'following', 'followingCount']) {
+            final val = statsResult[key];
+            if (val != null && val is int && val > 0) {
+              suivis = val;
+              break;
+            }
+          }
+        } catch (e) {
+          print('⚠️ [Stats] Endpoint stats aussi en erreur: $e');
         }
-      } catch (e) {
-        print('⚠️ [Stats] Erreur chargement stats via endpoint, fallback via followers...');
-        // Fallback: compter directement les followers
-        try {
-          final followers = await SuivreAuthService.getFollowers(
-            entityId: societe.id,
-            entityType: EntityType.societe,
-          );
-          abonnes = followers.length;
-        } catch (_) {}
-        try {
-          final following = await SuivreAuthService.getMyFollowing();
-          suivis = following.length;
-        } catch (_) {}
       }
 
-      print(
-        '📊 [Stats] Final: abonnes=$abonnes, suivis=$suivis, groupes=${groupes.length}',
-      );
+      print('📊 [Stats] Final: abonnes=$abonnes, suivis=$suivis, groupes=${groupes.length}');
 
       if (mounted) {
         setState(() {

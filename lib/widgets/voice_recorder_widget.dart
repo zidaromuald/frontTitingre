@@ -89,12 +89,12 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
       // Créer un fichier temporaire pour l'audio
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _audioFilePath = '${tempDir.path}/voice_message_$timestamp.aac';
+      _audioFilePath = '${tempDir.path}/voice_message_$timestamp.ogg';
 
-      // Démarrer l'enregistrement
+      // Démarrer l'enregistrement en OGG (accepté par le serveur)
       await _audioRecorder!.startRecorder(
         toFile: _audioFilePath,
-        codec: Codec.aacADTS,
+        codec: Codec.opusOGG,
       );
 
       setState(() {

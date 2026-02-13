@@ -1,6 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:gestauth_clean/utils/csv_export_helper.dart';
 import 'package:gestauth_clean/services/partenariat/transaction_partenariat_service.dart';
 import 'package:gestauth_clean/services/partenariat/information_partenaire_service.dart';
 import 'package:gestauth_clean/services/AuthUS/auth_base_service.dart';
@@ -1312,11 +1311,6 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
   // Helpers
   // ========================================
 
-  /// Recuperer un repertoire temporaire pour l'export CSV
-  Directory _getExportDirectory() {
-    return Directory.systemTemp;
-  }
-
   /// Exporter une seule transaction en CSV
   Future<void> _exportSingleTransactionCsv(TransactionPartenaritModel t) async {
     try {
@@ -1335,15 +1329,11 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
 
       buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
 
-      final dir = _getExportDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
       final safeProduit = t.produit.replaceAll(RegExp(r'[^\w]'), '_');
-      final file = File('${dir.path}/transaction_${safeProduit}_$timestamp.csv');
-      await file.writeAsString(buffer.toString());
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Transaction - ${t.produit}',
+      await CsvExportHelper.exportCsv(
+        buffer.toString(),
+        'transaction_$safeProduit',
+        'Transaction - ${t.produit}',
       );
     } catch (e) {
       _showErrorSnackBar('Erreur lors de l\'export: $e');
@@ -1374,14 +1364,10 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
         buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
       }
 
-      final dir = _getExportDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final file = File('${dir.path}/transactions_$timestamp.csv');
-      await file.writeAsString(buffer.toString());
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Transactions - ${widget.partenaireName}',
+      await CsvExportHelper.exportCsv(
+        buffer.toString(),
+        'transactions',
+        'Transactions - ${widget.partenaireName}',
       );
     } catch (e) {
       _showErrorSnackBar('Erreur lors de l\'export: $e');

@@ -1,6 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:gestauth_clean/utils/csv_export_helper.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/partenariat/transaction_partenariat_service.dart';
@@ -793,11 +792,6 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     }
   }
 
-  /// Recuperer un repertoire temporaire pour l'export CSV
-  Directory _getExportDirectory() {
-    return Directory.systemTemp;
-  }
-
   /// Exporter une seule transaction en CSV
   Future<void> _exportSingleTransactionCsv(TransactionPartenaritModel t) async {
     try {
@@ -814,15 +808,11 @@ class _UserTransactionPageState extends State<UserTransactionPage>
 
       buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$date');
 
-      final dir = _getExportDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
       final safeProduit = t.produit.replaceAll(RegExp(r'[^\w]'), '_');
-      final file = File('${dir.path}/transaction_${safeProduit}_$timestamp.csv');
-      await file.writeAsString(buffer.toString());
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Transaction - ${t.produit}',
+      await CsvExportHelper.exportCsv(
+        buffer.toString(),
+        'transaction_$safeProduit',
+        'Transaction - ${t.produit}',
       );
     } catch (e) {
       if (mounted) {
@@ -864,14 +854,11 @@ class _UserTransactionPageState extends State<UserTransactionPage>
         buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$date');
       }
 
-      final dir = _getExportDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final file = File('${dir.path}/transactions_${widget.userName.replaceAll(' ', '_')}_$timestamp.csv');
-      await file.writeAsString(buffer.toString());
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Transactions - ${widget.userName}',
+      final safeUserName = widget.userName.replaceAll(' ', '_');
+      await CsvExportHelper.exportCsv(
+        buffer.toString(),
+        'transactions_$safeUserName',
+        'Transactions - ${widget.userName}',
       );
     } catch (e) {
       if (mounted) {

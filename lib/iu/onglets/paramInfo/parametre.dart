@@ -21,9 +21,9 @@ class _ParametrePageState extends State<ParametrePage> {
 
   // Données utilisateur (à remplacer par vraies données)
   Map<String, dynamic> userProfile = {
-    'nom': 'Jean Dupont',
-    'prenom': 'Jean',
-    'email': 'jean.dupont@email.com',
+    'nom': 'ZIDA',
+    'prenom': 'Jules',
+    'email': 'jules.zida@email.com',
     'numero': '+226 70 12 34 56',
     'photo': null,
     'bio': 'Développeur passionné par la technologie et l\'innovation.',
@@ -63,7 +63,7 @@ class _ParametrePageState extends State<ParametrePage> {
   // Catégories spéciales (Canaux)
   final List<Map<String, dynamic>> categoriesSpeciales = [
     {
-      'nom': 'Canaux',
+      'nom': 'Mes Canaux',
       'icon': Icons.tag,
       'color': mattermostBlue,
       'description': 'Groupes de discussion thématiques',

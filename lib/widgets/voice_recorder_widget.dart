@@ -308,6 +308,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   bool _isPlayerInitialized = false;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
+  StreamSubscription<PlaybackDisposition>? _progressSubscription;
 
   @override
   void initState() {
@@ -317,6 +318,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
 
   @override
   void dispose() {
+    _progressSubscription?.cancel();
     _audioPlayer?.closePlayer();
     super.dispose();
   }
@@ -325,10 +327,28 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
     _audioPlayer = FlutterSoundPlayer();
     await _audioPlayer!.openPlayer();
 
-    setState(() {
-      _isPlayerInitialized = true;
-      _totalDuration = widget.duration ?? Duration.zero;
+    // Activer les événements de progression toutes les 100ms
+    await _audioPlayer!.setSubscriptionDuration(
+      const Duration(milliseconds: 100),
+    );
+
+    // Abonnement unique sur toute la durée de vie du widget
+    _progressSubscription = _audioPlayer!.onProgress!.listen((event) {
+      if (!mounted) return;
+      setState(() {
+        _currentPosition = event.position;
+        if (event.duration.inMilliseconds > 0) {
+          _totalDuration = event.duration;
+        }
+      });
     });
+
+    if (mounted) {
+      setState(() {
+        _isPlayerInitialized = true;
+        _totalDuration = widget.duration ?? Duration.zero;
+      });
+    }
   }
 
   Future<void> _togglePlayPause() async {
@@ -336,30 +356,20 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
 
     if (_isPlaying) {
       await _audioPlayer!.pausePlayer();
-      setState(() {
-        _isPlaying = false;
-      });
+      setState(() => _isPlaying = false);
     } else {
       await _audioPlayer!.startPlayer(
         fromURI: widget.audioUrl,
         whenFinished: () {
-          setState(() {
-            _isPlaying = false;
-            _currentPosition = Duration.zero;
-          });
+          if (mounted) {
+            setState(() {
+              _isPlaying = false;
+              _currentPosition = Duration.zero;
+            });
+          }
         },
       );
-
-      _audioPlayer!.onProgress!.listen((event) {
-        setState(() {
-          _currentPosition = event.position;
-          _totalDuration = event.duration;
-        });
-      });
-
-      setState(() {
-        _isPlaying = true;
-      });
+      setState(() => _isPlaying = true);
     }
   }
 
@@ -379,8 +389,15 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       );
     }
 
+    final double sliderMax = _totalDuration.inMilliseconds > 0
+        ? _totalDuration.inMilliseconds.toDouble()
+        : 1.0;
+    final double sliderValue = _currentPosition.inMilliseconds
+        .toDouble()
+        .clamp(0.0, sliderMax);
+
     return Container(
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: Theme.of(context).primaryColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
@@ -395,9 +412,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
               color: Theme.of(context).primaryColor,
             ),
           ),
-
-          if (_totalDuration.inSeconds > 0) ...[
-            SizedBox(
+          Flexible(
+            child: SizedBox(
               width: 120,
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
@@ -405,16 +421,19 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
                   trackHeight: 2,
                 ),
                 child: Slider(
-                  value: _currentPosition.inSeconds.toDouble(),
-                  max: _totalDuration.inSeconds.toDouble(),
+                  value: sliderValue,
+                  max: sliderMax,
                   onChanged: null,
                 ),
               ),
             ),
-          ],
-
+          ),
           Text(
-            '${_formatDuration(_currentPosition)} / ${_formatDuration(_totalDuration)}',
+            _totalDuration.inSeconds > 0
+                ? '${_formatDuration(_currentPosition)} / ${_formatDuration(_totalDuration)}'
+                : _isPlaying
+                    ? _formatDuration(_currentPosition)
+                    : '--:--',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

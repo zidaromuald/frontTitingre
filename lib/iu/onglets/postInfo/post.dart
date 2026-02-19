@@ -1208,11 +1208,11 @@ class _CreerPostPageState extends State<CreerPostPage> {
     try {
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _audioFilePath = '${tempDir.path}/post_vocal_$timestamp.ogg';
+      _audioFilePath = '${tempDir.path}/post_vocal_$timestamp.wav';
 
       await _audioRecorder!.startRecorder(
         toFile: _audioFilePath,
-        codec: Codec.opusOGG,
+        codec: Codec.pcm16WAV,
       );
 
       setState(() {
@@ -1259,9 +1259,9 @@ class _CreerPostPageState extends State<CreerPostPage> {
           // Convertir le fichier audio en PlatformFile pour l'upload
           final bytes = await audioFile.readAsBytes();
           final platformFile = PlatformFile.fromBytes(
-            name: 'vocal_${DateTime.now().millisecondsSinceEpoch}.ogg',
+            name: 'vocal_${DateTime.now().millisecondsSinceEpoch}.wav',
             bytes: bytes,
-            mimeType: 'audio/ogg',
+            mimeType: 'audio/wav',
           );
 
           setState(() {

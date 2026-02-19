@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as path;
 import 'api_service.dart';
@@ -197,12 +198,20 @@ class MediaService {
     final fileLength = await file.length();
     final stream = http.ByteStream(file.openRead());
 
+    final mimeTypeStr = _getMimeType(file.path);
+    final mimeTypeParts = mimeTypeStr.split('/');
+    final contentType = http_parser.MediaType(
+      mimeTypeParts[0],
+      mimeTypeParts.length > 1 ? mimeTypeParts[1] : 'octet-stream',
+    );
+
     request.files.add(
       http.MultipartFile(
         'file',
         stream,
         fileLength,
         filename: path.basename(file.path),
+        contentType: contentType,
       ),
     );
 
@@ -282,9 +291,11 @@ class MediaService {
       return 'video/$ext';
     }
     // Audio
-    else if (['mp3', 'wav', 'ogg', 'm4a'].contains(ext)) {
-      return 'audio/$ext';
-    }
+    else if (ext == 'mp3') return 'audio/mpeg';
+    else if (ext == 'wav') return 'audio/wav';
+    else if (ext == 'ogg') return 'audio/ogg';
+    else if (ext == 'aac') return 'audio/aac';
+    else if (ext == 'm4a') return 'audio/mp4';
     // Documents
     else {
       return 'application/$ext';

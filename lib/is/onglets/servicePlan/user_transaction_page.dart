@@ -327,6 +327,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
+                      color: Color(0xFF0B2340),
                     ),
                   ),
                 ),
@@ -430,7 +431,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
                                   transaction.userNom != null
                                       ? '${transaction.userNom} ${transaction.userPrenom ?? ''}'.trim()
                                       : widget.userName,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0B2340)),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
@@ -452,7 +453,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
                                 const Text('Societe', style: TextStyle(fontSize: 10, color: mattermostDarkGray)),
                                 Text(
                                   transaction.societeNom ?? _societeNom,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0B2340)),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
@@ -559,11 +560,14 @@ class _UserTransactionPageState extends State<UserTransactionPage>
             '$label: ',
             style: const TextStyle(color: mattermostDarkGray, fontSize: 14),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+                color: const Color(0xFF0B2340),
+              ),
             ),
           ),
         ],

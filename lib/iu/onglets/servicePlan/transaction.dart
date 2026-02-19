@@ -491,7 +491,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tete avec periode, statut et menu 3 points
+          // En-tete avec produit, periode, statut et menu 3 points
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 4, 0),
             child: Row(
@@ -503,13 +503,25 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    transaction.periodeFormatee,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: _themeColor,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        transaction.produit,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: mattermostDarkBlue,
+                        ),
+                      ),
+                      Text(
+                        transaction.periodeFormatee,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _themeColor,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Container(

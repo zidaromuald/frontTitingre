@@ -16,6 +16,7 @@ import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/suivre/abonnement_auth_service.dart';
 import 'package:gestauth_clean/widgets/r2_network_image.dart';
 import 'package:gestauth_clean/widgets/video_player_widget.dart';
+import 'package:gestauth_clean/widgets/voice_recorder_widget.dart';
 import 'package:gestauth_clean/groupe/groupe_detail_page.dart';
 import 'package:gestauth_clean/iu/onglets/recherche/societe_profile_page.dart';
 
@@ -1725,29 +1726,7 @@ class _PostCardState extends State<_PostCard> {
         ),
       );
     } else if (_isAudio(url)) {
-      return Container(
-        height: 80,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: cs.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.audio_file, size: 32, color: cs.primary),
-            const SizedBox(width: 12),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Fichier audio', style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.w600)),
-                Text('Appuyez pour écouter', style: TextStyle(color: cs.onPrimaryContainer.withOpacity(0.7), fontSize: 12)),
-              ],
-            ),
-          ],
-        ),
-      );
+      return VoiceMessagePlayer(audioUrl: url);
     } else {
       return R2NetworkImage(
         imageUrl: fullUrl,

@@ -8,6 +8,7 @@ import '../services/AuthUS/user_auth_service.dart';
 import '../services/suivre/suivre_auth_service.dart' as suivre;
 import '../services/posts/post_service.dart';
 import '../widgets/r2_network_image.dart';
+import '../widgets/voice_recorder_widget.dart';
 import '../iu/onglets/postInfo/post_details_page.dart';
 import '../iu/onglets/postInfo/post.dart';
 import 'groupe_chat_page.dart';
@@ -1589,35 +1590,7 @@ class _GroupePostCard extends StatelessWidget {
         ),
       );
     } else if (_isAudio(url)) {
-      return Container(
-        height: 70,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: cs.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.audio_file, size: 28, color: primaryColor),
-            const SizedBox(width: 12),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Fichier audio',
-                  style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  'Appuyez pour écouter',
-                  style: TextStyle(color: cs.onPrimaryContainer.withOpacity(0.7), fontSize: 12),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+      return VoiceMessagePlayer(audioUrl: url);
     } else {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),

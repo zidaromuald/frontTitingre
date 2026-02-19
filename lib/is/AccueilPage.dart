@@ -18,6 +18,7 @@ import 'onglets/paramInfo/profil.dart';
 import 'onglets/servicePlan/service.dart' as service_societe;
 import '../groupe/groupe_detail_page.dart';
 import '../widgets/video_player_widget.dart';
+import '../widgets/voice_recorder_widget.dart';
 
 class AccueilPage extends StatefulWidget {
   const AccueilPage({super.key});
@@ -1073,41 +1074,7 @@ class _PostCardState extends State<_PostCard> {
         ),
       );
     } else if (_isAudio(url)) {
-      return Container(
-        height: 70,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: cs.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.audio_file, size: 28, color: cs.primary),
-            const SizedBox(width: 12),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Fichier audio',
-                  style: TextStyle(
-                    color: cs.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'Appuyez pour écouter',
-                  style: TextStyle(
-                    color: cs.onPrimaryContainer.withOpacity(0.7),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+      return VoiceMessagePlayer(audioUrl: url);
     } else {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),

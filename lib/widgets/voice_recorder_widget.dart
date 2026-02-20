@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart' hide PlayerState;
 import 'package:audioplayers/audioplayers.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Widget pour enregistrer des messages vocaux
 /// Utilisable uniquement dans les groupes et conversations privées avec sociétés
@@ -192,7 +194,7 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -309,6 +311,8 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
   bool _hasError = false;
+  bool _isLoading = false;
+  String? _localFilePath; // cache du fichier téléchargé
 
   final List<StreamSubscription> _subs = [];
 
@@ -350,22 +354,70 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       s.cancel();
     }
     _player.dispose();
+    // Supprimer le fichier temporaire
+    if (_localFilePath != null) {
+      File(_localFilePath!).delete().catchError((e) => File(_localFilePath!));
+    }
     super.dispose();
+  }
+
+  /// Télécharge le fichier audio avec le token Bearer, le sauvegarde localement
+  Future<String?> _downloadAudio() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+
+      final response = await http.get(
+        Uri.parse(widget.audioUrl),
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint('Erreur téléchargement audio: HTTP ${response.statusCode}');
+        return null;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final file = File('${tempDir.path}/audio_cache_$timestamp.wav');
+      await file.writeAsBytes(response.bodyBytes);
+      return file.path;
+    } catch (e) {
+      debugPrint('Erreur download audio: $e');
+      return null;
+    }
   }
 
   Future<void> _togglePlayPause() async {
     try {
       if (_playerState == PlayerState.playing) {
         await _player.pause();
-      } else if (_playerState == PlayerState.paused) {
-        await _player.resume();
-      } else {
-        setState(() => _hasError = false);
-        await _player.play(UrlSource(widget.audioUrl));
+        return;
       }
+      if (_playerState == PlayerState.paused) {
+        await _player.resume();
+        return;
+      }
+
+      // Première lecture : télécharger si pas encore en cache
+      if (_localFilePath == null) {
+        if (mounted) setState(() => _isLoading = true);
+        _localFilePath = await _downloadAudio();
+        if (mounted) setState(() => _isLoading = false);
+
+        if (_localFilePath == null) {
+          if (mounted) setState(() => _hasError = true);
+          return;
+        }
+      }
+
+      setState(() => _hasError = false);
+      await _player.play(DeviceFileSource(_localFilePath!));
     } catch (e) {
       debugPrint('Erreur lecture audio: $e');
-      if (mounted) setState(() => _hasError = true);
+      if (mounted) setState(() { _hasError = true; _isLoading = false; });
     }
   }
 
@@ -395,14 +447,20 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            onPressed: _togglePlayPause,
-            icon: Icon(
-              isPlaying ? Icons.pause_circle : Icons.play_circle,
-              color: _hasError ? Colors.red : color,
-              size: 36,
-            ),
-          ),
+          _isLoading
+              ? SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: color),
+                )
+              : IconButton(
+                  onPressed: _togglePlayPause,
+                  icon: Icon(
+                    isPlaying ? Icons.pause_circle : Icons.play_circle,
+                    color: _hasError ? Colors.red : color,
+                    size: 36,
+                  ),
+                ),
           Flexible(
             child: SizedBox(
               width: 120,

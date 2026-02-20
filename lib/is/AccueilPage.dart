@@ -317,11 +317,12 @@ class _AccueilPageState extends State<AccueilPage> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 120,
+            height: 130,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: _groupesWithUnread.map((groupe) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 15),
@@ -1074,7 +1075,7 @@ class _PostCardState extends State<_PostCard> {
         ),
       );
     } else if (_isAudio(url)) {
-      return VoiceMessagePlayer(audioUrl: url);
+      return VoiceMessagePlayer(audioUrl: fullUrl);
     } else {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),

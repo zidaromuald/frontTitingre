@@ -1726,7 +1726,7 @@ class _PostCardState extends State<_PostCard> {
         ),
       );
     } else if (_isAudio(url)) {
-      return VoiceMessagePlayer(audioUrl: url);
+      return VoiceMessagePlayer(audioUrl: fullUrl);
     } else {
       return R2NetworkImage(
         imageUrl: fullUrl,

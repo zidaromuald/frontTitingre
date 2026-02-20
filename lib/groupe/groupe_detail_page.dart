@@ -1590,7 +1590,7 @@ class _GroupePostCard extends StatelessWidget {
         ),
       );
     } else if (_isAudio(url)) {
-      return VoiceMessagePlayer(audioUrl: url);
+      return VoiceMessagePlayer(audioUrl: fullUrl);
     } else {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),

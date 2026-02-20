@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_sound/flutter_sound.dart';
+import 'package:flutter_sound/flutter_sound.dart' hide PlayerState;
+import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -303,103 +304,92 @@ class VoiceMessagePlayer extends StatefulWidget {
 }
 
 class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
-  FlutterSoundPlayer? _audioPlayer;
-  bool _isPlaying = false;
-  bool _isPlayerInitialized = false;
+  late final AudioPlayer _player;
+  PlayerState _playerState = PlayerState.stopped;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
-  StreamSubscription<PlaybackDisposition>? _progressSubscription;
+  bool _hasError = false;
+
+  final List<StreamSubscription> _subs = [];
 
   @override
   void initState() {
     super.initState();
-    _initPlayer();
+    _player = AudioPlayer();
+    _setupListeners();
+  }
+
+  void _setupListeners() {
+    _subs.add(_player.onDurationChanged.listen((d) {
+      if (!mounted) return;
+      setState(() => _totalDuration = d);
+    }));
+
+    _subs.add(_player.onPositionChanged.listen((p) {
+      if (!mounted) return;
+      setState(() => _currentPosition = p);
+    }));
+
+    _subs.add(_player.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() => _playerState = state);
+    }));
+
+    _subs.add(_player.onPlayerComplete.listen((_) {
+      if (!mounted) return;
+      setState(() {
+        _playerState = PlayerState.stopped;
+        _currentPosition = Duration.zero;
+      });
+    }));
   }
 
   @override
   void dispose() {
-    _progressSubscription?.cancel();
-    _audioPlayer?.closePlayer();
+    for (final s in _subs) {
+      s.cancel();
+    }
+    _player.dispose();
     super.dispose();
   }
 
-  Future<void> _initPlayer() async {
-    _audioPlayer = FlutterSoundPlayer();
-    await _audioPlayer!.openPlayer();
-
-    // Activer les événements de progression toutes les 100ms
-    await _audioPlayer!.setSubscriptionDuration(
-      const Duration(milliseconds: 100),
-    );
-
-    // Abonnement unique sur toute la durée de vie du widget
-    _progressSubscription = _audioPlayer!.onProgress!.listen((event) {
-      if (!mounted) return;
-      setState(() {
-        _currentPosition = event.position;
-        if (event.duration.inMilliseconds > 0) {
-          _totalDuration = event.duration;
-        }
-      });
-    });
-
-    if (mounted) {
-      setState(() {
-        _isPlayerInitialized = true;
-        _totalDuration = widget.duration ?? Duration.zero;
-      });
-    }
-  }
-
   Future<void> _togglePlayPause() async {
-    if (!_isPlayerInitialized || _audioPlayer == null) return;
-
-    if (_isPlaying) {
-      await _audioPlayer!.pausePlayer();
-      setState(() => _isPlaying = false);
-    } else {
-      await _audioPlayer!.startPlayer(
-        fromURI: widget.audioUrl,
-        whenFinished: () {
-          if (mounted) {
-            setState(() {
-              _isPlaying = false;
-              _currentPosition = Duration.zero;
-            });
-          }
-        },
-      );
-      setState(() => _isPlaying = true);
+    try {
+      if (_playerState == PlayerState.playing) {
+        await _player.pause();
+      } else if (_playerState == PlayerState.paused) {
+        await _player.resume();
+      } else {
+        setState(() => _hasError = false);
+        await _player.play(UrlSource(widget.audioUrl));
+      }
+    } catch (e) {
+      debugPrint('Erreur lecture audio: $e');
+      if (mounted) setState(() => _hasError = true);
     }
   }
 
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes.toString().padLeft(2, '0');
-    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes.toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isPlayerInitialized) {
-      return const SizedBox(
-        width: 40,
-        height: 40,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
-    }
+    final isPlaying = _playerState == PlayerState.playing;
+    final color = Theme.of(context).primaryColor;
 
     final double sliderMax = _totalDuration.inMilliseconds > 0
         ? _totalDuration.inMilliseconds.toDouble()
         : 1.0;
-    final double sliderValue = _currentPosition.inMilliseconds
-        .toDouble()
-        .clamp(0.0, sliderMax);
+    final double sliderValue =
+        _currentPosition.inMilliseconds.toDouble().clamp(0.0, sliderMax);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -408,8 +398,9 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
           IconButton(
             onPressed: _togglePlayPause,
             icon: Icon(
-              _isPlaying ? Icons.pause : Icons.play_arrow,
-              color: Theme.of(context).primaryColor,
+              isPlaying ? Icons.pause_circle : Icons.play_circle,
+              color: _hasError ? Colors.red : color,
+              size: 36,
             ),
           ),
           Flexible(
@@ -417,24 +408,31 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
               width: 120,
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  thumbShape:
+                      const RoundSliderThumbShape(enabledThumbRadius: 6),
                   trackHeight: 2,
                 ),
                 child: Slider(
                   value: sliderValue,
                   max: sliderMax,
+                  activeColor: color,
                   onChanged: null,
                 ),
               ),
             ),
           ),
           Text(
-            _totalDuration.inSeconds > 0
-                ? '${_formatDuration(_currentPosition)} / ${_formatDuration(_totalDuration)}'
-                : _isPlaying
-                    ? _formatDuration(_currentPosition)
-                    : '--:--',
-            style: Theme.of(context).textTheme.bodySmall,
+            _hasError
+                ? 'Erreur'
+                : _totalDuration.inSeconds > 0
+                    ? '${_formatDuration(_currentPosition)} / ${_formatDuration(_totalDuration)}'
+                    : isPlaying
+                        ? _formatDuration(_currentPosition)
+                        : '--:--',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: _hasError ? Colors.red : null),
           ),
         ],
       ),

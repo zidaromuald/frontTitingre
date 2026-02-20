@@ -150,7 +150,30 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
     if (_audioFilePath != null && _recordDuration.inSeconds > 0) {
       final audioFile = File(_audioFilePath!);
       if (await audioFile.exists()) {
-        widget.onRecordingComplete(audioFile, _recordDuration);
+        // flutter_sound a une race condition : stopRecorder() complète avant
+        // que le fichier soit entièrement écrit. On attend que la taille
+        // dépasse les 44 octets du header WAV (= fichier vide).
+        int previousSize = -1;
+        for (int i = 0; i < 12; i++) {
+          await Future.delayed(const Duration(milliseconds: 150));
+          final currentSize = await audioFile.length();
+          if (currentSize > 44 && currentSize == previousSize) break;
+          previousSize = currentSize;
+        }
+
+        final finalSize = await audioFile.length();
+        debugPrint('[Record] Fichier: ${audioFile.path}, taille: $finalSize octets');
+
+        if (finalSize > 44) {
+          widget.onRecordingComplete(audioFile, _recordDuration);
+        } else {
+          debugPrint('[Record] ERREUR: Fichier audio vide (seulement header WAV)');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Erreur: enregistrement audio vide, veuillez réessayer')),
+            );
+          }
+        }
       }
     }
   }

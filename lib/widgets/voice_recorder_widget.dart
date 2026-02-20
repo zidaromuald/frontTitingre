@@ -364,6 +364,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   /// Télécharge le fichier audio avec le token Bearer, le sauvegarde localement
   Future<String?> _downloadAudio() async {
     try {
+      debugPrint('[Audio] Téléchargement: ${widget.audioUrl}');
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
 
@@ -374,18 +375,26 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         },
       );
 
+      debugPrint('[Audio] Réponse: HTTP ${response.statusCode}, Content-Type: ${response.headers['content-type']}, taille: ${response.bodyBytes.length} octets');
+
       if (response.statusCode != 200) {
-        debugPrint('Erreur téléchargement audio: HTTP ${response.statusCode}');
+        debugPrint('[Audio] Erreur HTTP ${response.statusCode}: ${response.body}');
         return null;
       }
 
+      // Utiliser l'extension de l'URL d'origine pour le fichier temp
+      final uri = Uri.parse(widget.audioUrl);
+      final originalName = uri.pathSegments.last;
+      final ext = originalName.contains('.') ? originalName.split('.').last : 'wav';
+
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final file = File('${tempDir.path}/audio_cache_$timestamp.wav');
+      final file = File('${tempDir.path}/audio_cache_$timestamp.$ext');
       await file.writeAsBytes(response.bodyBytes);
+      debugPrint('[Audio] Fichier sauvegardé: ${file.path}');
       return file.path;
     } catch (e) {
-      debugPrint('Erreur download audio: $e');
+      debugPrint('[Audio] Erreur download: $e');
       return null;
     }
   }

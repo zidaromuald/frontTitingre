@@ -277,10 +277,11 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 85,
+            height: 95,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: _groupesWithUnread.map((groupe) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 12),

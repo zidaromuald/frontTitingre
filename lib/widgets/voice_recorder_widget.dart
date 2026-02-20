@@ -334,6 +334,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
   bool _hasError = false;
+  String _errorMessage = 'Erreur';
   bool _isLoading = false;
   String? _localFilePath; // cache du fichier téléchargé
 
@@ -405,6 +406,12 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         return null;
       }
 
+      // 44 octets = header WAV vide (fichier corrompu à l'upload)
+      if (response.bodyBytes.length <= 44) {
+        debugPrint('[Audio] Fichier audio vide sur le serveur (${response.bodyBytes.length} octets) - enregistrement corrompu');
+        return null;
+      }
+
       // Utiliser l'extension de l'URL d'origine pour le fichier temp
       final uri = Uri.parse(widget.audioUrl);
       final originalName = uri.pathSegments.last;
@@ -440,7 +447,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
         if (mounted) setState(() => _isLoading = false);
 
         if (_localFilePath == null) {
-          if (mounted) setState(() => _hasError = true);
+          if (mounted) setState(() { _hasError = true; _errorMessage = 'Audio indisponible'; });
           return;
         }
       }
@@ -449,7 +456,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
       await _player.play(DeviceFileSource(_localFilePath!));
     } catch (e) {
       debugPrint('Erreur lecture audio: $e');
-      if (mounted) setState(() { _hasError = true; _isLoading = false; });
+      if (mounted) setState(() { _hasError = true; _isLoading = false; _errorMessage = 'Erreur lecture'; });
     }
   }
 
@@ -513,7 +520,7 @@ class _VoiceMessagePlayerState extends State<VoiceMessagePlayer> {
           ),
           Text(
             _hasError
-                ? 'Erreur'
+                ? _errorMessage
                 : _totalDuration.inSeconds > 0
                     ? '${_formatDuration(_currentPosition)} / ${_formatDuration(_totalDuration)}'
                     : isPlaying

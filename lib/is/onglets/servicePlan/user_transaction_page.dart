@@ -40,11 +40,13 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   bool _isLoadingPageId = true;
   bool _isLoadingTransactions = true;
   bool _isLoadingInformations = true;
+  String? _errorTransactions; // Stocke l'erreur de chargement des transactions
 
   // Couleurs
   static const Color mattermostGreen = Color(0xFF28A745);
   static const Color mattermostGray = Color(0xFFF4F4F4);
   static const Color mattermostDarkGray = Color(0xFF8D8D8D);
+  static const Color mattermostDarkBlue = Color(0xFF0B2340);
 
   @override
   void initState() {
@@ -169,7 +171,10 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     } catch (e) {
       print('❌ [UserTransactionPage] Erreur chargement transactions: $e');
       if (mounted) {
-        setState(() => _isLoadingTransactions = false);
+        setState(() {
+          _isLoadingTransactions = false;
+          _errorTransactions = e.toString();
+        });
       }
     }
   }
@@ -247,6 +252,64 @@ class _UserTransactionPageState extends State<UserTransactionPage>
       return const Center(child: CircularProgressIndicator());
     }
 
+    // Afficher l'erreur si le chargement a échoué
+    if (_errorTransactions != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text(
+              'Erreur de chargement',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mattermostDarkBlue),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _errorTransactions!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: mattermostDarkGray),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                setState(() => _errorTransactions = null);
+                _loadTransactions();
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Réessayer'),
+              style: ElevatedButton.styleFrom(backgroundColor: widget.themeColor),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Page partenariat non trouvée
+    if (_pagePartenaritId == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.handshake_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            const Text(
+              'Aucune page partenariat',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mattermostDarkBlue),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Cette page partenariat n\'existe pas encore',
+              style: TextStyle(color: mattermostDarkGray),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_transactions.isEmpty) {
       return Center(
         child: Column(
@@ -254,7 +317,10 @@ class _UserTransactionPageState extends State<UserTransactionPage>
           children: [
             Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            const Text('Aucune transaction'),
+            const Text(
+              'Aucune transaction',
+              style: TextStyle(fontSize: 16, color: mattermostDarkBlue),
+            ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => _createTransaction(),

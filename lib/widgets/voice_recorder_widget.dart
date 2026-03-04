@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart' hide PlayerState;
 import 'package:audioplayers/audioplayers.dart';
@@ -43,6 +44,13 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
   Duration _recordDuration = Duration.zero;
   Timer? _timer;
 
+  // Stream recording: collecte les bytes PCM en mémoire → zéro race condition
+  StreamController<Uint8List>? _foodController;
+  StreamSubscription<Uint8List>? _foodSub;
+  final List<int> _pcmBytes = [];
+  static const int _sampleRate = 16000;
+  static const int _numChannels = 1;
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +59,8 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
 
   @override
   void dispose() {
+    _foodSub?.cancel();
+    _foodController?.close();
     _stopRecording();
     _audioRecorder?.closeRecorder();
     _timer?.cancel();
@@ -61,7 +71,6 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
   Future<void> _initRecorder() async {
     _audioRecorder = FlutterSoundRecorder();
 
-    // Demander la permission microphone
     final status = await Permission.microphone.request();
     if (status != PermissionStatus.granted) {
       if (mounted) {
@@ -74,14 +83,13 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
       return;
     }
 
-    // Ouvrir le recorder
     await _audioRecorder!.openRecorder();
     setState(() {
       _isRecorderInitialized = true;
     });
   }
 
-  /// Démarrer l'enregistrement
+  /// Démarrer l'enregistrement (stream PCM → fichier WAV construit manuellement)
   Future<void> _startRecording() async {
     if (!_isRecorderInitialized || _audioRecorder == null) {
       await _initRecorder();
@@ -89,15 +97,17 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
     }
 
     try {
-      // Créer un fichier temporaire pour l'audio
-      final tempDir = await getTemporaryDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _audioFilePath = '${tempDir.path}/voice_message_$timestamp.wav';
+      _pcmBytes.clear();
+      _foodController = StreamController<Uint8List>();
+      _foodSub = _foodController!.stream.listen((data) {
+        _pcmBytes.addAll(data);
+      });
 
-      // Démarrer l'enregistrement en WAV (supporté Android/iOS + accepté par le serveur)
       await _audioRecorder!.startRecorder(
-        toFile: _audioFilePath,
-        codec: Codec.pcm16WAV,
+        toStream: _foodController!.sink,
+        codec: Codec.pcm16,
+        numChannels: _numChannels,
+        sampleRate: _sampleRate,
       );
 
       setState(() {
@@ -128,19 +138,65 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
     });
   }
 
-  /// Arrêter l'enregistrement
+  /// Arrêter l'enregistrement et écrire le fichier WAV
   Future<void> _stopRecording() async {
     if (!_isRecording || _audioRecorder == null) return;
 
     try {
       await _audioRecorder!.stopRecorder();
       _timer?.cancel();
+      await _foodSub?.cancel();
+      await _foodController?.close();
+      _foodSub = null;
+      _foodController = null;
+
+      // Écrire le WAV uniquement si des données PCM ont été collectées
+      if (_pcmBytes.isNotEmpty) {
+        final tempDir = await getTemporaryDirectory();
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        _audioFilePath = '${tempDir.path}/voice_message_$timestamp.wav';
+        await _writeWavFile(_audioFilePath!, _pcmBytes);
+        debugPrint('[Record] WAV écrit: $_audioFilePath, taille: ${_pcmBytes.length + 44} octets');
+      }
+
       setState(() {
         _isRecording = false;
       });
     } catch (e) {
       debugPrint('Erreur arrêt enregistrement: $e');
+      setState(() { _isRecording = false; });
     }
+  }
+
+  /// Construit un fichier WAV valide à partir de bytes PCM16 bruts
+  Future<void> _writeWavFile(String path, List<int> pcm) async {
+    final dataSize = pcm.length;
+    final byteRate = _sampleRate * _numChannels * 2;
+    final blockAlign = _numChannels * 2;
+    final header = <int>[];
+
+    void w32(int v) {
+      header.addAll([v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF]);
+    }
+    void w16(int v) {
+      header.addAll([v & 0xFF, (v >> 8) & 0xFF]);
+    }
+
+    header.addAll([0x52, 0x49, 0x46, 0x46]); // 'RIFF'
+    w32(dataSize + 36);                        // taille totale - 8
+    header.addAll([0x57, 0x41, 0x56, 0x45]); // 'WAVE'
+    header.addAll([0x66, 0x6D, 0x74, 0x20]); // 'fmt '
+    w32(16);                                   // taille du chunk fmt
+    w16(1);                                    // format PCM
+    w16(_numChannels);
+    w32(_sampleRate);
+    w32(byteRate);
+    w16(blockAlign);
+    w16(16);                                   // bits par sample
+    header.addAll([0x64, 0x61, 0x74, 0x61]); // 'data'
+    w32(dataSize);
+
+    await File(path).writeAsBytes([...header, ...pcm]);
   }
 
   /// Arrêter et envoyer le vocal
@@ -150,27 +206,14 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
     if (_audioFilePath != null && _recordDuration.inSeconds > 0) {
       final audioFile = File(_audioFilePath!);
       if (await audioFile.exists()) {
-        // flutter_sound a une race condition : stopRecorder() complète avant
-        // que le fichier soit entièrement écrit. On attend que la taille
-        // dépasse les 44 octets du header WAV (= fichier vide).
-        int previousSize = -1;
-        for (int i = 0; i < 12; i++) {
-          await Future.delayed(const Duration(milliseconds: 150));
-          final currentSize = await audioFile.length();
-          if (currentSize > 44 && currentSize == previousSize) break;
-          previousSize = currentSize;
-        }
-
-        final finalSize = await audioFile.length();
-        debugPrint('[Record] Fichier: ${audioFile.path}, taille: $finalSize octets');
-
-        if (finalSize > 44) {
+        final size = await audioFile.length();
+        debugPrint('[Record] Fichier prêt: $size octets');
+        if (size > 44) {
           widget.onRecordingComplete(audioFile, _recordDuration);
         } else {
-          debugPrint('[Record] ERREUR: Fichier audio vide (seulement header WAV)');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Erreur: enregistrement audio vide, veuillez réessayer')),
+              const SnackBar(content: Text('Enregistrement vide, veuillez réessayer')),
             );
           }
         }

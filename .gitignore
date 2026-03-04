@@ -47,6 +47,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Documents commerciaux confidentiels
+docs/PROPOSITION_COMMERCIALE_*.md
+
 # Android signing keys - IMPORTANT: Ne jamais committer ces fichiers !
 *.jks
 *.keystore

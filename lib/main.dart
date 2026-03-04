@@ -21,6 +21,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Titingre',
       debugShowCheckedModeBanner: false,
+      // Force le mode clair sur mobile - évite que ThemeData.dark() rende
+      // les textes blancs sur fond blanc (textes invisibles en mode sombre système)
+      themeMode: ThemeMode.light,
+      theme: ThemeData(
+        useMaterial3: false,
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E4A8C),
+          brightness: Brightness.light,
+        ),
+      ),
       home: const SplashScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),

@@ -312,9 +312,9 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
           children: [
             const Icon(Icons.error_outline, size: 64, color: mattermostRed),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Erreur de chargement',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mattermostDarkBlue),
             ),
             const SizedBox(height: 8),
             Padding(
@@ -346,7 +346,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
             const SizedBox(height: 16),
             const Text(
               'Aucune transaction',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: mattermostDarkBlue),
             ),
             const SizedBox(height: 8),
             const Text(

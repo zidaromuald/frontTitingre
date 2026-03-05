@@ -44,9 +44,10 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
   Duration _recordDuration = Duration.zero;
   Timer? _timer;
 
-  // Stream recording: collecte les bytes PCM en mémoire → zéro race condition
+  // Stream recording: collecte les bytes PCM en mémoire
   StreamController<Uint8List>? _foodController;
   StreamSubscription<Uint8List>? _foodSub;
+  Completer<void>? _streamDone;
   final List<int> _pcmBytes = [];
   static const int _sampleRate = 16000;
   static const int _numChannels = 1;
@@ -98,10 +99,14 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
 
     try {
       _pcmBytes.clear();
+      _streamDone = Completer<void>();
       _foodController = StreamController<Uint8List>();
-      _foodSub = _foodController!.stream.listen((data) {
-        _pcmBytes.addAll(data);
-      });
+      _foodSub = _foodController!.stream.listen(
+        (data) => _pcmBytes.addAll(data),
+        onDone: () {
+          if (!(_streamDone?.isCompleted ?? true)) _streamDone!.complete();
+        },
+      );
 
       await _audioRecorder!.startRecorder(
         toStream: _foodController!.sink,
@@ -145,10 +150,15 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
     try {
       await _audioRecorder!.stopRecorder();
       _timer?.cancel();
-      await _foodSub?.cancel();
+      // Fermer le contrôleur EN PREMIER pour signaler la fin du stream,
+      // puis attendre que tous les events PCM soient livrés au listener
+      // AVANT d'annuler la subscription (sinon les derniers bytes sont perdus).
       await _foodController?.close();
+      await _streamDone?.future;
+      await _foodSub?.cancel();
       _foodSub = null;
       _foodController = null;
+      _streamDone = null;
 
       // Écrire le WAV uniquement si des données PCM ont été collectées
       if (_pcmBytes.isNotEmpty) {

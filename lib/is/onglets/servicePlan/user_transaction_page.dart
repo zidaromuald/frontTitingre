@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gestauth_clean/utils/csv_export_helper.dart';
+import 'package:gestauth_clean/utils/pdf_export_helper.dart';
 import 'package:gestauth_clean/services/AuthUS/user_auth_service.dart';
 import 'package:gestauth_clean/services/AuthUS/societe_auth_service.dart';
 import 'package:gestauth_clean/services/partenariat/transaction_partenariat_service.dart';
@@ -30,14 +30,11 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  UserModel? _user;
   int? _pagePartenaritId; // ID de la page partenariat
   String _societeNom = ''; // Nom de la societe connectee
   List<TransactionPartenaritModel> _transactions = [];
   List<InformationPartenaireModel> _informations = [];
 
-  bool _isLoadingUser = true;
-  bool _isLoadingPageId = true;
   bool _isLoadingTransactions = true;
   bool _isLoadingInformations = true;
   String? _errorTransactions; // Stocke l'erreur de chargement des transactions
@@ -87,14 +84,10 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   }
 
   Future<void> _loadPagePartenaritId() async {
-    setState(() => _isLoadingPageId = true);
-
     try {
-      // Récupérer l'ID de la société connectée
       final societe = await SocieteAuthService.getMe();
       print('📤 [UserTransactionPage] getPageByUserAndSociete userId=${widget.userId}, societeId=${societe.id}');
 
-      // Récupérer la page partenariat entre la société et l'utilisateur
       final page = await PagePartenaritService.getPageByUserAndSociete(
         userId: widget.userId,
         societeId: societe.id,
@@ -106,13 +99,11 @@ class _UserTransactionPageState extends State<UserTransactionPage>
         setState(() {
           _pagePartenaritId = page.id;
           _societeNom = societe.nom;
-          _isLoadingPageId = false;
         });
       }
     } catch (e) {
       print('❌ [UserTransactionPage] Erreur chargement page partenariat: $e');
       if (mounted) {
-        setState(() => _isLoadingPageId = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur page partenariat: $e'),
@@ -124,20 +115,10 @@ class _UserTransactionPageState extends State<UserTransactionPage>
   }
 
   Future<void> _loadUserProfile() async {
-    setState(() => _isLoadingUser = true);
-
     try {
-      final user = await UserAuthService.getUserProfile(widget.userId);
-
-      if (mounted) {
-        setState(() {
-          _user = user;
-          _isLoadingUser = false;
-        });
-      }
+      await UserAuthService.getUserProfile(widget.userId);
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingUser = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur de chargement du profil: $e'),
@@ -218,6 +199,13 @@ class _UserTransactionPageState extends State<UserTransactionPage>
             fontWeight: FontWeight.w700,
           ),
         ),
+        actions: [
+          IconButton(
+            onPressed: _exportTransactionsPdf,
+            icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+            tooltip: 'Exporter toutes les transactions (PDF)',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -417,7 +405,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
                   onSelected: (value) {
                     switch (value) {
                       case 'download':
-                        _exportSingleTransactionCsv(transaction);
+                        _exportSingleTransactionPdf(transaction);
                         break;
                       case 'edit':
                         _editTransaction(transaction);
@@ -862,33 +850,18 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     }
   }
 
-  /// Exporter une seule transaction en CSV
-  Future<void> _exportSingleTransactionCsv(TransactionPartenaritModel t) async {
+  /// Exporter une seule transaction en PDF
+  Future<void> _exportSingleTransactionPdf(TransactionPartenaritModel t) async {
     try {
-      final buffer = StringBuffer();
-      buffer.writeln('Produit;Quantite;Unite;Prix Unitaire (CFA);Prix Total (CFA);Periode;Categorie;Statut;Date Creation');
-
-      final produit = _escapeCsv(t.produit);
-      final unite = _escapeCsv(t.unite ?? '');
-      final categorie = _escapeCsv(t.categorie ?? '');
-      final statut = t.getStatusLabel();
-      final periode = _escapeCsv(t.periodeFormatee);
-      final prixTotal = (t.quantite * t.prixUnitaire).toStringAsFixed(0);
-      final date = _formatDate(t.createdAt);
-
-      buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$date');
-
-      final safeProduit = t.produit.replaceAll(RegExp(r'[^\w]'), '_');
-      await CsvExportHelper.exportCsv(
-        buffer.toString(),
-        'transaction_$safeProduit',
-        'Transaction - ${t.produit}',
+      await PdfExportHelper.exportSingleTransaction(
+        transaction: t,
+        partenaireName: widget.userName,
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de l\'export: $e'),
+            content: Text('Erreur lors de l\'export PDF: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -896,57 +869,32 @@ class _UserTransactionPageState extends State<UserTransactionPage>
     }
   }
 
-  /// Exporter toutes les transactions en CSV
-  Future<void> _exportTransactionsCsv() async {
+  /// Exporter toutes les transactions en PDF
+  Future<void> _exportTransactionsPdf() async {
     if (_transactions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Aucune transaction a exporter'),
+          content: Text('Aucune transaction à exporter'),
           backgroundColor: Colors.orange,
         ),
       );
       return;
     }
-
     try {
-      final buffer = StringBuffer();
-      buffer.writeln('Produit;Quantite;Unite;Prix Unitaire (CFA);Prix Total (CFA);Periode;Categorie;Statut;Date Creation');
-
-      for (final t in _transactions) {
-        final produit = _escapeCsv(t.produit);
-        final unite = _escapeCsv(t.unite ?? '');
-        final categorie = _escapeCsv(t.categorie ?? '');
-        final statut = t.getStatusLabel();
-        final periode = _escapeCsv(t.periodeFormatee);
-        final prixTotal = (t.quantite * t.prixUnitaire).toStringAsFixed(0);
-        final date = _formatDate(t.createdAt);
-
-        buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$date');
-      }
-
-      final safeUserName = widget.userName.replaceAll(' ', '_');
-      await CsvExportHelper.exportCsv(
-        buffer.toString(),
-        'transactions_$safeUserName',
-        'Transactions - ${widget.userName}',
+      await PdfExportHelper.exportAllTransactions(
+        transactions: _transactions,
+        partenaireName: widget.userName,
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur lors de l\'export: $e'),
+            content: Text('Erreur lors de l\'export PDF: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
-  }
-
-  String _escapeCsv(String value) {
-    if (value.contains(';') || value.contains('"') || value.contains('\n')) {
-      return '"${value.replaceAll('"', '""')}"';
-    }
-    return value;
   }
 
   String _formatDate(DateTime date) {

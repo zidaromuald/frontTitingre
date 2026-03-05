@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gestauth_clean/utils/csv_export_helper.dart';
+import 'package:gestauth_clean/utils/pdf_export_helper.dart';
 import 'package:gestauth_clean/services/partenariat/transaction_partenariat_service.dart';
 import 'package:gestauth_clean/services/partenariat/information_partenaire_service.dart';
 import 'package:gestauth_clean/services/AuthUS/auth_base_service.dart';
@@ -234,7 +234,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -245,7 +245,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _themeColor.withOpacity(0.1),
+              color: _themeColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -280,7 +280,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: mattermostGreen.withOpacity(0.1),
+                    color: mattermostGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -400,7 +400,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -545,7 +545,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
                   onSelected: (value) {
                     switch (value) {
                       case 'download':
-                        _exportSingleTransactionCsv(transaction);
+                        _exportSingleTransactionPdf(transaction);
                         break;
                       case 'edit':
                         _showEditTransactionDialog(transaction);
@@ -560,9 +560,9 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
                       value: 'download',
                       child: Row(
                         children: [
-                          Icon(Icons.download, size: 18),
+                          Icon(Icons.picture_as_pdf, size: 18, color: Colors.red),
                           SizedBox(width: 8),
-                          Text('Telecharger'),
+                          Text('Télécharger PDF'),
                         ],
                       ),
                     ),
@@ -833,7 +833,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -955,7 +955,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -1307,10 +1307,10 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
             ),
             ListTile(
               leading: Icon(Icons.download, color: _themeColor),
-              title: const Text('Exporter les transactions (CSV)'),
+              title: const Text('Exporter les transactions (PDF)'),
               onTap: () {
                 Navigator.pop(context);
-                _exportTransactionsCsv();
+                _exportTransactionsPdf();
               },
             ),
           ],
@@ -1324,73 +1324,30 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
   // ========================================
 
   /// Exporter une seule transaction en CSV
-  Future<void> _exportSingleTransactionCsv(TransactionPartenaritModel t) async {
+  Future<void> _exportSingleTransactionPdf(TransactionPartenaritModel t) async {
     try {
-      final buffer = StringBuffer();
-      buffer.writeln('Produit;Quantite;Unite;Prix Unitaire (CFA);Prix Total (CFA);Periode;Categorie;Statut;Societe;Utilisateur;Date Creation');
-
-      final produit = _escapeCsv(t.produit);
-      final unite = _escapeCsv(t.unite ?? '');
-      final categorie = _escapeCsv(t.categorie ?? '');
-      final statut = t.getStatusLabel();
-      final societe = _escapeCsv(t.societeNom ?? '');
-      final user = _escapeCsv(t.getUserName());
-      final periode = _escapeCsv(t.periodeFormatee);
-      final prixTotal = (t.quantite * t.prixUnitaire).toStringAsFixed(0);
-      final date = '${t.createdAt.day.toString().padLeft(2, '0')}/${t.createdAt.month.toString().padLeft(2, '0')}/${t.createdAt.year}';
-
-      buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
-
-      final safeProduit = t.produit.replaceAll(RegExp(r'[^\w]'), '_');
-      await CsvExportHelper.exportCsv(
-        buffer.toString(),
-        'transaction_$safeProduit',
-        'Transaction - ${t.produit}',
+      await PdfExportHelper.exportSingleTransaction(
+        transaction: t,
+        partenaireName: widget.partenaireName,
       );
     } catch (e) {
-      _showErrorSnackBar('Erreur lors de l\'export: $e');
+      _showErrorSnackBar('Erreur lors de l\'export PDF: $e');
     }
   }
 
-  Future<void> _exportTransactionsCsv() async {
+  Future<void> _exportTransactionsPdf() async {
     if (_transactions.isEmpty) {
-      _showErrorSnackBar('Aucune transaction a exporter');
+      _showErrorSnackBar('Aucune transaction à exporter');
       return;
     }
-
     try {
-      final buffer = StringBuffer();
-      buffer.writeln('Produit;Quantite;Unite;Prix Unitaire (CFA);Prix Total (CFA);Periode;Categorie;Statut;Societe;Utilisateur;Date Creation');
-
-      for (final t in _transactions) {
-        final produit = _escapeCsv(t.produit);
-        final unite = _escapeCsv(t.unite ?? '');
-        final categorie = _escapeCsv(t.categorie ?? '');
-        final statut = t.getStatusLabel();
-        final societe = _escapeCsv(t.societeNom ?? '');
-        final user = _escapeCsv(t.getUserName());
-        final periode = _escapeCsv(t.periodeFormatee);
-        final prixTotal = (t.quantite * t.prixUnitaire).toStringAsFixed(0);
-        final date = '${t.createdAt.day.toString().padLeft(2, '0')}/${t.createdAt.month.toString().padLeft(2, '0')}/${t.createdAt.year}';
-
-        buffer.writeln('$produit;${t.quantite};$unite;${t.prixUnitaire};$prixTotal;$periode;$categorie;$statut;$societe;$user;$date');
-      }
-
-      await CsvExportHelper.exportCsv(
-        buffer.toString(),
-        'transactions',
-        'Transactions - ${widget.partenaireName}',
+      await PdfExportHelper.exportAllTransactions(
+        transactions: _transactions,
+        partenaireName: widget.partenaireName,
       );
     } catch (e) {
-      _showErrorSnackBar('Erreur lors de l\'export: $e');
+      _showErrorSnackBar('Erreur lors de l\'export PDF: $e');
     }
-  }
-
-  String _escapeCsv(String value) {
-    if (value.contains(';') || value.contains('"') || value.contains('\n')) {
-      return '"${value.replaceAll('"', '""')}"';
-    }
-    return value;
   }
 
   void _showSuccessSnackBar(String message) {

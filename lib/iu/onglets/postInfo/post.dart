@@ -1208,11 +1208,11 @@ class _CreerPostPageState extends State<CreerPostPage> {
     try {
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      _audioFilePath = '${tempDir.path}/post_vocal_$timestamp.wav';
+      _audioFilePath = '${tempDir.path}/post_vocal_$timestamp.aac';
 
       await _audioRecorder!.startRecorder(
         toFile: _audioFilePath,
-        codec: Codec.pcm16WAV,
+        codec: Codec.aacADTS,
       );
 
       setState(() {
@@ -1256,23 +1256,15 @@ class _CreerPostPageState extends State<CreerPostPage> {
       if (_audioFilePath != null && _recordDuration.inSeconds > 0) {
         final audioFile = File(_audioFilePath!);
         if (await audioFile.exists()) {
-          // Attendre que flutter_sound finisse d'écrire (race condition)
-          // Header WAV seul = 44 octets → on attend que des données soient écrites
-          int previousSize = -1;
-          for (int i = 0; i < 12; i++) {
-            await Future.delayed(const Duration(milliseconds: 150));
-            final currentSize = await audioFile.length();
-            if (currentSize > 44 && currentSize == previousSize) break;
-            previousSize = currentSize;
-          }
-          debugPrint('[Record] post.dart fichier: ${audioFile.path}, taille: ${await audioFile.length()} octets');
+          final fileSize = await audioFile.length();
+          debugPrint('[Record] post.dart fichier: ${audioFile.path}, taille: $fileSize octets');
 
           // Convertir le fichier audio en PlatformFile pour l'upload
           final bytes = await audioFile.readAsBytes();
           final platformFile = PlatformFile.fromBytes(
-            name: 'vocal_${DateTime.now().millisecondsSinceEpoch}.wav',
+            name: 'vocal_${DateTime.now().millisecondsSinceEpoch}.aac',
             bytes: bytes,
-            mimeType: 'audio/wav',
+            mimeType: 'audio/aac',
           );
 
           setState(() {

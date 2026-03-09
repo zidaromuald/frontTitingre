@@ -11,6 +11,7 @@ import 'package:gestauth_clean/groupe/groupe_detail_page.dart';
 import 'package:gestauth_clean/services/messagerie/conversation_service.dart';
 import 'package:gestauth_clean/messagerie/conversation_detail_page.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
+import 'package:gestauth_clean/services/partenariat/page_partenariat_service.dart';
 
 class ServicePage extends StatefulWidget {
   const ServicePage({super.key});
@@ -809,20 +810,49 @@ class _ServicePageState extends State<ServicePage> {
   }
 
   /// Naviguer vers la page Transaction/Partenariat pour une société
-  void _navigateToTransactionPageForSociete(SocieteModel societe) {
-    // Naviguer vers la page de détails du partenariat
-    // Note: pagePartenaritId doit être récupéré depuis le backend
-    // Pour l'instant, on utilise l'ID de la société comme placeholder
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PartenaireDetailsPage(
-          pagePartenaritId: societe.id, // TODO: Récupérer le vrai ID de page partenariat
-          partenaireName: societe.nom,
-          themeColor: mattermostBlue,
-        ),
-      ),
+  Future<void> _navigateToTransactionPageForSociete(SocieteModel societe) async {
+    // Afficher un loader pendant la récupération du pagePartenaritId
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      // Récupérer l'ID de l'utilisateur connecté
+      final me = await UserAuthService.getMe();
+
+      // Récupérer la page partenariat entre cet utilisateur et la société
+      final page = await PagePartenaritService.getPageByUserAndSociete(
+        userId: me.id,
+        societeId: societe.id,
+      );
+
+      if (mounted) Navigator.pop(context); // fermer le loader
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PartenaireDetailsPage(
+              pagePartenaritId: page.id,
+              partenaireName: societe.nom,
+              themeColor: mattermostBlue,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // fermer le loader
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Page partenariat introuvable: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // Item société

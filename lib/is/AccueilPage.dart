@@ -1449,6 +1449,10 @@ class _PostCardState extends State<_PostCard> {
                     ),
                   ),
                 ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

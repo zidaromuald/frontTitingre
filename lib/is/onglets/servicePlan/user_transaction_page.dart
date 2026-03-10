@@ -930,6 +930,7 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
   late TextEditingController _uniteController;
   late TextEditingController _categorieController;
   late TextEditingController _periodeLabelController;
+  late TextEditingController _localiteController;
 
   DateTime? _dateDebut;
   DateTime? _dateFin;
@@ -948,6 +949,7 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
     _uniteController = TextEditingController(text: widget.transaction?.unite ?? '');
     _categorieController = TextEditingController(text: widget.transaction?.categorie ?? '');
     _periodeLabelController = TextEditingController(text: widget.transaction?.periodeLabel ?? '');
+    _localiteController = TextEditingController(text: widget.transaction?.localite ?? '');
 
     _dateDebut = widget.transaction?.dateDebut ?? DateTime.now();
     _dateFin = widget.transaction?.dateFin ?? DateTime.now().add(const Duration(days: 30));
@@ -961,6 +963,7 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
     _uniteController.dispose();
     _categorieController.dispose();
     _periodeLabelController.dispose();
+    _localiteController.dispose();
     super.dispose();
   }
 
@@ -1041,6 +1044,9 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
           categorie: _categorieController.text.trim().isNotEmpty
               ? _categorieController.text.trim()
               : null,
+          localite: _localiteController.text.trim().isNotEmpty
+              ? _localiteController.text.trim()
+              : null,
         );
 
         result = await TransactionPartenaritService.createTransaction(dto);
@@ -1060,6 +1066,9 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
               : null,
           categorie: _categorieController.text.trim().isNotEmpty
               ? _categorieController.text.trim()
+              : null,
+          localite: _localiteController.text.trim().isNotEmpty
+              ? _localiteController.text.trim()
               : null,
         );
 
@@ -1267,6 +1276,22 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
                         decoration: InputDecoration(
                           hintText: 'Ex: Céréales',
                           prefixIcon: const Icon(Icons.category, color: primaryColor),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Localité
+                      const Text(
+                        'Localité',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _localiteController,
+                        decoration: InputDecoration(
+                          hintText: 'Ex: Ouagadougou, Bobo-Dioulasso',
+                          prefixIcon: const Icon(Icons.location_on, color: primaryColor),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),

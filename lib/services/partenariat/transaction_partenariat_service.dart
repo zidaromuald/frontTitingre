@@ -196,6 +196,7 @@ class TransactionPartenaritModel {
   final String? periodeLabel; // Label optionnel: "Janvier à Mars 2023"
   final String? unite; // Ex: "Kg", "Litres"
   final String? categorie; // Ex: "Agriculture"
+  final String? localite; // Ex: "Ouagadougou", "Bobo-Dioulasso"
 
   final String statut; // 'en_attente' | 'validee' | 'rejetee'
   final DateTime? dateValidation;
@@ -235,6 +236,7 @@ class TransactionPartenaritModel {
     this.userNom,
     this.userPrenom,
     this.userEmail,
+    this.localite,
   });
 
   /// Normalise le statut backend vers les valeurs internes
@@ -297,6 +299,7 @@ class TransactionPartenaritModel {
       userNom: json['user']?['nom'] ?? json['user_nom'],
       userPrenom: json['user']?['prenom'] ?? json['user_prenom'],
       userEmail: json['user']?['email'] ?? json['user_email'],
+      localite: json['localite'],
     );
   }
 
@@ -471,6 +474,7 @@ class CreateTransactionPartenaritDto {
   final String? categorie; // Catégorie du produit
   final String? statut; // Statut: 'en_attente' | 'validee' | 'rejetee'
   final Map<String, dynamic>? metadata; // Métadonnées additionnelles
+  final String? localite; // Ville/province/région
 
   CreateTransactionPartenaritDto({
     required this.pagePartenaritId,
@@ -484,6 +488,7 @@ class CreateTransactionPartenaritDto {
     this.categorie,
     this.statut,
     this.metadata,
+    this.localite,
   });
 
   Map<String, dynamic> toJson() {
@@ -501,6 +506,7 @@ class CreateTransactionPartenaritDto {
     if (categorie != null) map['categorie'] = categorie;
     if (statut != null) map['statut'] = statut;
     if (metadata != null) map['metadata'] = metadata;
+    if (localite != null) map['localite'] = localite;
 
     return map;
   }
@@ -519,6 +525,7 @@ class UpdateTransactionPartenaritDto {
   final String? categorie; // Catégorie du produit
   final String? statut; // Statut: 'en_attente' | 'validee' | 'rejetee'
   final Map<String, dynamic>? metadata; // Métadonnées additionnelles
+  final String? localite; // Ville/province/région
 
   UpdateTransactionPartenaritDto({
     this.produit,
@@ -531,6 +538,7 @@ class UpdateTransactionPartenaritDto {
     this.categorie,
     this.statut,
     this.metadata,
+    this.localite,
   });
 
   Map<String, dynamic> toJson() {
@@ -546,6 +554,7 @@ class UpdateTransactionPartenaritDto {
     if (categorie != null) map['categorie'] = categorie;
     if (statut != null) map['statut'] = statut;
     if (metadata != null) map['metadata'] = metadata;
+    if (localite != null) map['localite'] = localite;
 
     return map;
   }

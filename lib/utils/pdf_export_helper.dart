@@ -131,7 +131,7 @@ class PdfExportHelper {
               // ── DÉTAILS TRANSACTION ─────────────────────
               _buildSectionTitle('Détails de la Transaction'),
               pw.SizedBox(height: 8),
-              _buildDetailTable(t),
+              _buildDetailTable(t, now),
               pw.SizedBox(height: 16),
 
               // ── TOTAUX ──────────────────────────────────
@@ -395,13 +395,15 @@ class PdfExportHelper {
     );
   }
 
-  static pw.Widget _buildDetailTable(TransactionPartenaritModel t) {
+  static pw.Widget _buildDetailTable(TransactionPartenaritModel t, DateTime dateEmission) {
     final rows = [
       ['Produit / Service', t.produit],
       ['Période', t.periodeFormatee],
       ['Catégorie', t.categorie ?? '—'],
+      ['Localité', t.localite ?? '—'],
       ['Quantité', t.quantiteFormatee],
       ['Prix unitaire', t.prixUnitaireFormate],
+      ['Date d\'émission', _formatDate(dateEmission)],
       ['Date de création', _formatDate(t.createdAt)],
     ];
 

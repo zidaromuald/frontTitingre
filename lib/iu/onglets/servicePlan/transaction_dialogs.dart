@@ -22,6 +22,7 @@ class TransactionDialogs {
     final periodeLabelController = TextEditingController();
     final uniteController = TextEditingController();
     final categorieController = TextEditingController();
+    final localiteController = TextEditingController();
 
     DateTime? dateDebut;
     DateTime? dateFin;
@@ -196,6 +197,18 @@ class TransactionDialogs {
                     prefixIcon: Icon(Icons.category),
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // Localité (optionnel)
+                TextFormField(
+                  controller: localiteController,
+                  decoration: const InputDecoration(
+                    labelText: 'Localité (optionnel)',
+                    hintText: 'Ex: Ouagadougou, Bobo-Dioulasso',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.location_on),
+                  ),
+                ),
               ],
             ),
           ),
@@ -232,6 +245,7 @@ class TransactionDialogs {
                   categorie: categorieController.text.isEmpty
                       ? null
                       : categorieController.text,
+                  localite: localiteController.text.isEmpty ? null : localiteController.text,
                   statut: 'en_attente',
                 );
 
@@ -266,9 +280,10 @@ class TransactionDialogs {
     final periodeLabelController = TextEditingController(text: transaction.periodeLabel ?? '');
     final uniteController = TextEditingController(text: transaction.unite ?? '');
     final categorieController = TextEditingController(text: transaction.categorie ?? '');
+    final localiteController = TextEditingController(text: transaction.localite ?? '');
 
-    DateTime? dateDebut = transaction.dateDebut;
-    DateTime? dateFin = transaction.dateFin;
+    DateTime dateDebut = transaction.dateDebut;
+    DateTime dateFin = transaction.dateFin;
 
     return showDialog<UpdateTransactionPartenaritDto>(
       context: context,
@@ -369,6 +384,18 @@ class TransactionDialogs {
                     prefixIcon: Icon(Icons.category),
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // Localité
+                TextFormField(
+                  controller: localiteController,
+                  decoration: const InputDecoration(
+                    labelText: 'Localité',
+                    hintText: 'Ex: Ouagadougou, Bobo-Dioulasso',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.location_on),
+                  ),
+                ),
               ],
             ),
           ),
@@ -389,8 +416,8 @@ class TransactionDialogs {
                   prixUnitaire: prixUnitaireController.text.isEmpty
                       ? null
                       : double.parse(prixUnitaireController.text),
-                  dateDebut: dateDebut?.toIso8601String(),
-                  dateFin: dateFin?.toIso8601String(),
+                  dateDebut: dateDebut.toIso8601String(),
+                  dateFin: dateFin.toIso8601String(),
                   periodeLabel: periodeLabelController.text.isEmpty
                       ? null
                       : periodeLabelController.text,
@@ -398,6 +425,7 @@ class TransactionDialogs {
                   categorie: categorieController.text.isEmpty
                       ? null
                       : categorieController.text,
+                  localite: localiteController.text.isEmpty ? null : localiteController.text,
                 );
 
                 Navigator.pop(context, dto);

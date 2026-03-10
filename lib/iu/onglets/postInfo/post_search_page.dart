@@ -590,12 +590,6 @@ class _SearchResultCard extends StatelessWidget {
                     '${post.commentsCount}',
                     style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(.6)),
                   ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.share_outlined, size: 16, color: cs.onSurface.withOpacity(.6)),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${post.sharesCount}',
-                    style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(.6)),
                   ),
                 ],
               ),

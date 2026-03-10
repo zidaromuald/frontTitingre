@@ -1642,42 +1642,6 @@ class _PostCardState extends State<_PostCard> {
                     ),
                   ),
                 ),
-                // Bouton Partager (ouvre la page details)
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PostDetailsPage(postId: widget.post.id),
-                        ),
-                      ).then((_) => _loadLikeStatus());
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.share_outlined,
-                            size: 20,
-                            color: cs.onSurface.withOpacity(0.6),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Partager',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: cs.onSurface.withOpacity(0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
           ],
         ),

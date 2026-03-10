@@ -195,7 +195,7 @@ class MessageService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
-      return MessageModel.fromJson(jsonResponse['message']);
+      return MessageModel.fromJson(jsonResponse['data']);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(error['message'] ?? 'Erreur d\'envoi du message');
@@ -215,7 +215,7 @@ class MessageService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> messagesData = jsonResponse['messages'];
+      final List<dynamic> messagesData = jsonResponse['data'] ?? [];
       return messagesData.map((json) => MessageModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération des messages');
@@ -234,7 +234,7 @@ class MessageService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> messagesData = jsonResponse['messages'];
+      final List<dynamic> messagesData = jsonResponse['data'] ?? [];
       return messagesData.map((json) => MessageModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération des messages non lus');
@@ -253,7 +253,7 @@ class MessageService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> messagesData = jsonResponse['messages'];
+      final List<dynamic> messagesData = jsonResponse['data'] ?? [];
       return messagesData.map((json) => MessageModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération des messages de la transaction');
@@ -272,7 +272,7 @@ class MessageService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> messagesData = jsonResponse['messages'];
+      final List<dynamic> messagesData = jsonResponse['data'] ?? [];
       return messagesData.map((json) => MessageModel.fromJson(json)).toList();
     } else {
       throw Exception('Erreur de récupération des messages de l\'abonnement');

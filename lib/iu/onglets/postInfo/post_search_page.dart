@@ -590,7 +590,6 @@ class _SearchResultCard extends StatelessWidget {
                     '${post.commentsCount}',
                     style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(.6)),
                   ),
-                  ),
                 ],
               ),
             ],

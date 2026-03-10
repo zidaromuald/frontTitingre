@@ -120,12 +120,14 @@ class PagePartenaritModel {
   });
 
   factory PagePartenaritModel.fromJson(Map<String, dynamic> json) {
+    // user_id et societe_id peuvent être dans abonnement (réponse backend)
+    final abonnement = json['abonnement'] as Map<String, dynamic>?;
     return PagePartenaritModel(
-      id: json['id'],
-      userId: json['userId'] ?? json['user_id'],
-      societeId: json['societeId'] ?? json['societe_id'],
-      titre: json['titre'],
-      visibilite: json['visibilite'],
+      id: json['id'] as int,
+      userId: json['userId'] ?? json['user_id'] ?? abonnement?['user_id'] ?? 0,
+      societeId: json['societeId'] ?? json['societe_id'] ?? abonnement?['societe_id'] ?? 0,
+      titre: json['titre'] ?? '',
+      visibilite: json['visibilite'] ?? 'prive',
       createdAt: DateTime.tryParse(json['createdAt'] ?? json['created_at'] ?? '') ?? DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] ?? json['updated_at'] ?? '') ?? DateTime.now(),
       user: json['user'],

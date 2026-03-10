@@ -121,16 +121,29 @@ class ConversationModel {
   });
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
-    final List<dynamic> participantsData = json['participants'] ?? [];
-    final participants = participantsData
-        .map((p) => ParticipantModel.fromJson(p))
-        .toList();
+    // Le backend retourne participant1/participant2 séparément
+    final List<ParticipantModel> participants = [];
+    if (json['participant1'] is Map<String, dynamic>) {
+      participants.add(ParticipantModel.fromJson(json['participant1'] as Map<String, dynamic>));
+    }
+    if (json['participant2'] is Map<String, dynamic>) {
+      participants.add(ParticipantModel.fromJson(json['participant2'] as Map<String, dynamic>));
+    }
+    // Fallback: tableau participants (ancienne structure)
+    if (participants.isEmpty && json['participants'] is List) {
+      final List<dynamic> participantsData = json['participants'];
+      participants.addAll(
+        participantsData
+            .whereType<Map<String, dynamic>>()
+            .map((p) => ParticipantModel.fromJson(p)),
+      );
+    }
 
     return ConversationModel(
       id: json['id'],
       participants: participants,
-      lastMessage: json['last_message'] != null
-          ? LastMessageModel.fromJson(json['last_message'])
+      lastMessage: json['last_message'] is Map<String, dynamic>
+          ? LastMessageModel.fromJson(json['last_message'] as Map<String, dynamic>)
           : null,
       unreadCount: json['unread_count'] ?? 0,
       isArchived: json['is_archived'] ?? false,
@@ -234,7 +247,7 @@ class ConversationService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final jsonResponse = jsonDecode(response.body);
-      return ConversationModel.fromJson(jsonResponse['conversation']);
+      return ConversationModel.fromJson(jsonResponse['data']);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(
@@ -252,9 +265,9 @@ class ConversationService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> conversationsData = jsonResponse['conversations'];
+      final List<dynamic> conversationsData = jsonResponse['data'] ?? [];
       return conversationsData
-          .map((json) => ConversationModel.fromJson(json))
+          .map((json) => ConversationModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } else {
       throw Exception('Erreur de récupération des conversations');
@@ -269,9 +282,9 @@ class ConversationService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      final List<dynamic> conversationsData = jsonResponse['conversations'];
+      final List<dynamic> conversationsData = jsonResponse['data'] ?? [];
       return conversationsData
-          .map((json) => ConversationModel.fromJson(json))
+          .map((json) => ConversationModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } else {
       throw Exception('Erreur de récupération des conversations archivées');
@@ -286,7 +299,7 @@ class ConversationService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return ConversationModel.fromJson(jsonResponse['conversation']);
+      return ConversationModel.fromJson(jsonResponse['data']);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(
@@ -326,7 +339,7 @@ class ConversationService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return ConversationModel.fromJson(jsonResponse['conversation']);
+      return ConversationModel.fromJson(jsonResponse['data']);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(
@@ -343,7 +356,7 @@ class ConversationService {
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(response.body);
-      return ConversationModel.fromJson(jsonResponse['conversation']);
+      return ConversationModel.fromJson(jsonResponse['data']);
     } else {
       final error = jsonDecode(response.body);
       throw Exception(

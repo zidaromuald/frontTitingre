@@ -1123,17 +1123,6 @@ class _PostDetailsPageState extends State<PostDetailsPage> {
             'Commentaires',
             cs,
           ),
-          Container(
-            height: 40,
-            width: 1,
-            color: cs.outlineVariant,
-          ),
-          _buildStatItem(
-            Icons.share,
-            _post!.sharesCount.toString(),
-            'Partages',
-            cs,
-          ),
         ],
       ),
     );

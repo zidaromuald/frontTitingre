@@ -815,6 +815,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
             color: mattermostDarkGray,
             fontWeight: FontWeight.w500,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 4),
         Text(
@@ -824,6 +825,7 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
             fontWeight: FontWeight.w600,
             color: mattermostDarkBlue,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -837,7 +839,6 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 8),

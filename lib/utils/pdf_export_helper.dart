@@ -448,12 +448,35 @@ class PdfExportHelper {
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
         border: pw.Border.all(color: _bleuTitingre),
       ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+      child: pw.Column(
         children: [
-          _buildTotalItem('Quantité', t.quantiteFormatee),
-          _buildTotalItem('Prix Unitaire', t.prixUnitaireFormate),
-          _buildTotalItem('PRIX TOTAL', t.prixTotalFormate, highlight: true),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+            children: [
+              _buildTotalItem('Quantité', t.quantiteFormatee),
+              _buildTotalItem('Prix Unitaire', t.prixUnitaireFormate),
+              _buildTotalItem('PRIX TOTAL', t.prixTotalFormate, highlight: true),
+            ],
+          ),
+          if (t.localite != null && t.localite!.isNotEmpty) ...[
+            pw.SizedBox(height: 8),
+            pw.Divider(color: _bleuTitingre.shade(0.3), height: 1),
+            pw.SizedBox(height: 6),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text('Localité : ',
+                    style: pw.TextStyle(fontSize: 10, color: _grisTexte)),
+                pw.Text(
+                  t.localite!,
+                  style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _bleuFonce),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

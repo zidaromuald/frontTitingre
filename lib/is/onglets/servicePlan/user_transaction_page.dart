@@ -460,12 +460,10 @@ class _UserTransactionPageState extends State<UserTransactionPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildTransactionDetail('Periode', transaction.periodeLabel ??
-                    '${_formatDate(transaction.dateDebut)} - ${_formatDate(transaction.dateFin)}'),
-                _buildTransactionDetail('Quantite', '${transaction.quantite} ${transaction.unite ?? ''}'),
-                _buildTransactionDetail('Prix unitaire', '${transaction.prixUnitaire} CFA'),
-                _buildTransactionDetail('Prix total', '${transaction.quantite * transaction.prixUnitaire} CFA',
-                    bold: true),
+                _buildTransactionDetail('Periode', transaction.periodeFormatee),
+                _buildTransactionDetail('Quantite', transaction.quantiteFormatee),
+                _buildTransactionDetail('Prix unitaire', transaction.prixUnitaireFormate),
+                _buildTransactionDetail('Prix total', transaction.prixTotalFormate, bold: true),
 
                 // Noms User et Societe
                 const Divider(height: 20),
@@ -557,9 +555,11 @@ class _UserTransactionPageState extends State<UserTransactionPage>
                       children: [
                         const Icon(Icons.verified, color: mattermostGreen, size: 18),
                         const SizedBox(width: 8),
-                        Text(
-                          'Transaction validee${transaction.dateValidation != null ? ' le ${_formatDate(transaction.dateValidation!)}' : ''}',
-                          style: const TextStyle(fontSize: 12, color: mattermostGreen, fontWeight: FontWeight.w600),
+                        Expanded(
+                          child: Text(
+                            'Transaction validee${transaction.dateValidation != null ? ' le ${_formatDate(transaction.dateValidation!)}' : ''}',
+                            style: const TextStyle(fontSize: 12, color: mattermostGreen, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ],
                     ),
@@ -610,9 +610,12 @@ class _UserTransactionPageState extends State<UserTransactionPage>
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Text(
-            '$label: ',
-            style: const TextStyle(color: mattermostDarkGray, fontSize: 14),
+          Flexible(
+            flex: 0,
+            child: Text(
+              '$label: ',
+              style: const TextStyle(color: mattermostDarkGray, fontSize: 14),
+            ),
           ),
           Expanded(
             child: Text(
@@ -622,6 +625,7 @@ class _UserTransactionPageState extends State<UserTransactionPage>
                 fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
                 color: const Color(0xFF0B2340),
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

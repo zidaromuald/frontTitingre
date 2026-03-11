@@ -1031,12 +1031,15 @@ class _PartenaireDetailsPageState extends State<PartenaireDetailsPage> {
                 color: mattermostDarkGray,
               ),
               const SizedBox(width: 4),
-              Text(
-                'Par ${info.getCreatorName()}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: mattermostDarkGray,
-                  fontStyle: FontStyle.italic,
+              Expanded(
+                child: Text(
+                  'Par ${info.getCreatorName()}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: mattermostDarkGray,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import '../api_service.dart';
 import '../groupe/groupe_service.dart';
+import '../messagerie/conversation_service.dart';
+import '../AuthUS/auth_base_service.dart';
 
 // ============================================================================
 // MODÈLES
@@ -182,23 +184,47 @@ class UnreadContentService {
   // ==========================================================================
 
   /// Récupérer les sociétés avec lesquelles j'ai des conversations non lues
-  /// GET /conversations/with-unread-messages
+  /// Utilise getMyConversations() pour couvrir aussi les conversations
+  /// initiées par la société (quand la société écrit en premier à l'utilisateur)
   static Future<List<SocieteWithUnreadContent>> getMySocietesWithUnreadContent() async {
     try {
-      final response = await ApiService.get('/conversations/with-unread-messages');
+      // Récupérer l'identité de l'utilisateur connecté
+      final userData = await AuthBaseService.getUserData();
+      final userType = await AuthBaseService.getUserType();
+      final myId = userData != null ? (userData['id'] as num?)?.toInt() : null;
+      final myType = userType == 'user' ? 'User' : 'Societe';
 
-      if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        final List<dynamic> societesData = jsonResponse['data'] ?? jsonResponse['conversations'] ?? [];
+      if (myId == null) return [];
 
-        return societesData
-            .map((json) => SocieteWithUnreadContent.fromJson(json))
-            .where((societe) => societe.hasUnreadContent)
-            .toList();
-      } else {
-        print('❌ Erreur getMySocietesWithUnreadContent: ${response.statusCode}');
-        return [];
+      // Récupérer TOUTES mes conversations (qu'elles soient initiées par moi ou par la société)
+      final conversations = await ConversationService.getMyConversations();
+
+      final List<SocieteWithUnreadContent> result = [];
+      for (final conv in conversations) {
+        // Identifier l'autre participant
+        final other = conv.getOtherParticipant(myId, myType);
+        if (other == null || other.type != 'Societe') continue;
+
+        // N'afficher que les conversations avec des messages non lus
+        if (conv.unreadCount <= 0) continue;
+
+        result.add(SocieteWithUnreadContent(
+          id: other.id,
+          nom: other.nomSociete ?? other.nom ?? 'Société',
+          logo: other.photoUrl,
+          unreadMessagesCount: conv.unreadCount,
+          lastActivityAt: conv.lastMessage?.createdAt ?? conv.updatedAt,
+        ));
       }
+
+      // Trier par activité la plus récente
+      result.sort((a, b) {
+        if (a.lastActivityAt == null) return 1;
+        if (b.lastActivityAt == null) return -1;
+        return b.lastActivityAt!.compareTo(a.lastActivityAt!);
+      });
+
+      return result;
     } catch (e) {
       print('❌ Erreur getMySocietesWithUnreadContent: $e');
       return [];

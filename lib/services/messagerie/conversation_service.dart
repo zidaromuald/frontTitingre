@@ -26,6 +26,11 @@ class ParticipantModel {
   });
 
   factory ParticipantModel.fromJson(Map<String, dynamic> json) {
+    final raw = json['photo_url'] as String?;
+    String? resolvedUrl;
+    if (raw != null && raw.isNotEmpty) {
+      resolvedUrl = raw.startsWith('http') ? raw : 'https://api.titingre.com$raw';
+    }
     return ParticipantModel(
       id: json['id'],
       type: json['type'],
@@ -33,7 +38,7 @@ class ParticipantModel {
       prenom: json['prenom'],
       nomSociete: json['nom_societe'],
       email: json['email'],
-      photoUrl: json['photo_url'],
+      photoUrl: resolvedUrl,
     );
   }
 

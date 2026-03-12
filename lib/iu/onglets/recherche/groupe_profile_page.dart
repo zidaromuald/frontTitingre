@@ -767,7 +767,9 @@ class _GroupeProfilePageState extends State<GroupeProfilePage>
 
   Widget _buildMembreCard(Map<String, dynamic> membre) {
     final role = MembreRole.fromString(membre['role'] ?? 'membre');
-    final userName = membre['user']?['nom'] ?? 'Membre';
+    final prenom = membre['user']?['prenom'] ?? '';
+    final nom = membre['user']?['nom'] ?? '';
+    final userName = '${prenom} ${nom}'.trim().isNotEmpty ? '${prenom} ${nom}'.trim() : 'Membre';
     final userPhoto = membre['user']?['profile']?['photo'];
 
     return Card(

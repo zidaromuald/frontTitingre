@@ -82,19 +82,18 @@ class MessageModel {
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
+    final senderData = json['sender'] as Map<String, dynamic>?;
     return MessageModel(
       id: json['id'],
       conversationId: json['conversation_id'],
-      senderId: json['sender_id'],
-      senderType: json['sender_type'],
-      contenu: json['contenu'],
+      senderId: json['sender_id'] ?? senderData?['id'] ?? 0,
+      senderType: json['sender_type'] ?? senderData?['type'] ?? '',
+      contenu: json['contenu'] ?? '',
       isRead: json['is_read'] ?? false,
       transactionId: json['transaction_id'],
       abonnementId: json['abonnement_id'],
       createdAt: DateTime.parse(json['created_at']),
-      sender: json['sender'] != null
-          ? SenderModel.fromJson(json['sender'])
-          : null,
+      sender: senderData != null ? SenderModel.fromJson(senderData) : null,
     );
   }
 

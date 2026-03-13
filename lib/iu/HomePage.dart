@@ -185,7 +185,7 @@ class _HomePageState extends State<HomePage> {
                 'nom': societe.nom,
                 'profile': societe.profile != null
                     ? {
-                        'logo': societe.profile!.logo,
+                        'logo': societe.profile!.getLogoUrl(),
                         'description': societe.profile!.description,
                       }
                     : null,

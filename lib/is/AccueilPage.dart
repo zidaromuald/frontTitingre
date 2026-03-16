@@ -86,7 +86,9 @@ class _AccueilPageState extends State<AccueilPage> {
           return <Map<String, dynamic>>[];
         }),
         // 3. Following (suivis) - comptage direct via la liste
-        SuivreAuthService.getMyFollowing().then<Object>((f) => f).catchError((e) {
+        SuivreAuthService.getMyFollowing().then<Object>((f) => f).catchError((
+          e,
+        ) {
           print('⚠️ [Stats] Erreur chargement following: $e');
           return <SuivreModel>[];
         }),
@@ -98,16 +100,26 @@ class _AccueilPageState extends State<AccueilPage> {
       abonnes = followers.length;
       suivis = following.length;
 
-      print('📊 [Stats] Followers: $abonnes, Following: $suivis, Groupes: ${groupes.length}');
+      print(
+        '📊 [Stats] Followers: $abonnes, Following: $suivis, Groupes: ${groupes.length}',
+      );
 
       // Si les comptages directs sont à 0, essayer l'endpoint stats en dernier recours
       if (abonnes == 0 && suivis == 0) {
         try {
-          final statsResult = await SuivreAuthService.getSocieteStats(societe.id);
+          final statsResult = await SuivreAuthService.getSocieteStats(
+            societe.id,
+          );
           print('📊 [Stats] Stats endpoint result: $statsResult');
 
           // Essayer toutes les clés possibles pour les abonnés
-          for (final key in ['abonnes_count', 'followers_count', 'abonnes', 'followers', 'subscribersCount']) {
+          for (final key in [
+            'abonnes_count',
+            'followers_count',
+            'abonnes',
+            'followers',
+            'subscribersCount',
+          ]) {
             final val = statsResult[key];
             if (val != null && val is int && val > 0) {
               abonnes = val;
@@ -115,7 +127,13 @@ class _AccueilPageState extends State<AccueilPage> {
             }
           }
           // Essayer toutes les clés possibles pour les suivis
-          for (final key in ['suivis_count', 'following_count', 'suivis', 'following', 'followingCount']) {
+          for (final key in [
+            'suivis_count',
+            'following_count',
+            'suivis',
+            'following',
+            'followingCount',
+          ]) {
             final val = statsResult[key];
             if (val != null && val is int && val > 0) {
               suivis = val;
@@ -127,7 +145,9 @@ class _AccueilPageState extends State<AccueilPage> {
         }
       }
 
-      print('📊 [Stats] Final: abonnes=$abonnes, suivis=$suivis, groupes=${groupes.length}');
+      print(
+        '📊 [Stats] Final: abonnes=$abonnes, suivis=$suivis, groupes=${groupes.length}',
+      );
 
       if (mounted) {
         setState(() {

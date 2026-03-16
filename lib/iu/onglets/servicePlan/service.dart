@@ -12,6 +12,7 @@ import 'package:gestauth_clean/services/messagerie/conversation_service.dart';
 import 'package:gestauth_clean/messagerie/conversation_detail_page.dart';
 import 'package:gestauth_clean/iu/onglets/servicePlan/transaction.dart';
 import 'package:gestauth_clean/services/partenariat/page_partenariat_service.dart';
+import 'package:gestauth_clean/groupe/create_groupe_page.dart';
 
 class ServicePage extends StatefulWidget {
   const ServicePage({super.key});
@@ -418,6 +419,16 @@ class _ServicePageState extends State<ServicePage> {
     );
   }
 
+  Future<void> _navigateToCreateGroupe() async {
+    final result = await Navigator.push<GroupeModel>(
+      context,
+      MaterialPageRoute(builder: (context) => const CreateGroupePage()),
+    );
+    if (result != null) {
+      _loadMesGroupes();
+    }
+  }
+
   // Liste des groupes (canaux)
   Widget _buildCanauxList() {
     if (_isLoadingCanaux) {
@@ -440,6 +451,17 @@ class _ServicePageState extends State<ServicePage> {
               'Rejoignez des groupes pour collaborer',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _navigateToCreateGroupe,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: mattermostBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('Créer un groupe'),
+            ),
           ],
         ),
       );
@@ -449,14 +471,31 @@ class _ServicePageState extends State<ServicePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            "Mes groupes (${_mesGroupes.length})",
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: mattermostDarkBlue,
-            ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Mes groupes (${_mesGroupes.length})",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: mattermostDarkBlue,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _navigateToCreateGroupe,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mattermostBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Créer', style: TextStyle(fontSize: 13)),
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -643,11 +682,11 @@ class _ServicePageState extends State<ServicePage> {
                       color: mattermostBlue,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: societe.profile?.logo != null
+                    child: societe.profile?.getLogoUrl() != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.network(
-                              societe.profile!.logo!,
+                              societe.profile!.getLogoUrl()!,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return const Icon(Icons.business,
@@ -881,11 +920,11 @@ class _ServicePageState extends State<ServicePage> {
                 color: mattermostBlue,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: societe.profile?.logo != null
+              child: societe.profile?.getLogoUrl() != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
-                        societe.profile!.logo!,
+                        societe.profile!.getLogoUrl()!,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return const Icon(Icons.business,

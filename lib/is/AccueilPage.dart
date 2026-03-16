@@ -19,6 +19,7 @@ import 'onglets/servicePlan/service.dart' as service_societe;
 import '../groupe/groupe_detail_page.dart';
 import '../widgets/video_player_widget.dart';
 import '../widgets/voice_recorder_widget.dart';
+import '../messagerie/conversations_list_page.dart';
 
 class AccueilPage extends StatefulWidget {
   const AccueilPage({super.key});
@@ -531,6 +532,17 @@ class _AccueilPageState extends State<AccueilPage> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 24),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ConversationsListPage()),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

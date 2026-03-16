@@ -19,6 +19,7 @@ import 'package:gestauth_clean/widgets/video_player_widget.dart';
 import 'package:gestauth_clean/widgets/voice_recorder_widget.dart';
 import 'package:gestauth_clean/groupe/groupe_detail_page.dart';
 import 'package:gestauth_clean/iu/onglets/recherche/societe_profile_page.dart';
+import 'package:gestauth_clean/messagerie/conversations_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -874,6 +875,17 @@ class _HomePageState extends State<HomePage> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 24),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ConversationsListPage()),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

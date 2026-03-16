@@ -299,6 +299,16 @@ class MessageService {
     }
   }*/
 
+  /// Supprimer un message (uniquement l'expéditeur)
+  /// DELETE /messages/:id
+  static Future<void> deleteMessage(int messageId) async {
+    final response = await ApiService.delete('/messages/$messageId');
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Erreur de suppression du message');
+    }
+  }
+
   /// Marquer tous les messages d'une conversation comme lus
   /// PUT /messages/conversations/:conversationId/read-all
   /// Nécessite authentification

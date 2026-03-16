@@ -699,9 +699,16 @@ class _HomePageState extends State<HomePage> {
     final nom = societeData['nom'] as String? ?? 'Société';
     final profile = societeData['profile'] as Map<String, dynamic>?;
     final rawLogo = profile?['logo'] as String?;
-    final logo = rawLogo != null && rawLogo.isNotEmpty && !rawLogo.startsWith('http')
-        ? 'https://api.titingre.com$rawLogo'
-        : rawLogo;
+    String? logo;
+    if (rawLogo != null && rawLogo.isNotEmpty) {
+      if (rawLogo.startsWith('http')) {
+        logo = rawLogo;
+      } else if (rawLogo.startsWith('/')) {
+        logo = 'https://api.titingre.com$rawLogo';
+      } else {
+        logo = 'https://api.titingre.com/storage/$rawLogo';
+      }
+    }
 
     return GestureDetector(
       onTap: () {

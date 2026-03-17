@@ -1746,11 +1746,70 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
   bool _isAdding = false;
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
+  int? _currentUserId;
+  String? _currentUserType;
 
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();
     _loadComments();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final storedType = await AuthBaseService.getUserType();
+      if (storedType == 'societe') {
+        final societe = await SocieteAuthService.getCachedSociete();
+        if (mounted && societe != null) {
+          setState(() {
+            _currentUserId = societe.id;
+            _currentUserType = 'Societe';
+          });
+        }
+      } else {
+        final user = await UserAuthService.getCachedUser();
+        if (mounted && user != null) {
+          setState(() {
+            _currentUserId = user.id;
+            _currentUserType = 'User';
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _deleteComment(CommentModel comment) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer le commentaire'),
+        content: const Text('Voulez-vous supprimer ce commentaire ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await CommentService.deleteComment(comment.id);
+      widget.onCommentAdded();
+      await _loadComments();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
@@ -1875,6 +1934,9 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final comment = _comments[index];
+                          final isMyComment = _currentUserId != null &&
+                              _currentUserType != null &&
+                              comment.isAuthor(_currentUserId!, _currentUserType!);
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1925,6 +1987,17 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
                                   ],
                                 ),
                               ),
+                              if (isMyComment)
+                                IconButton(
+                                  onPressed: () => _deleteComment(comment),
+                                  icon: const Icon(Icons.delete_outline, size: 18),
+                                  color: Colors.red[400],
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 32,
+                                    minHeight: 32,
+                                  ),
+                                ),
                             ],
                           );
                         },

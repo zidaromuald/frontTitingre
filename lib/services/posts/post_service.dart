@@ -751,7 +751,7 @@ class PostService {
 
       print('📤 [PostService] authorData préparé: $authorData');
 
-      // Charger en parallèle : mes posts + feed des suivis + feed public
+      // Charger en parallèle : mes posts + feed des suivis
       final results = await Future.wait([
         // Mes propres posts (avec données d'auteur injectées)
         getPostsByAuthor(
@@ -759,17 +759,14 @@ class PostService {
           userType == 'Societe' ? AuthorType.societe : AuthorType.user,
           authorData: authorData,
         ),
-        // Feed des personnes que je suis
+        // Feed des personnes/sociétés que je suis (backend filtre déjà par suivi)
         getMyFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia),
-        // Feed public (pour garantir la visibilité des posts publics des sociétés)
-        getPublicFeed(limit: limit, offset: offset, onlyWithMedia: onlyWithMedia),
       ]);
 
       final myPosts = results[0];
       final followingFeed = results[1];
-      final publicFeed = results[2];
 
-      print('📥 [PostService] Mes posts: ${myPosts.length}, Feed suivis: ${followingFeed.length}, Public: ${publicFeed.length}');
+      print('📥 [PostService] Mes posts: ${myPosts.length}, Feed suivis: ${followingFeed.length}');
 
       // Combiner et dédupliquer par ID
       final Map<int, PostModel> postsMap = {};
@@ -781,13 +778,6 @@ class PostService {
 
       // Ajouter les posts des suivis (sans écraser mes posts)
       for (final post in followingFeed) {
-        if (!postsMap.containsKey(post.id)) {
-          postsMap[post.id] = post;
-        }
-      }
-
-      // Ajouter les posts publics (sans écraser ceux déjà présents)
-      for (final post in publicFeed) {
         if (!postsMap.containsKey(post.id)) {
           postsMap[post.id] = post;
         }

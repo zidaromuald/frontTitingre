@@ -1943,11 +1943,16 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
                               CircleAvatar(
                                 radius: 16,
                                 backgroundColor: cs.primaryContainer,
-                                child: Icon(
-                                  comment.authorType == 'Societe' ? Icons.business : Icons.person,
-                                  size: 16,
-                                  color: cs.onPrimaryContainer,
-                                ),
+                                backgroundImage: comment.author?['photo_url'] != null
+                                    ? NetworkImage(comment.author!['photo_url'] as String)
+                                    : null,
+                                child: comment.author?['photo_url'] == null
+                                    ? Icon(
+                                        comment.authorType == 'Societe' ? Icons.business : Icons.person,
+                                        size: 16,
+                                        color: cs.onPrimaryContainer,
+                                      )
+                                    : null,
                               ),
                               const SizedBox(width: 10),
                               Expanded(

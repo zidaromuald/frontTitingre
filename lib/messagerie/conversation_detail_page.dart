@@ -312,7 +312,12 @@ class _ConversationDetailPageState extends State<ConversationDetailPage> {
               backgroundColor: mattermostBlue,
               radius: 16,
               child: Text(
-                message.getSenderName().substring(0, 1).toUpperCase(),
+                (message.getSenderName().isNotEmpty
+                        ? message.getSenderName()
+                        : widget.participantName)
+                    .characters
+                    .first
+                    .toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -331,7 +336,9 @@ class _ConversationDetailPageState extends State<ConversationDetailPage> {
                   Padding(
                     padding: const EdgeInsets.only(left: 8, bottom: 4),
                     child: Text(
-                      message.getSenderName(),
+                      message.getSenderName().isNotEmpty
+                          ? message.getSenderName()
+                          : widget.participantName,
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,

@@ -1522,23 +1522,13 @@ class _CommentsBottomSheetState extends State<_CommentsBottomSheet> {
 
   Future<void> _loadCurrentUser() async {
     try {
-      final storedType = await AuthBaseService.getUserType();
-      if (storedType == 'societe') {
-        final societe = await SocieteAuthService.getCachedSociete();
-        if (mounted && societe != null) {
-          setState(() {
-            _currentUserId = societe.id;
-            _currentUserType = 'Societe';
-          });
-        }
-      } else {
-        final user = await UserAuthService.getCachedUser();
-        if (mounted && user != null) {
-          setState(() {
-            _currentUserId = user.id;
-            _currentUserType = 'User';
-          });
-        }
+      final userData = await AuthBaseService.getUserData();
+      final userType = await AuthBaseService.getUserType();
+      if (mounted && userData != null) {
+        setState(() {
+          _currentUserId = userData['id'];
+          _currentUserType = userType == 'societe' ? 'Societe' : 'User';
+        });
       }
     } catch (_) {}
   }
